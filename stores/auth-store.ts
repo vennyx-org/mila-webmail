@@ -601,12 +601,21 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null, isRateLimited: false, rateLimitUntil: null });
 
         try {
-          // Determine slot for this account (use slot from sessionStorage if re-adding)
+          // Determine slot for this account (use slot from sessionStorage if re-adding).
+          // Note: `parseInt(getItem(...) || '0')` collapses "no value set" and
+          // "value is 0" into the same case, so the fallback to getNextCookieSlot()
+          // never fired for the common "+ Add Account" path — every OAuth account
+          // ended up on slot 0 and overwrote earlier accounts' refresh-token cookies.
+          // Distinguishing rawSlot === null from a parsed 0 fixes that. The page
+          // also writes oauth_cookie_slot before redirecting to the IdP.
           const accountStore = useAccountStore.getState();
-          const pendingSlot = typeof window !== 'undefined'
-            ? parseInt(sessionStorage.getItem('oauth_cookie_slot') || '0', 10)
-            : 0;
-          const slot = pendingSlot >= 0 && pendingSlot <= 4 ? pendingSlot : accountStore.getNextCookieSlot();
+          const rawSlot = typeof window !== 'undefined'
+            ? sessionStorage.getItem('oauth_cookie_slot')
+            : null;
+          const pendingSlot = rawSlot !== null ? parseInt(rawSlot, 10) : NaN;
+          const slot = !isNaN(pendingSlot) && pendingSlot >= 0 && pendingSlot <= 4
+            ? pendingSlot
+            : accountStore.getNextCookieSlot();
 
           const tokenRes = await apiFetch(`/api/auth/token?slot=${slot}`, {
             method: 'POST',
@@ -659,6 +668,12 @@ export const useAuthStore = create<AuthState>()(
             hasError: false,
             isDefault: accountStore.accounts.length === 0,
           });
+          // The refresh-token cookie was written to `slot`. Force the stored
+          // cookieSlot to match: addAccount preserves the prior slot when
+          // re-adding an existing account, and recomputes via getNextCookieSlot
+          // for new accounts (which may disagree if another tab claimed a slot
+          // mid-flow). Either way, the cookie's slot is the source of truth.
+          accountStore.updateAccount(accountId, { cookieSlot: slot });
           accountStore.setActiveAccount(accountId);
 
           await syncStalwartAuthContext(serverUrl, username, client.getAuthHeader(), slot);
@@ -718,12 +733,19 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null, isRateLimited: false, rateLimitUntil: null });
 
         try {
-          // Server-side SSO: the server holds the PKCE verifier in an encrypted cookie
+          // Server-side SSO: the server holds the PKCE verifier in an encrypted cookie.
+          // Pass the next-free cookie slot so /api/auth/sso/complete writes the refresh
+          // token to the correct per-account jmap_rt_<slot> cookie. Without this the
+          // route hardcoded slot 0, which broke "+ Add Account" by overwriting the
+          // first account's refresh-token cookie.
+          const accountStore = useAccountStore.getState();
+          const slot = accountStore.getNextCookieSlot();
+
           const ssoRes = await apiFetch('/api/auth/sso/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ code, state }),
+            body: JSON.stringify({ code, state, slot }),
           });
 
           if (!ssoRes.ok) {
@@ -740,8 +762,6 @@ export const useAuthStore = create<AuthState>()(
           if (!ssoServerUrl) {
             throw new Error('Server URL not configured');
           }
-
-          const accountStore = useAccountStore.getState();
 
           const refreshFn = get().refreshAccessToken;
           const client = JMAPClient.withBearer(ssoServerUrl, access_token, '', () => refreshFn());
@@ -779,10 +799,13 @@ export const useAuthStore = create<AuthState>()(
             hasError: false,
             isDefault: accountStore.accounts.length === 0,
           });
+          // The refresh-token cookie was written to `slot` by /api/auth/sso/complete.
+          // Force the stored cookieSlot to match — see loginWithOAuth above for the
+          // re-add and concurrent-tab cases this guards against.
+          accountStore.updateAccount(accountId, { cookieSlot: slot });
           accountStore.setActiveAccount(accountId);
 
-          const cookieSlot = accountStore.getAccountById(accountId)?.cookieSlot ?? 0;
-          await syncStalwartAuthContext(ssoServerUrl, username, client.getAuthHeader(), cookieSlot);
+          await syncStalwartAuthContext(ssoServerUrl, username, client.getAuthHeader(), slot);
 
           set({
             isAuthenticated: true,

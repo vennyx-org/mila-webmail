@@ -13,11 +13,17 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
 
   try {
-    const { code, state } = await request.json();
+    const { code, state, slot: bodySlot } = await request.json();
 
     if (!code || !state) {
       return NextResponse.json({ error: 'Missing code or state' }, { status: 400 });
     }
+
+    // Per-account refresh-token cookie slot. Without this the route hardcoded
+    // slot 0, so the "+ Add Account" flow overwrote the first account's
+    // refresh-token cookie. Default to 0 for back-compat with any caller that
+    // omits slot. Mirrors the validation in /api/auth/token POST.
+    const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4 ? bodySlot : 0;
 
     // Read and decrypt the pending SSO cookie
     const pendingCookie = cookieStore.get(SSO_PENDING_COOKIE)?.value;
@@ -58,9 +64,9 @@ export async function POST(request: NextRequest) {
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(code, codeVerifier, redirectUri);
 
-    // Store refresh token
+    // Store refresh token in the per-account cookie slot.
     if (tokens.refresh_token) {
-      const cookieName = refreshTokenCookieName(0);
+      const cookieName = refreshTokenCookieName(slot);
       cookieStore.set(cookieName, tokens.refresh_token, getCookieOptions());
     }
 

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth-store";
+import { useAccountStore } from "@/stores/account-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { useShallow } from "zustand/react/shallow";
 import { useConfig } from "@/hooks/use-config";
@@ -459,6 +460,16 @@ export default function LoginPage() {
     if (isAddAccountMode) {
       sessionStorage.setItem("oauth_add_account_mode", "true");
     }
+
+    // Persist the next-free cookie slot so loginWithOAuth (in stores/auth-store.ts)
+    // writes the refresh token to the correct per-account jmap_rt_<slot> cookie.
+    // loginWithOAuth reads this key but it was previously never written, so every
+    // OAuth account collapsed onto slot 0 and clobbered earlier accounts' refresh
+    // tokens. getNextCookieSlot() returns 0 when no accounts exist (correct for
+    // first sign-in) and the lowest unused slot otherwise (correct for "+ Add
+    // Account").
+    const nextSlot = useAccountStore.getState().getNextCookieSlot();
+    sessionStorage.setItem("oauth_cookie_slot", nextSlot.toString());
 
     const authUrl = new URL(oauthMetadata.authorization_endpoint);
     authUrl.searchParams.set("response_type", "code");

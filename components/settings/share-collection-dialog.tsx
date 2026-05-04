@@ -79,7 +79,7 @@ export function ShareCollectionDialog({
   const t = useTranslations("sharing");
   const tCommon = useTranslations("common");
   const modalRef = useRef<HTMLDivElement>(null);
-  const [principals, setPrincipals] = useState<Principal[]>([]);
+  const [allPrincipals, setAllPrincipals] = useState<Principal[]>([]);
   const [loadingPrincipals, setLoadingPrincipals] = useState(true);
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -91,23 +91,28 @@ export function ShareCollectionDialog({
     setLoadingPrincipals(true);
     client.getPrincipals().then((list) => {
       if (cancelled) return;
-      // Exclude the user themselves and any principal that already has a share
-      const existing = new Set(Object.keys(shareWith || {}));
-      const filtered = list.filter((p) => p.id !== ownAccountId && !existing.has(p.id));
-      setPrincipals(filtered);
+      setAllPrincipals(list);
       setLoadingPrincipals(false);
     }).catch(() => {
       if (!cancelled) setLoadingPrincipals(false);
     });
     return () => { cancelled = true; };
-  }, [client, ownAccountId, shareWith]);
+  }, [client]);
 
-  // Map principal id -> Principal for displayed shares
+  // Map of every fetched principal by id, used for name/description lookups in
+  // the shared list. Must include principals that already have a share so the
+  // list shows their name rather than the raw id.
   const allPrincipalsById = useMemo(() => {
     const map = new Map<string, Principal>();
-    for (const p of principals) map.set(p.id, p);
+    for (const p of allPrincipals) map.set(p.id, p);
     return map;
-  }, [principals]);
+  }, [allPrincipals]);
+
+  // Principals available to add: exclude self and anyone already shared with.
+  const principals = useMemo(() => {
+    const existing = new Set(Object.keys(shareWith || {}));
+    return allPrincipals.filter((p) => p.id !== ownAccountId && !existing.has(p.id));
+  }, [allPrincipals, ownAccountId, shareWith]);
 
   // Close on Escape, focus trap, click outside
   useEffect(() => {
@@ -155,8 +160,6 @@ export function ShareCollectionDialog({
     setSavingId(principal.id);
     try {
       await onShare(principal.id, rights);
-      // Move principal out of the "to add" list
-      setPrincipals((prev) => prev.filter((p) => p.id !== principal.id));
       setShowAdd(false);
       setSearch("");
       toast.success(t("share_added"));

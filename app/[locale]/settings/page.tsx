@@ -213,6 +213,22 @@ export default function SettingsPage() {
     }
   }, [initialCheckDone, isAuthenticated, authLoading]);
 
+  // Sync the mobile submenu view with browser history so the system back
+  // button (or gesture) returns to the settings list before exiting /settings.
+  useEffect(() => {
+    if (isDesktop) return;
+    if (typeof window === 'undefined') return;
+    if (!mobileShowContent) return;
+
+    window.history.pushState({ __settingsSubmenu: true }, '');
+
+    const handlePop = () => {
+      setMobileShowContent(false);
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, [isDesktop, mobileShowContent]);
+
   if (!isAuthenticated) {
     return null;
   }
@@ -321,7 +337,7 @@ export default function SettingsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setMobileShowContent(false)}
+              onClick={() => window.history.back()}
               className="h-10 w-10"
             >
               <ArrowLeft className="w-5 h-5" />

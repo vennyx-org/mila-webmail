@@ -3314,6 +3314,9 @@ export class JMAPClient implements IJMAPClient {
       const err = result.notUpdated[calendarId];
       throw new Error(err.description || "Failed to update calendar share");
     }
+    if (!result?.updated || !(calendarId in result.updated)) {
+      throw new Error("Server did not confirm the share update");
+    }
   }
 
   /**
@@ -3338,6 +3341,9 @@ export class JMAPClient implements IJMAPClient {
     if (result?.notUpdated?.[addressBookId]) {
       const err = result.notUpdated[addressBookId];
       throw new Error(err.description || "Failed to update address book share");
+    }
+    if (!result?.updated || !(addressBookId in result.updated)) {
+      throw new Error("Server did not confirm the share update");
     }
   }
 

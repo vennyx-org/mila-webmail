@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.6.1 (2026-05-04)
+
+### Features
+
+- **Updates**: Update-available detection with non-dismissible notice and dev-reload refresh
+- **Plugins**: New plugin hooks for compose, attachments, search, lifecycle, and routing
+- **Sharing**: Share indicators for calendars and contacts, updated JMAP capabilities (#244)
+- **Mail**: Auto-add recipients to trusted senders when replying
+- **Identity**: Sanitize identity display name to prevent invalid `From` headers
+
+### Fixes
+
+- **Mobile**: Synchronize mobile submenu view with browser history for better navigation
+- **Viewer**: Update email viewer styles to improve overflow handling
+- **Auth**: Ensure `cookieSlot` consistency during account updates in auth store
+- **Auth**: Thread per-account cookie slot through OAuth flows
+- **Calendar**: Square the colored left marker on calendar events
+- **About**: Show git commit in About instead of "unknown"
+
+### i18n
+
+- Update mailbox context menu translations across 12 locales
+
 ## 1.6.0 (2026-05-01)
 
 ### Features
