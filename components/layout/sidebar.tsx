@@ -66,6 +66,7 @@ interface SidebarProps {
   onCreateFolder?: () => void;
   onRenameFolder?: (mailboxId: string) => void;
   onDeleteFolder?: (mailboxId: string) => void;
+  onImportEmail?: (mailboxId: string) => void;
   onRefreshMailboxes?: () => void;
   className?: string;
 }
@@ -636,6 +637,7 @@ export function Sidebar({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onImportEmail,
   onRefreshMailboxes,
   className,
 }: SidebarProps) {
@@ -1037,6 +1039,7 @@ export function Sidebar({
         onCreateFolder={onCreateFolder}
         onRenameFolder={onRenameFolder}
         onDeleteFolder={onDeleteFolder}
+        onImportEmail={onImportEmail}
         onRefresh={onRefreshMailboxes}
       />
     </div>

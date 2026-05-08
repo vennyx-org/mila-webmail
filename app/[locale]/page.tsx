@@ -1504,6 +1504,43 @@ export default function Home() {
     }
   };
 
+  const handleImportEmailFromContextMenu = (mailboxId: string) => {
+    if (!client) return;
+    const mailbox = mailboxes.find(mb => mb.id === mailboxId);
+    if (!mailbox) return;
+    const targetMailboxId = mailbox.originalId || mailbox.id;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.eml,message/rfc822';
+    input.multiple = true;
+    input.onchange = async (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files ?? []);
+      if (files.length === 0) return;
+
+      let imported = 0;
+      let failed = 0;
+      for (const file of files) {
+        try {
+          const blob = new Blob([await file.arrayBuffer()], { type: 'message/rfc822' });
+          await client.importRawEmail(blob, { [targetMailboxId]: true }, { '$seen': true });
+          imported++;
+        } catch {
+          failed++;
+        }
+      }
+
+      if (imported > 0) {
+        toast.success(t('notifications.import_email_success'));
+        if (selectedMailbox) await fetchEmails(client, selectedMailbox);
+      }
+      if (failed > 0) {
+        toast.error(t('notifications.import_email_error'));
+      }
+    };
+    input.click();
+  };
+
   const handleRefreshMailboxes = async () => {
     if (!client) return;
     try {
@@ -1894,6 +1931,7 @@ export default function Home() {
               onCreateFolder={handleCreateFolderFromContextMenu}
               onRenameFolder={handleRenameFolderFromContextMenu}
               onDeleteFolder={handleDeleteFolderFromContextMenu}
+              onImportEmail={handleImportEmailFromContextMenu}
               onRefreshMailboxes={handleRefreshMailboxes}
               onCompose={() => {
                 setComposerMode('compose');

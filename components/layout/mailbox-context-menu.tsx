@@ -20,6 +20,7 @@ import {
   Pencil,
   FolderX,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 
 interface Position {
@@ -84,6 +85,7 @@ interface MailboxContextMenuProps {
   onCreateFolder?: () => void;
   onRenameFolder?: (mailboxId: string) => void;
   onDeleteFolder?: (mailboxId: string) => void;
+  onImportEmail?: (mailboxId: string) => void;
   onRefresh?: () => void;
 }
 
@@ -102,6 +104,7 @@ export function MailboxContextMenu({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onImportEmail,
   onRefresh,
 }: MailboxContextMenuProps) {
   const t = useTranslations("mailbox_context_menu");
@@ -149,6 +152,7 @@ export function MailboxContextMenu({
   const canCreateChild = mailbox.myRights?.mayCreateChild !== false;
   const canSetSeen = mailbox.myRights?.maySetSeen !== false;
   const canRemoveItems = mailbox.myRights?.mayRemoveItems !== false;
+  const canAddItems = mailbox.myRights?.mayAddItems !== false;
 
   const fullPath = getMailboxPath(mailbox, mailboxes);
 
@@ -186,6 +190,15 @@ export function MailboxContextMenu({
         label={t("rename")}
         onClick={() => handleAction(() => onRenameFolder?.(mailbox.id))}
         disabled={!onRenameFolder || !canRename}
+      />
+
+      <ContextMenuSeparator />
+
+      <ContextMenuItem
+        icon={Upload}
+        label={t("import_email")}
+        onClick={() => handleAction(() => onImportEmail?.(mailbox.id))}
+        disabled={!onImportEmail || !canAddItems}
       />
 
       <ContextMenuSeparator />
