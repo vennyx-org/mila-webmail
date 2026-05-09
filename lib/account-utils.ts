@@ -65,7 +65,7 @@ export function getAccountScopedKey(baseKey: string, accountId: string): string 
 /**
  * Hard upper bound on cookie slots. Each slot can hold up to ~3 cookies
  * (session, refresh token, server id, auth context), so 50 slots ≈ 125
- * cookies on average — within Firefox's per-domain limit of 150.
+ * cookies on average - within Firefox's per-domain limit of 150.
  */
 export const MAX_ACCOUNT_SLOTS = 50;
 
@@ -83,7 +83,7 @@ export const MAX_ACCOUNTS_HTTP1 = 5;
  * We walk recent resource-timing entries and treat a single h2/h3 sighting
  * as a positive signal. Cross-origin entries may report an empty
  * `nextHopProtocol` without `Timing-Allow-Origin`, in which case we
- * under-detect and fall back to the conservative cap — that's safe.
+ * under-detect and fall back to the conservative cap - that's safe.
  */
 export function isHttp2Available(): boolean {
   if (typeof performance === 'undefined') return false;

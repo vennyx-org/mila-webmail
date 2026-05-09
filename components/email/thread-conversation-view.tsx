@@ -331,7 +331,7 @@ function EmailCard({
         htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
         // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
         // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
-        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody —
+        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody -
         // in that case there is no real plain-text alternative, so always render the HTML.
         const textPartId = email.textBody?.[0]?.partId;
         const htmlPartId = email.htmlBody[0].partId;

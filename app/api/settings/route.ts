@@ -6,7 +6,7 @@ import { sessionCookieName } from '@/lib/auth/session-cookie';
 import { readStalwartAuthContextFromStore } from '@/lib/stalwart/auth-context';
 import { saveUserSettings, loadUserSettings, deleteUserSettings } from '@/lib/settings-sync';
 import { configManager } from '@/lib/admin/config-manager';
-import { readFileEnv } from '@/lib/read-file-env';
+import { hasSessionSecret } from '@/lib/auth/session-secret';
 import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
 function classifyError(error: unknown): { message: string; status: number } {
@@ -50,7 +50,10 @@ function classifyError(error: unknown): { message: string; status: number } {
 }
 
 function isEnabled(): boolean {
-  return process.env.SETTINGS_SYNC_ENABLED === 'true' && (!!process.env.SESSION_SECRET || !!readFileEnv(process.env.SESSION_SECRET_FILE));
+  const flagOn =
+    process.env.SETTINGS_SYNC_ENABLED === 'true' ||
+    configManager.get<boolean>('settingsSyncEnabled', false);
+  return flagOn && hasSessionSecret();
 }
 
 /** Strip trailing slashes so differently-formatted URLs still match. */

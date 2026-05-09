@@ -114,7 +114,7 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
     setDefaultAccount(accountId);
   };
 
-  // Show the account's own identity, not the preferred sending identity —
+  // Show the account's own identity, not the preferred sending identity -
   // primaryIdentity can be an alias (e.g. info@korazo.net) that differs from
   // the actually logged-in account (info@linusrath.de).
   const displayName = activeAccount?.displayName || activeAccount?.label || "";

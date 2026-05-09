@@ -3,17 +3,14 @@ import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
-
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
+import { getConfigDir, assertWritable } from './paths';
 
 function getPluginsDir(): string {
-  return path.join(getAdminDir(), 'plugins');
+  return path.join(getConfigDir(), 'plugins');
 }
 
 function getThemesDir(): string {
-  return path.join(getAdminDir(), 'themes');
+  return path.join(getConfigDir(), 'themes');
 }
 
 // ─── Types ───────────────────────────────────────────────────
@@ -141,6 +138,7 @@ export async function savePlugin(
   plugin: ServerPlugin,
   code: string,
 ): Promise<void> {
+  assertWritable('install plugin');
   const dir = getPluginsDir();
   await ensureDir(dir);
 
@@ -171,6 +169,7 @@ export async function savePlugin(
 }
 
 export async function updatePluginMeta(id: string, updates: Partial<Pick<ServerPlugin, 'enabled' | 'forceEnabled'>>): Promise<ServerPlugin | null> {
+  assertWritable('update plugin metadata');
   const registry = await getPluginRegistry();
   const idx = registry.plugins.findIndex(p => p.id === id);
   if (idx < 0) return null;
@@ -181,6 +180,7 @@ export async function updatePluginMeta(id: string, updates: Partial<Pick<ServerP
 }
 
 export async function deletePlugin(id: string): Promise<boolean> {
+  assertWritable('delete plugin');
   const registry = await getPluginRegistry();
   const idx = registry.plugins.findIndex(p => p.id === id);
   if (idx < 0) return false;
@@ -221,6 +221,7 @@ export async function saveTheme(
   theme: ServerTheme,
   css: string,
 ): Promise<void> {
+  assertWritable('install theme');
   const dir = getThemesDir();
   await ensureDir(dir);
 
@@ -240,6 +241,7 @@ export async function saveTheme(
 }
 
 export async function updateThemeMeta(id: string, updates: Partial<Pick<ServerTheme, 'enabled' | 'forceEnabled'>>): Promise<ServerTheme | null> {
+  assertWritable('update theme metadata');
   const registry = await getThemeRegistry();
   const idx = registry.themes.findIndex(t => t.id === id);
   if (idx < 0) return null;
@@ -250,6 +252,7 @@ export async function updateThemeMeta(id: string, updates: Partial<Pick<ServerTh
 }
 
 export async function deleteTheme(id: string): Promise<boolean> {
+  assertWritable('delete theme');
   const registry = await getThemeRegistry();
   const idx = registry.themes.findIndex(t => t.id === id);
   if (idx < 0) return false;

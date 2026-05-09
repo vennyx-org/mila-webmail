@@ -281,7 +281,7 @@ export function EmailComposer({
   const currentIdentity = selectedIdentityId
     ? identities.find((identity) => identity.id === selectedIdentityId) || primaryIdentity
     : primaryIdentity;
-  // Alias identities often lack a configured signature — fall back to the primary
+  // Alias identities often lack a configured signature - fall back to the primary
   // identity's signature so replies (which auto-select a matching alias) still
   // populate the user's signature.
   const signatureIdentity = (currentIdentity?.htmlSignature || currentIdentity?.textSignature)

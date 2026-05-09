@@ -1,11 +1,29 @@
 // Admin dashboard types
 
-export interface AdminData {
+/**
+ * Operator-authored admin record. Lives in admin.json under the config dir
+ * and can be mounted read-only after setup. Only the password hash itself
+ * is config; mutable timestamps live in AdminStateData.
+ */
+export interface AdminConfigData {
   passwordHash: string;
+}
+
+/**
+ * Runtime-mutable admin record. Lives in admin-state.json under the state
+ * dir. Updated on every login and password change, so it must stay writable.
+ */
+export interface AdminStateData {
   createdAt: string;
   lastLogin: string | null;
   passwordChangedAt: string;
 }
+
+/**
+ * Combined view used by getAdminMeta() and tests. Constructed by merging
+ * admin.json + admin-state.json at read time.
+ */
+export interface AdminData extends AdminConfigData, AdminStateData {}
 
 export interface AdminSessionPayload {
   role: 'admin';

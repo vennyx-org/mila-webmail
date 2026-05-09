@@ -2296,7 +2296,7 @@ export function EmailViewer({
         htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
         // Per RFC 8621 § 4.1.4, when a message has only one alternative the server
         // exposes the same part in both htmlBody and textBody. The shared part may
-        // actually be text/plain (plain-text-only mail) — rendering that as HTML
+        // actually be text/plain (plain-text-only mail) - rendering that as HTML
         // collapses newlines and skips linkification, so route by the part's type.
         const htmlPart = email.htmlBody[0];
         if (htmlPart.type && htmlPart.type.toLowerCase() !== 'text/html') {
@@ -2691,7 +2691,7 @@ export function EmailViewer({
     // double re-inverting images nested inside those containers.
     // Nested bgcolor containers must NOT add another invert layer: each filter
     // toggles the inversion, so an odd number of stacked filters (e.g. body +
-    // outer bgcolor table + inner bgcolor table) produces an inverted result —
+    // outer bgcolor table + inner bgcolor table) produces an inverted result -
     // i.e. light-on-light. The second rule disables filter on bgcolor-like
     // elements that are descendants of another bgcolor-like element.
     const darkModeCSS = isDark && !emailHasNativeDarkMode ? `
@@ -2888,7 +2888,7 @@ export function EmailViewer({
             // Re-invert emoji glyphs so they keep their original colors. The
             // body's invert filter flips colored emoji (yellow smiley → blue,
             // red heart → cyan, etc.). Wrap each emoji run in a span that
-            // re-inverts. Only act when the ancestor invert depth is odd —
+            // re-inverts. Only act when the ancestor invert depth is odd -
             // emojis inside a double-inverted bgcolor container already render
             // at their original colors.
             let emojiRe: RegExp;
