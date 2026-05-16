@@ -98,6 +98,16 @@ async function handlePush(event) {
     ? payload.accountLabel
     : "";
 
+  // JMAP StateChange wraps changes in { changed: { [accountId]: {...} } }.
+  // The relay forwards a single account's StateChange per push, so the first
+  // key is the one this notification is for. Without this the preview API
+  // would just fall back to the first signed-in slot and surface mail from
+  // the wrong account.
+  const changed = payload && payload.changed && typeof payload.changed === "object"
+    ? payload.changed
+    : null;
+  const accountId = changed ? Object.keys(changed)[0] || "" : "";
+
   // Best effort: ask the webmail to look up the latest unread email so we can
   // build a useful notification. If the request fails (offline, session
   // expired, server down) we fall back to a generic "New mail" so the user
@@ -105,7 +115,10 @@ async function handlePush(event) {
   let preview = null;
   let previewOk = false;
   try {
-    const res = await fetch(`${BASE_PATH}/api/push/preview`, {
+    const previewUrl = accountId
+      ? `${BASE_PATH}/api/push/preview?accountId=${encodeURIComponent(accountId)}`
+      : `${BASE_PATH}/api/push/preview`;
+    const res = await fetch(previewUrl, {
       credentials: "include",
       cache: "no-store",
     });
