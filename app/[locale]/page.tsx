@@ -60,6 +60,7 @@ import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Button } from "@/components/ui/button";
 import { useConfig } from "@/hooks/use-config";
 import { usePluginStore } from "@/stores/plugin-store";
+import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { useThemeStore } from "@/stores/theme-store";
 import { consumePendingMailto, subscribeToPendingMailto } from "@/lib/protocol-handlers/session";
 import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
@@ -97,7 +98,7 @@ export default function Home() {
   const [pendingMailtoAccountChoice, setPendingMailtoAccountChoice] = useState<ParsedMailto | null>(null);
   const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { isAuthenticated, client, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
+  const { isAuthenticated, client, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil, username, serverUrl } = useAuthStore();
   const { identities } = useIdentityStore();
   useIdentitySync();
   const trustedSendersAddressBook = useSettingsStore((state) => state.trustedSendersAddressBook);
@@ -1960,6 +1961,7 @@ export default function Home() {
   return (
     <DragDropProvider>
       <div className="flex flex-col h-dvh bg-background overflow-hidden pt-[env(safe-area-inset-top)]">
+        <PluginSlot name="app-top-banner" extraProps={{ username, serverUrl }} />
         {isRateLimited && rateLimitSecondsLeft !== null && (
           <div className="flex items-center justify-center gap-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300 text-sm py-1.5 px-4 flex-shrink-0">
             <AlertTriangle className="h-3.5 w-3.5" />

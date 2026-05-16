@@ -185,6 +185,15 @@ export interface PluginAPI {
   i18n: PluginI18n;
   ui: {
     registerToolbarAction: (action: ToolbarAction) => Disposable;
+    /**
+     * Register a banner that renders at the very top of the authenticated app
+     * shell — above the navigation rail, sidebar and content panes. Used for
+     * persistent global notices (impersonation, maintenance, etc.). The
+     * component receives `{ username, serverUrl }` as props.
+     *
+     * Requires the `ui:app-top-banner` permission.
+     */
+    registerAppTopBanner: (component: React.ComponentType<Record<string, unknown>>) => Disposable;
     registerEmailBanner: (factory: BannerFactory) => Disposable;
     registerEmailFooter: (component: React.ComponentType) => Disposable;
     registerSettingsSection: (section: SettingsSection) => Disposable;
@@ -708,6 +717,11 @@ export function createPluginAPI(plugin: InstalledPlugin): PluginAPI {
       registerEmailBanner: (factory: BannerFactory) => {
         requirePermission(plugin, 'ui:email-banner');
         return registerSlot(plugin.id, 'email-banner', factory.render as unknown as React.ComponentType<Record<string, unknown>>, 100);
+      },
+
+      registerAppTopBanner: (component: React.ComponentType<Record<string, unknown>>) => {
+        requirePermission(plugin, 'ui:app-top-banner');
+        return registerSlot(plugin.id, 'app-top-banner', component, 100);
       },
 
       registerEmailFooter: (component: React.ComponentType) => {

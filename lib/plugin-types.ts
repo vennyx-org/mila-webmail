@@ -230,6 +230,7 @@ export interface InstalledPlugin {
 
 export type SlotName =
   | 'toolbar-actions'
+  | 'app-top-banner'
   | 'email-banner'
   | 'email-footer'
   | 'composer-toolbar'
@@ -778,7 +779,7 @@ export const ALL_PERMISSIONS = [
   'security:read',
   'auth:observe',
   'http:post', 'http:fetch',
-  'ui:observe', 'ui:toolbar', 'ui:email-banner', 'ui:email-footer',
+  'ui:observe', 'ui:toolbar', 'ui:app-top-banner', 'ui:email-banner', 'ui:email-footer',
   'ui:composer-toolbar', 'ui:composer-sidebar',
   'ui:sidebar-widget', 'ui:settings-section',
   'ui:context-menu', 'ui:navigation-rail', 'ui:keyboard',

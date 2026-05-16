@@ -44,6 +44,7 @@ function resetStore() {
     plugins: [],
     slots: {
       'toolbar-actions': [],
+      'app-top-banner': [],
       'email-banner': [],
       'email-footer': [],
       'composer-toolbar': [],

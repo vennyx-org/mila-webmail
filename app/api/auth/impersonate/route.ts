@@ -1,0 +1,126 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { logger } from '@/lib/logger';
+import { encryptSession } from '@/lib/auth/crypto';
+import { SESSION_COOKIE_MAX_AGE, sessionCookieName } from '@/lib/auth/session-cookie';
+import { getCookieOptions } from '@/lib/oauth/cookie-config';
+import { normalizeJmapServerUrl } from '@/lib/auth/verify-jmap-auth';
+import { setStalwartAuthContextInStore } from '@/lib/stalwart/auth-context';
+import { recordLogin } from '@/lib/telemetry/login-tracker';
+import {
+  ImpersonationJwtError,
+  impersonationReplayCache,
+  verifyImpersonationJwt,
+} from '@/lib/impersonation/jwt';
+import {
+  readImpersonationConfig,
+  resolveImpersonationServerUrl,
+} from '@/lib/impersonation/master-config';
+
+export const runtime = 'nodejs';
+
+const IMPERSONATION_SLOT = 0;
+
+function sessionCookieOptions() {
+  return { ...getCookieOptions(), maxAge: SESSION_COOKIE_MAX_AGE };
+}
+
+/**
+ * GET /api/auth/impersonate?token=<jwt>
+ *
+ * Master-user impersonation via signed JWT. The token carries the target
+ * mailbox; Bulwark verifies the signature, resolves the configured Stalwart
+ * master credentials from env, then mints the same session cookies the
+ * password-login path produces. The browser is redirected to "/" and the
+ * SPA hydrates as if the user had just logged in with master@target%master.
+ *
+ * Returns 404 when the feature is not configured so an unconfigured
+ * deployment does not advertise the endpoint.
+ */
+export async function GET(request: NextRequest) {
+  const config = readImpersonationConfig();
+  if (!config) {
+    // Not configured — behave exactly like an unknown route.
+    return new NextResponse('Not found', { status: 404 });
+  }
+
+  const token = request.nextUrl.searchParams.get('token');
+  if (!token) {
+    return NextResponse.json({ error: 'Missing token' }, { status: 400 });
+  }
+
+  let claims;
+  try {
+    claims = verifyImpersonationJwt(token, config.jwtSecret, {
+      expectedIssuer: config.expectedIssuer,
+    });
+  } catch (err) {
+    if (err instanceof ImpersonationJwtError) {
+      logger.warn('Impersonation JWT rejected', { code: err.code });
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    logger.error('Impersonation JWT error', {
+      error: err instanceof Error ? err.message : 'Unknown',
+    });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+
+  if (!impersonationReplayCache.consume(claims.jti, claims.exp)) {
+    logger.warn('Impersonation JWT replay rejected', { jti: claims.jti });
+    return NextResponse.json({ error: 'Token already used' }, { status: 401 });
+  }
+
+  const serverUrl = await resolveImpersonationServerUrl();
+  if (!serverUrl) {
+    logger.error('Impersonation requested but jmapServerUrl is not configured');
+    return NextResponse.json({ error: 'JMAP server not configured' }, { status: 500 });
+  }
+
+  let normalizedServerUrl: string;
+  try {
+    normalizedServerUrl = normalizeJmapServerUrl(serverUrl);
+  } catch {
+    return NextResponse.json({ error: 'Invalid JMAP server URL' }, { status: 500 });
+  }
+
+  // Stalwart master-user impersonation: username = "<target>%<master>",
+  // password = <master_password>. Per Stalwart docs:
+  //   https://stalw.art/docs/auth/authorization/administrator/
+  const impersonatedUsername = `${claims.mailbox}%${config.masterUser}`;
+  const authHeader = `Basic ${Buffer.from(
+    `${impersonatedUsername}:${config.masterPassword}`,
+  ).toString('base64')}`;
+
+  const cookieStore = await cookies();
+  const sessionToken = encryptSession(
+    normalizedServerUrl,
+    impersonatedUsername,
+    config.masterPassword,
+  );
+  cookieStore.set(sessionCookieName(IMPERSONATION_SLOT), sessionToken, sessionCookieOptions());
+  setStalwartAuthContextInStore(cookieStore, IMPERSONATION_SLOT, {
+    serverUrl: normalizedServerUrl,
+    username: impersonatedUsername,
+    authHeader,
+  });
+
+  // Structured audit log — operators rely on this for security review.
+  logger.info('Impersonation session granted', {
+    event: 'impersonation_granted',
+    jti: claims.jti,
+    mailbox: claims.mailbox,
+    tenant_id: claims.tenant_id,
+    actor_user_id: claims.actor_user_id,
+    iss: claims.iss,
+    ip:
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      null,
+    referer: request.headers.get('referer'),
+    user_agent: request.headers.get('user-agent'),
+  });
+
+  void recordLogin(impersonatedUsername, normalizedServerUrl);
+
+  return NextResponse.redirect(new URL('/', request.url), 303);
+}
