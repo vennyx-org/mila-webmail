@@ -1,3 +1,5 @@
+import { isPublicHttpUrl } from '../security/url-guard';
+
 export interface OAuthMetadata {
   issuer: string;
   authorization_endpoint: string;
@@ -22,6 +24,20 @@ function rememberMetadata(serverUrl: string, metadata: OAuthMetadata): void {
   metadataCache.set(serverUrl, { metadata, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
+// Endpoints come from an attacker-controllable JSON document when callers pass
+// a user-supplied serverUrl (e.g. /api/auth/totp-token-exchange under
+// allowCustomJmapEndpoint). Without this gate, a malicious metadata document
+// could point token_endpoint at 169.254.169.254 or 127.0.0.1:* and turn the
+// downstream fetch() into an SSRF with response-body reflection.
+async function endpointsArePublic(endpoints: Array<string | undefined>): Promise<boolean> {
+  for (const endpoint of endpoints) {
+    if (endpoint === undefined) continue;
+    if (typeof endpoint !== 'string') return false;
+    if (!(await isPublicHttpUrl(endpoint))) return false;
+  }
+  return true;
+}
+
 export async function discoverOAuth(serverUrl: string): Promise<OAuthMetadata | null> {
   const cached = metadataCache.get(serverUrl);
   if (cached && cached.expiresAt > Date.now()) return cached.metadata;
@@ -44,6 +60,16 @@ export async function discoverOAuth(serverUrl: string): Promise<OAuthMetadata | 
 
       const data = await response.json();
       if (data.authorization_endpoint && data.token_endpoint) {
+        const allPublic = await endpointsArePublic([
+          data.authorization_endpoint,
+          data.token_endpoint,
+          data.revocation_endpoint,
+          data.end_session_endpoint,
+        ]);
+        if (!allPublic) {
+          errors.push(`${url} returned non-public or invalid endpoint URL`);
+          continue;
+        }
         const metadata: OAuthMetadata = {
           issuer: data.issuer,
           authorization_endpoint: data.authorization_endpoint,
