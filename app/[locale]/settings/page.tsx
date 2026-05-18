@@ -590,7 +590,7 @@ export default function SettingsPage() {
 
     // Apps
     ...(supportsCalendar ? [{ id: 'calendar' as Tab, label: t('tabs.calendar'), icon: tabIcons.calendar, group: 'apps' as TabGroup }] : []),
-    { id: 'contacts', label: t('tabs.contacts'), icon: tabIcons.contacts, group: 'apps' },
+    ...(isFeatureEnabled('contactsEnabled') ? [{ id: 'contacts' as Tab, label: t('tabs.contacts'), icon: tabIcons.contacts, group: 'apps' as TabGroup }] : []),
     ...(supportsFiles && isFeatureEnabled('filesEnabled') ? [{ id: 'files' as Tab, label: t('tabs.files'), icon: tabIcons.files, group: 'apps' as TabGroup }] : []),
     ...(isFeatureEnabled('sidebarAppsEnabled') ? [{ id: 'sidebar_apps' as Tab, label: t('tabs.sidebar_apps'), icon: tabIcons.sidebar_apps, group: 'apps' as TabGroup }] : []),
 

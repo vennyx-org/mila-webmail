@@ -273,6 +273,8 @@ export function AuthTab() {
         <Text label="OAuth Client ID" configKey="oauthClientId" value={currentValue('oauthClientId') as string} source={config.oauthClientId?.source} onChange={handleChange} onRevert={handleRevert} />
         <Text label="OAuth Client Secret" configKey="oauthClientSecret" value={currentValue('oauthClientSecret') as string} source={config.oauthClientSecret?.source} onChange={handleChange} onRevert={handleRevert} type="password" placeholder={config.oauthClientSecret?.hasValue ? '••••••••  (saved — type to replace)' : undefined} />
         <Text label="OAuth Issuer URL" configKey="oauthIssuerUrl" value={currentValue('oauthIssuerUrl') as string} source={config.oauthIssuerUrl?.source} onChange={handleChange} onRevert={handleRevert} placeholder="https://auth.example.com" />
+        <Text label="OAuth Scopes" description="Space-separated scopes that replace the defaults. Leave blank to use the built-in scope list." configKey="oauthScopes" value={currentValue('oauthScopes') as string} source={config.oauthScopes?.source} onChange={handleChange} onRevert={handleRevert} placeholder="openid email offline_access" />
+        <Text label="OAuth Extra Scopes" description="Additional space-separated scopes appended to the defaults." configKey="oauthExtraScopes" value={currentValue('oauthExtraScopes') as string} source={config.oauthExtraScopes?.source} onChange={handleChange} onRevert={handleRevert} placeholder="urn:ietf:params:oauth:..." />
       </Section>
 
       <Section title="Single Sign-On">

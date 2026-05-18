@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
@@ -19,6 +19,7 @@ import { AppTopBannerSlot } from "@/components/plugins/app-top-banner-slot";
 import { useContactStore, getContactDisplayName } from "@/stores/contact-store";
 import { useAuthStore, redirectToLogin } from "@/stores/auth-store";
 import { useEmailStore } from "@/stores/email-store";
+import { usePolicyStore } from "@/stores/policy-store";
 import { toast } from "@/stores/toast-store";
 import { cn, generateUUID } from "@/lib/utils";
 import { NavigationRail } from "@/components/layout/navigation-rail";
@@ -43,6 +44,7 @@ type View =
 
 export default function ContactsPage() {
   const t = useTranslations("contacts");
+  const contactsEnabled = usePolicyStore((s) => s.isFeatureEnabled('contactsEnabled'));
   const { client, isAuthenticated, logout, checkAuth, isLoading: authLoading } = useAuthStore();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
   const [initialCheckDone, setInitialCheckDone] = useState(() => useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().client);
@@ -640,6 +642,18 @@ export default function ContactsPage() {
         );
     }
   };
+
+  if (!contactsEnabled) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-background p-6">
+        <div className="max-w-lg text-center space-y-3">
+          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <p className="text-sm font-medium">Contacts feature is disabled by your administrator</p>
+          <p className="text-xs text-muted-foreground">Please contact your administrator if you need access.</p>
+        </div>
+      </div>
+    );
+  }
 
   const showListPanel = !isMobile || view === "list";
   const showRightPanel = !isMobile || view !== "list";
