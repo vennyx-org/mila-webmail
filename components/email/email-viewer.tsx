@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Email, ContactCard, Mailbox } from "@/lib/jmap/types";
-import { EMAIL_IFRAME_SANITIZE_CONFIG, collapseBlockedImageContainers, plainTextToSafeHtml } from "@/lib/email-sanitization";
+import { EMAIL_IFRAME_SANITIZE_CONFIG, collapseBlockedImageContainers, escapeHtml, plainTextToSafeHtml, sanitizeEmailHtml } from "@/lib/email-sanitization";
 import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -3066,14 +3066,26 @@ export function EmailViewer({
     if (!email) return;
     const printSender = email.from?.[0];
     const date = email.sentAt ? formatDateTime(email.sentAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '';
-    const toList = email.to?.map(r => r.name ? `${r.name} &lt;${r.email}&gt;` : r.email).join(', ') || '';
-    const ccList = email.cc?.map(r => r.name ? `${r.name} &lt;${r.email}&gt;` : r.email).join(', ') || '';
+    const formatRecipient = (r: { name?: string | null; email: string }) =>
+      r.name ? `${escapeHtml(r.name)} &lt;${escapeHtml(r.email)}&gt;` : escapeHtml(r.email);
+    const toList = email.to?.map(formatRecipient).join(', ') || '';
+    const ccList = email.cc?.map(formatRecipient).join(', ') || '';
+    const subjectText = email.subject || t('no_subject');
+    const senderText = printSender?.name
+      ? `${printSender.name} <${printSender.email}>`
+      : printSender?.email || t('unknown_sender');
+    // The body was sanitized with EMAIL_IFRAME_SANITIZE_CONFIG which permits
+    // <style>. The print window has no iframe isolation, so re-sanitize with
+    // the stricter config that forbids <style> before injecting into the DOM.
+    const printableBody = effectiveEmailContent.isHtml
+      ? sanitizeEmailHtml(effectiveEmailContent.html)
+      : effectiveEmailContent.html;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     printWindow.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${DOMPurify.sanitize(email.subject || t('no_subject'))}</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(subjectText)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; color: #000; }
   .header { border-bottom: 1px solid #ccc; padding-bottom: 16px; margin-bottom: 16px; }
@@ -3085,15 +3097,15 @@ export function EmailViewer({
   @media print { body { margin: 20px; } }
 </style></head><body>
 <div class="header">
-  <div class="subject">${DOMPurify.sanitize(email.subject || t('no_subject'))}</div>
+  <div class="subject">${escapeHtml(subjectText)}</div>
   <div class="meta">
-    <div><strong>${t('from')}:</strong> ${DOMPurify.sanitize(printSender?.name ? `${printSender.name} <${printSender.email}>` : printSender?.email || t('unknown_sender'))}</div>
-    ${toList ? `<div><strong>${t('to')}:</strong> ${toList}</div>` : ''}
+    <div><strong>${escapeHtml(t('from'))}:</strong> ${escapeHtml(senderText)}</div>
+    ${toList ? `<div><strong>${escapeHtml(t('to'))}:</strong> ${toList}</div>` : ''}
     ${ccList ? `<div><strong>CC:</strong> ${ccList}</div>` : ''}
-    ${date ? `<div><strong>${t('date')}:</strong> ${DOMPurify.sanitize(date)}</div>` : ''}
+    ${date ? `<div><strong>${escapeHtml(t('date'))}:</strong> ${escapeHtml(date)}</div>` : ''}
   </div>
 </div>
-<div class="body">${effectiveEmailContent.html}</div>
+<div class="body">${printableBody}</div>
 </body></html>`);
     printWindow.document.close();
     printWindow.focus();
