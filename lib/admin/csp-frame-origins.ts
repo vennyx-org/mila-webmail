@@ -73,7 +73,7 @@ export function isValidApiPostPath(path: unknown): path is string {
   if (!path.startsWith('/api/')) return false;
   if (path.includes('..')) return false;
   if (/[\s'"`;,()?#]/.test(path)) return false;
-  if (!/^[/A-Za-z0-9._\-]+$/.test(path)) return false;
+  if (!/^[/A-Za-z0-9._-]+$/.test(path)) return false;
   return true;
 }
 
