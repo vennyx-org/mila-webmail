@@ -4,16 +4,16 @@ import { useRef, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Mail, Calendar, BookUser, HardDrive, Settings, PenSquare, MailOpen, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useProTabStore, type ProTab, type ProTabKind, type ProPaneId } from "@/stores/pro-tab-store";
+import { useProTabStore, type ProTab, type ProTabKind } from "@/stores/pro-tab-store";
 
 /** Custom MIME type used to carry the dragged Pro tab id between handlers. */
 export const PRO_TAB_DRAG_MIME = "application/x-pro-tab-id";
 
 interface ProTabBarProps {
-  /** Tabs belonging to this bar's pane, already filtered + ordered. */
+  /** All tabs (both panes). Order in the array is the order in the bar. */
   tabs: ProTab[];
-  activeTabId: string | null;
-  paneId: ProPaneId;
+  activeMainTabId: string | null;
+  activeSplitTabId: string | null;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
   onDragStateChange?: (dragging: boolean) => void;
@@ -34,8 +34,8 @@ type DropIndicator = { targetId: string; edge: "before" | "after" } | null;
 
 export function ProTabBar({
   tabs,
-  activeTabId,
-  paneId,
+  activeMainTabId,
+  activeSplitTabId,
   onActivate,
   onClose,
   onDragStateChange,
@@ -43,8 +43,7 @@ export function ProTabBar({
 }: ProTabBarProps) {
   const tSidebar = useTranslations("sidebar");
   const reorderTab = useProTabStore((s) => s.reorderTab);
-  const moveTabToPane = useProTabStore((s) => s.moveTabToPane);
-  const splitOrientation = useProTabStore((s) => s.splitOrientation);
+  const focusedPaneId = useProTabStore((s) => s.focusedPaneId);
 
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
   const dragLeaveTimer = useRef<number | null>(null);
@@ -82,9 +81,6 @@ export function ProTabBar({
   };
 
   const handleStripDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    // Clear the indicator only when the cursor truly leaves the strip; the
-    // intermediate dragleave events that fire as the cursor crosses tab
-    // boundaries would otherwise flicker the indicator off.
     const next = e.relatedTarget as Node | null;
     if (next && e.currentTarget.contains(next)) return;
     if (dragLeaveTimer.current !== null) window.clearTimeout(dragLeaveTimer.current);
@@ -107,8 +103,6 @@ export function ProTabBar({
     handleDragEnd();
   };
 
-  // Dropping on the empty trailing area moves the tab to the end of this bar's
-  // pane. If the dragged tab was in the other pane, that also moves it here.
   const handleStripEndDrop = (e: DragEvent<HTMLDivElement>) => {
     if (!isProTabDrag(e)) return;
     e.preventDefault();
@@ -118,10 +112,7 @@ export function ProTabBar({
       return;
     }
     const last = tabs[tabs.length - 1];
-    if (!last) {
-      // Bar is empty — move into this pane.
-      moveTabToPane(draggedId, paneId, splitOrientation ?? "vertical");
-    } else if (last.id !== draggedId) {
+    if (last && last.id !== draggedId) {
       reorderTab(draggedId, last.id, "after");
     }
     handleDragEnd();
@@ -149,7 +140,12 @@ export function ProTabBar({
     >
       {tabs.map((tab) => {
         const Icon = TAB_ICONS[tab.kind];
-        const isActive = tab.id === activeTabId;
+        const isActiveMain = tab.id === activeMainTabId && tab.paneId === 'main';
+        const isActiveSplit = tab.id === activeSplitTabId && tab.paneId === 'split';
+        const isActive = isActiveMain || isActiveSplit;
+        const isFocusedActive =
+          (isActiveMain && focusedPaneId === 'main')
+          || (isActiveSplit && focusedPaneId === 'split');
         const label = tab.title ?? tSidebar(tab.labelKey);
         const showBefore = dropIndicator?.targetId === tab.id && dropIndicator.edge === "before";
         const showAfter = dropIndicator?.targetId === tab.id && dropIndicator.edge === "after";
@@ -159,6 +155,7 @@ export function ProTabBar({
             role="tab"
             aria-selected={isActive}
             data-tab-id={tab.id}
+            data-pane-id={tab.paneId}
             draggable
             onClick={() => onActivate(tab.id)}
             onMouseDown={(e) => {
@@ -176,8 +173,9 @@ export function ProTabBar({
               "min-w-0 flex-1 basis-0 max-w-[200px] [min-width:80px]",
               "border-r border-border first:border-l",
               isActive
-                ? "bg-background text-foreground font-medium"
+                ? "bg-background text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              isFocusedActive && "font-medium",
             )}
             style={
               isActive
@@ -185,7 +183,7 @@ export function ProTabBar({
                 : undefined
             }
           >
-            <Icon className={cn("w-4 h-4 flex-shrink-0", isActive && "text-primary")} />
+            <Icon className={cn("w-4 h-4 flex-shrink-0", isFocusedActive && "text-primary")} />
             <span className="truncate flex-1 min-w-0" title={label}>{label}</span>
 
             {tab.closeable && (
@@ -229,8 +227,7 @@ export function ProTabBar({
         );
       })}
 
-      {/* Trailing area soaks up drops past the last tab and lets cross-pane
-          moves drop onto an empty bar. */}
+      {/* Trailing area soaks up drops past the last tab. */}
       <div
         className="flex-1 min-w-[8px]"
         onDragOver={handleStripEndDragOver}
