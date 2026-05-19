@@ -2236,15 +2236,33 @@ export class JMAPClient implements IJMAPClient {
     if (response.methodResponses) {
       for (const [methodName, result] of response.methodResponses) {
         if (methodName.endsWith('/error')) {
-          console.error('JMAP method error:', result);
+          console.error('[sendEmail] JMAP method error:', methodName, result);
           throw new Error(result.description || `Failed to send email: ${result.type}`);
         }
 
         if (result.notCreated) {
-          const errors = result.notCreated;
-          const firstError = Object.values(errors)[0] as { description?: string; type?: string };
-          console.error('Email send error:', firstError);
-          throw new Error(firstError?.description || firstError?.type || 'Failed to send email');
+          // Include method name + full error object so it's clear whether the
+          // failure came from Email/set (draft create) or EmailSubmission/set
+          // (actual send) and which JMAP error type/properties were returned.
+          // Without this the user sees a generic "Failed to send" toast and
+          // the draft sits in Drafts with no indication of why (#303).
+          const errors = result.notCreated as Record<string, {
+            type?: string;
+            description?: string;
+            properties?: string[];
+          }>;
+          const firstError = Object.values(errors)[0];
+          console.error(
+            `[sendEmail] ${methodName} notCreated:`,
+            JSON.stringify(errors, null, 2),
+          );
+          const propsHint = firstError?.properties?.length
+            ? ` (properties: ${firstError.properties.join(', ')})`
+            : '';
+          const typeHint = firstError?.type ? ` [${firstError.type}]` : '';
+          throw new Error(
+            `${firstError?.description || firstError?.type || 'Failed to send email'}${typeHint}${propsHint}`,
+          );
         }
       }
     }

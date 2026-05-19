@@ -320,9 +320,17 @@ export function EmailComposer({
   const [showCc, setShowCc] = useState(initialData?.showCc ?? !!getInitialCc());
   const [showBcc, setShowBcc] = useState(initialData?.showBcc ?? false);
   const [draftId, setDraftId] = useState<string | null>(initialData?.draftId ?? null);
+  // Mirror of draftId for synchronous reads inside chained saves; React's
+  // setDraftId is async, so a queued saveDraft would otherwise see the old
+  // value and try to destroy a draft that was just replaced.
+  const draftIdRef = useRef<string | null>(initialData?.draftId ?? null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<string>("");
+  // Tracks the currently-running saveDraft so concurrent callers (autosave
+  // timer + send button) serialize instead of issuing parallel destroy/create
+  // requests with the same draftId. See bug #303.
+  const inflightSaveRef = useRef<Promise<string | null> | null>(null);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>(() => {
     if (mode === 'forward' && replyTo?.attachments?.length) {
       return replyTo.attachments
@@ -897,7 +905,7 @@ export function EmailComposer({
   };
 
   // Auto-save draft functionality
-  const saveDraft = async (): Promise<string | null> => {
+  const saveDraftOnce = async (): Promise<string | null> => {
     if (!client) return null;
 
     const toAddresses = to.split(",").map(e => e.trim()).filter(Boolean);
@@ -923,7 +931,7 @@ export function EmailComposer({
 
     // Only save if data has changed
     if (currentData === lastSavedDataRef.current) {
-      return draftId;
+      return draftIdRef.current;
     }
 
     setSaveStatus('saving');
@@ -943,6 +951,7 @@ export function EmailComposer({
       : (currentIdentity?.name || undefined);
 
     try {
+      const previousDraftId = draftIdRef.current;
       const savedDraftId = await client.createDraft(
         toAddresses,
         subject || t('no_subject'),
@@ -951,12 +960,15 @@ export function EmailComposer({
         bccAddresses,
         currentIdentity?.id,
         fromEmail,
-        draftId || undefined,
+        previousDraftId || undefined,
         uploadedAttachments,
         fromName,
         plainTextMode ? undefined : body
       );
 
+      // Update the ref synchronously so a queued save sees the new id and
+      // doesn't try to destroy the just-replaced draft.
+      draftIdRef.current = savedDraftId;
       setDraftId(savedDraftId);
       lastSavedDataRef.current = currentData;
       setSaveStatus('saved');
@@ -971,6 +983,28 @@ export function EmailComposer({
       setTimeout(() => setSaveStatus('idle'), 3000);
       return null;
     }
+  };
+
+  // Serialize saves: each call waits for the previous in-flight save before
+  // running. This prevents the autosave timer and the send button from
+  // racing two `Email/set { destroy, create }` requests against the same
+  // draftId, which left orphan drafts and (when EmailSubmission failed)
+  // looked like "send didn't happen" (#303).
+  const saveDraft = (): Promise<string | null> => {
+    const previous = inflightSaveRef.current;
+    const promise = (async (): Promise<string | null> => {
+      if (previous) {
+        try { await previous; } catch { /* prior failure already reported */ }
+      }
+      return saveDraftOnce();
+    })();
+    inflightSaveRef.current = promise;
+    promise.finally(() => {
+      if (inflightSaveRef.current === promise) {
+        inflightSaveRef.current = null;
+      }
+    });
+    return promise;
   };
 
   // Keep saveDraftRef pointing to latest saveDraft
@@ -990,6 +1024,10 @@ export function EmailComposer({
 
     // Set new timeout for auto-save (2 seconds after last change)
     saveTimeoutRef.current = setTimeout(() => {
+      // Clear the ref so handleSend can distinguish "save scheduled" from
+      // "save in flight" - the former still needs flushing, the latter is
+      // tracked via inflightSaveRef.
+      saveTimeoutRef.current = null;
       // Plugin observers (AI assist, grammar, …) get a debounced snapshot here.
       emailHooks.onDraftChange.emit({
         to: to.split(',').map(s => s.trim()).filter(Boolean),
@@ -1113,14 +1151,28 @@ export function EmailComposer({
       }
     }
 
-    let finalDraftId = draftId;
+    // Resolve the freshest draftId we can. Two cases:
+    //   1. An autosave is currently in flight - wait for it; don't issue a
+    //      parallel destroy/create that would race with it on the same id.
+    //   2. A debounced save is scheduled (timer set) - cancel it and flush
+    //      now so the latest body content lands on the server.
+    // Use draftIdRef (not the React state) because state updates from
+    // the in-flight save may not have rendered yet when we read here.
+    let finalDraftId = draftIdRef.current;
+    if (inflightSaveRef.current) {
+      try {
+        const savedId = await inflightSaveRef.current;
+        if (savedId) finalDraftId = savedId;
+      } catch (err) {
+        debug.error('In-flight draft save failed before send:', err);
+      }
+    }
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
       try {
         const savedId = await saveDraft();
-        if (savedId) {
-          finalDraftId = savedId;
-        }
+        if (savedId) finalDraftId = savedId;
       } catch (err) {
         debug.error('Failed to save draft before send:', err);
       }
@@ -1383,6 +1435,7 @@ export function EmailComposer({
       setBcc("");
       setSubject("");
       setBody("");
+      draftIdRef.current = null;
       setDraftId(null);
       setSubAddressTag("");
       setValidationErrors({});
