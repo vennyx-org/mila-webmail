@@ -113,6 +113,7 @@ export default function Home() {
   const { identities } = useIdentityStore();
   useIdentitySync();
   const trustedSendersAddressBook = useSettingsStore((state) => state.trustedSendersAddressBook);
+  const sendDelaySeconds = useSettingsStore((state) => state.sendDelaySeconds);
   const { loadTrustedSendersBook, trustedSendersLoaded } = useContactStore();
 
   // Load trusted senders address book when feature is enabled
@@ -1107,7 +1108,6 @@ export default function Home() {
       if (result.scheduled) {
         await refreshScheduledMetadata(client);
         if (isScheduledView) await fetchScheduledEmails(client);
-        toast.success(t('email_viewer.scheduled_send_created'));
         return;
       }
 
@@ -1263,9 +1263,10 @@ export default function Home() {
 
     lastUndoToastSubmissionRef.current = pendingUndoSend.submissionId;
     const pending = pendingUndoSend;
+    const undoDurationMs = Math.max(sendDelaySeconds, 8) * 1000;
 
-    toast.info(t('email_viewer.undo_send_scheduled'), {
-      duration: 8000,
+    toast.success(t('email_viewer.scheduled_send_created'), {
+      duration: undoDurationMs,
       action: {
         label: t('email_viewer.undo_send'),
         onClick: () => {
@@ -1289,11 +1290,11 @@ export default function Home() {
       if (current?.submissionId === pending.submissionId) {
         clearPendingUndoSend();
       }
-    }, 8000);
+    }, undoDurationMs);
 
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cancelUndoSend, clearPendingUndoSend, client, fetchScheduledEmails, isScheduledView, pendingUndoSend?.submissionId, t]);
+  }, [cancelUndoSend, clearPendingUndoSend, client, fetchScheduledEmails, isScheduledView, pendingUndoSend?.submissionId, sendDelaySeconds, t]);
 
   const handleReplyAll = async () => {
     if (selectedEmail) {
@@ -2812,7 +2813,6 @@ export default function Home() {
                       await refreshScheduledMetadata(client);
                       if (isScheduledView) await fetchScheduledEmails(client);
                     }
-                    toast.success(t('email_viewer.scheduled_send_created'));
                     setShowComposer(false);
                     setPendingDraft(null);
                   }}
