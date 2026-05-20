@@ -434,12 +434,30 @@ function parseAction(raw: string): FilterAction | null {
   return null;
 }
 
+function findBodyOpenBrace(s: string): number {
+  // Locate the first `{` that introduces the if-block body, skipping over
+  // string literals and comments. A naive indexOf('{') would otherwise pick
+  // up braces inside condition values (e.g. `:contains "{foo}"`).
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '"') { i = skipStringLit(s, i); continue; }
+    if (c === '#') { i = skipHashComment(s, i); continue; }
+    if (c === '/' && s[i + 1] === '*') { i = skipBlockComment(s, i); continue; }
+    if (c === '{') return i;
+    i++;
+  }
+  return -1;
+}
+
 function parseIfBlockToRule(block: TopBlock, idPrefix: string, index: number): FilterRule | null {
   const stmt = block.statement;
   const afterIf = stmt.replace(/^if\s+/, '');
-  const braceIdx = afterIf.indexOf('{');
-  const lastBraceIdx = afterIf.lastIndexOf('}');
-  if (braceIdx === -1 || lastBraceIdx === -1 || lastBraceIdx < braceIdx) return null;
+  const braceIdx = findBodyOpenBrace(afterIf);
+  // scanTopLevel's skipIfStatement uses balanced-brace scanning, so the
+  // statement always terminates at the matching `}`.
+  const lastBraceIdx = afterIf.length - 1;
+  if (braceIdx === -1 || afterIf[lastBraceIdx] !== '}' || lastBraceIdx < braceIdx) return null;
 
   const condStr = afterIf.slice(0, braceIdx).trim();
   const bodyStr = afterIf.slice(braceIdx + 1, lastBraceIdx).trim();
@@ -681,12 +699,15 @@ export function parseScript(content: string): ParseResult {
 
     // Drop any external "rules" that are really the bulwark-managed if-blocks or vacation.
     // Recognizable by the leading comment "# Rule: <name>" or "# Vacation auto-reply".
+    // This applies regardless of whether the block parsed as a structured rule or
+    // fell back to opaque - a Bulwark-emitted block may fail to round-trip cleanly
+    // (e.g. a value with literal braces) but the `# Rule: <name>` marker still
+    // identifies it as ours.
     const filteredExternal = external.rules.filter(r => {
       const raw = r.rawBlock || '';
-      if (/#\s*Rule:\s*/.test(raw) && r.origin === 'external') {
-        // If the name matches a bulwark rule name exactly, treat as bulwark-emitted
-        const match = raw.match(/#\s*Rule:\s*(.+?)\s*$/m);
-        const name = match ? match[1].trim() : '';
+      const match = raw.match(/#\s*Rule:\s*(.+?)\s*$/m);
+      if (match) {
+        const name = match[1].trim();
         if (bulwarkRules.some(b => b.name === name)) return false;
       }
       if (/#\s*Vacation auto-reply/i.test(raw)) return false;

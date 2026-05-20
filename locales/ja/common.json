@@ -135,6 +135,40 @@
     "shared": "共有",
     "scheduled": "予約済み"
   },
+  "protocol_handlers": {
+    "title": "既定のアプリ",
+    "description": "メールとカレンダーのリンクを Bulwark で開くかどうかを選択します。技術的には、Bulwark は mailto: と webcal: リンクのプロトコル ハンドラーとして登録されます。",
+    "unsupported": "このブラウザーまたは接続では、プロトコル ハンドラーの手動登録がサポートされていません。インストール済みの PWA は、ブラウザーまたはシステム設定から使用できる場合があります。",
+    "mailto_label": "メールリンク",
+    "mailto_description": "mailto: リンクを、入力済みの作成画面で Bulwark に開きます。",
+    "protocol_open_mode_label": "プロトコルリンクを開くとき",
+    "protocol_open_mode_description": "Bulwark が mailto: と webcal: のリンクを新しいタブで開くか、開いているセッションを再利用するかを選択します。アクティブなセッションのオプションでは通知の許可が必要です。ブラウザーがフォーカスをブロックした場合に、代替通知をクリックして Bulwark を前面に表示できます。",
+    "protocol_open_mode_active_session": "可能な場合はアクティブなセッションで開く",
+    "protocol_open_mode_new_tab": "常に新しいタブを開く",
+    "focus_notification_title": "Bulwark を開く",
+    "focus_notification_body": "リンクは Bulwark で開かれました。クリックするとウィンドウを前面に表示します。",
+    "webcal_label": "カレンダーリンク",
+    "webcal_description": "webcal: リンクを、入力済みのカレンダー購読ダイアログで Bulwark に開きます。",
+    "register_mailto": "メールアプリを登録",
+    "register_webcal": "カレンダーアプリを登録",
+    "mailto_registered": "メール ハンドラーの登録を要求しました",
+    "webcal_registered": "カレンダー ハンドラーの登録を要求しました",
+    "registration_failed": "プロトコル ハンドラーの登録に失敗しました",
+    "opening_mailto": "作成画面を開いています...",
+    "opening_webcal": "カレンダーを開いています...",
+    "browser_note": "ブラウザーまたはオペレーティング システムから確認を求められる場合があります。また、既定のアプリとして選択する前に Bulwark のインストールが必要な場合があります。",
+    "select_account_title": "アカウントを選択",
+    "select_mailto_account": "このメールリンクを開くアカウントを選択してください。",
+    "select_webcal_account": "このカレンダーリンクを開くアカウントを選択してください。",
+    "select_account_note": "この選択は、このプロトコル リンクにのみ適用されます。",
+    "detail_to": "宛先",
+    "detail_subject": "件名",
+    "detail_no_subject": "件名なし",
+    "detail_calendar": "カレンダー",
+    "detail_source": "ソース",
+    "active_account": "アクティブ",
+    "switching_account": "アカウントを切り替えています..."
+  },
   "sidebar_apps": {
     "modal_title": "サイドバーアプリ",
     "add_new": "アプリを追加",
@@ -225,6 +259,8 @@
     "compose": "作成",
     "compose_hint": "新しいメッセージを作成",
     "no_subject": "（件名なし）",
+    "no_body_content": "（本文がありません）",
+    "no_preview_available": "プレビューは利用できません",
     "loading_email": "メールを読み込み中...",
     "loading": "読み込み中...",
     "reply": "返信",
@@ -548,6 +584,15 @@
       "to": "宛先: {recipients}"
     },
     "remove_sub_address": "サブアドレスを削除",
+    "from_override": {
+      "toggle_off": "上書き",
+      "toggle_on": "上書きを取り消す",
+      "toggle_tooltip": "差出人名とアドレスを自由に編集できます。メールは引き続きあなたのアイデンティティ経由で送信されます - 表示される差出人ヘッダーのみが変更されます。",
+      "name_label": "差出人名",
+      "name_placeholder": "名前",
+      "email_label": "差出人メールアドレス",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "テンプレート",
     "save_as_template": "テンプレートとして保存",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "暗号化",
       "files": "ファイル",
       "contacts": "連絡先",
+      "protocol_handlers": "既定のアプリ",
       "sidebar_apps": "サイドバーアプリ",
       "notifications": "通知",
       "layout": "レイアウト",
@@ -973,7 +1019,9 @@
         "split": "分割ペイン",
         "split_description": "メッセージリストと読み取りペインを並べて表示します。",
         "focus": "集中リスト",
-        "focus_description": "メッセージごとに1行表示し、フォルダサイドバーを表示したままメールを全幅で開きます。"
+        "focus_description": "メッセージごとに1行表示し、フォルダサイドバーを表示したままメールを全幅で開きます。",
+        "horizontal": "閲覧ペインを下に表示",
+        "horizontal_description": "メッセージ一覧を上に表示し、選択したメッセージを下の閲覧ペインで開きます。"
       },
       "disable_threading": {
         "label": "会話グループ化を無効にする",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "返信元アドレスを自動選択",
         "description": "返信時に、元のメッセージを受信したIDへ差出人アドレスを自動的に切り替えます"
+      },
+      "signature_position": {
+        "label": "署名の位置",
+        "description": "返信や転送で署名を挿入する位置。引用テキストの上は返信の締めとして自然に読めます。下は元のメッセージを続けて表示します。",
+        "above_quote": "引用テキストの前",
+        "below_quote": "引用テキストの後"
+      },
+      "signature_separator": {
+        "label": "署名区切り",
+        "description": "署名の前に標準の区切り行「-- 」（RFC 3676）を付けます。本文から署名へ直接続けたい場合はオフにしてください。"
       },
       "sub_address_delimiter": {
         "label": "サブアドレス区切り文字",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "新しいサブフォルダー...",
     "new_folder": "新しいフォルダー...",
     "rename": "名前を変更...",
+    "import_email": ".eml をインポート...",
     "empty_folder": "フォルダーを空にする",
     "empty_folder_generic": "フォルダーを空にする",
     "delete_folder": "フォルダーを削除",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archive@email.com",
       "text_signature_label": "テキスト署名",
       "html_signature_label": "HTML署名",
+      "signature_byte_counter": "{bytes} / {max} バイト",
+      "signature_byte_limit_reached": "サーバーの上限に達しました",
       "save": "送信者情報を保存",
       "cancel": "キャンセル",
       "creating": "作成中...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "ファイルサイズが10MBを超えています",
       "invalid_format": "無効なカレンダーファイル形式"
     },
+    "webcal_action": {
+      "title": "カレンダーリンクを開く",
+      "description": "\"{name}\"をどのように使用しますか？",
+      "import_title": "一度だけインポート",
+      "import_description": "今すぐ予定を取得し、いずれかのカレンダーにコピーします。",
+      "subscribe_title": "購読",
+      "subscribe_description": "このカレンダーを別のカレンダーとして自動的に同期します。",
+      "cancel": "キャンセル"
+    },
     "management": {
       "title": "カレンダー管理",
       "description": "カレンダーの作成、名前変更、カスタマイズができます。サイドバーのカレンダーを右クリックして色を素早く変更できます。",
@@ -2821,6 +2891,8 @@
     "restart_title": "紹介ツアー",
     "restart_desc": "インターフェースのガイドツアーを再生する",
     "restart_button": "ツアーを再開",
+    "show_on_new_devices_title": "新しいデバイスで表示",
+    "show_on_new_devices_desc": "他のデバイスで完了済みでも、新しいデバイスで初めてサインインしたときにウェルカムバナーとツアーを再表示します",
     "sidebar_title": "メールボックス",
     "sidebar_desc": "フォルダーサイドバーです。メールボックスをクリックしてメールを表示できます。フォルダーの作成、メールのドラッグ移動、未読数の確認ができます。",
     "compose_title": "メールを作成",

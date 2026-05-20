@@ -107,15 +107,15 @@ const emails: MockEmail[] = [
   // =====================================================================
   {
     id: 'email-001', threadId: 'thread-001', mailboxIds: { 'mb-inbox': true }, keywords: {}, size: 4200, receivedAt: daysAgo(0),
-    from: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }],
+    from: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }],
     to: [{ name: 'Dev User', email: 'dev@localhost' }], cc: [],
     subject: 'Willkommen bei Bulwark Webmail!',
-    preview: 'Hallo! This is a sample email to help you get started with the Bulwark Webmail development environment.',
+    preview: 'Hallo! Welcome to Bulwark - a modern, open-source webmail client for Stalwart Mail Server, built fresh on JMAP.',
     hasAttachment: false,
-    textBody: [{ partId: 'p1', blobId: 'blob-001', size: 280, type: 'text/plain' }],
+    textBody: [{ partId: 'p1', blobId: 'blob-001', size: 2200, type: 'text/plain' }],
     htmlBody: [],
     bodyValues: {
-      p1: { value: 'Hallo!\n\nThis is a sample email to help you get started with the Bulwark Webmail development environment.\n\nFeel free to explore the UI - all data here is mock data.\n\nBeste Grüße,\nSophie' },
+      p1: { value: 'Hallo!\n\nWelcome to Bulwark - a modern, open-source webmail client for Stalwart Mail Server, built fresh on the JMAP protocol. No PHP, no 2008 architecture, no plugin-of-plugins archaeology; just clean TypeScript and Next.js, instant push, and a UI that feels like a native app instead of a Gmail polyfill.\n\nWhy JMAP matters: one TLS connection instead of long-polling, push notifications the moment new mail arrives, batched mutations so a click never waits on three round-trips, and threading stitched on the server rather than reassembled in the browser. The result is a webmail that feels quick on a flaky train Wi-Fi and quicker on fibre.\n\nMail, calendar, contacts, and files - everything Stalwart already serves, surfaced through a single window. Threaded inbox with full-text search and Sieve filters. Month, week, day and agenda views with recurring events and iMIP invitations. Multiple address books with vCard import and export. File previews backed by Stalwart\'s JMAP FileNode storage. S/MIME, templates, keyboard shortcuts, dark mode, dozens of languages - the boring stuff that should just work, working.\n\nTwo containers behind your reverse proxy of choice is all it takes to host it yourself: Stalwart for the server side, Bulwark for the client. Caddy, Traefik, nginx - pick one, there are working examples for each. Stalwart stays the source of truth, Bulwark is what you point your browser at, and the setup wizard handles the parts that would otherwise live in a config file.\n\nIt is AGPL, the codebase is small enough to read in an afternoon, and the extension directory already hosts a growing collection of plugins and themes. If something is missing, you can fork it, file an issue, or send a patch - a person will read it.\n\nBeste Grüße,\nSophie' },
     },
   },
   {
@@ -198,7 +198,7 @@ const emails: MockEmail[] = [
     id: 'email-014', threadId: 'thread-013', mailboxIds: { 'mb-inbox': true }, keywords: {}, size: 3400, receivedAt: hoursAgo(2),
     from: [{ name: 'Lars Johansson', email: 'lars.johansson@fjord-systems.example' }],
     to: [{ name: 'Dev User', email: 'dev@localhost' }],
-    cc: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }, { name: 'Élise Moreau', email: 'elise.moreau@fjord-systems.example' }],
+    cc: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }, { name: 'Élise Moreau', email: 'elise.moreau@fjord-systems.example' }],
     subject: 'Sprint planning - next week priorities',
     preview: 'Hej team, here are the priorities for next sprint. Please review before our planning meeting tomorrow.',
     hasAttachment: false,
@@ -368,7 +368,7 @@ const emails: MockEmail[] = [
   },
   {
     id: 'email-026', threadId: 'thread-013', mailboxIds: { 'mb-inbox': true }, keywords: {}, size: 2400, receivedAt: hoursAgo(1),
-    from: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }],
+    from: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }],
     to: [{ name: 'Lars Johansson', email: 'lars.johansson@fjord-systems.example' }],
     cc: [{ name: 'Dev User', email: 'dev@localhost' }, { name: 'Élise Moreau', email: 'elise.moreau@fjord-systems.example' }],
     subject: 'Re: Sprint planning - next week priorities',
@@ -472,7 +472,7 @@ const emails: MockEmail[] = [
   {
     id: 'email-008', threadId: 'thread-007', mailboxIds: { 'mb-sent': true }, keywords: { $seen: true }, size: 3100, receivedAt: daysAgo(5),
     from: [{ name: 'Dev User', email: 'dev@localhost' }],
-    to: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }], cc: [],
+    to: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }], cc: [],
     subject: 'Design review feedback',
     preview: 'Hallo Sophie, I reviewed the new mockups and have a few suggestions.',
     hasAttachment: false,
@@ -486,7 +486,7 @@ const emails: MockEmail[] = [
     id: 'email-027', threadId: 'thread-013', mailboxIds: { 'mb-sent': true }, keywords: { $seen: true }, size: 1900, receivedAt: hoursAgo(0.5),
     from: [{ name: 'Dev User', email: 'dev@localhost' }],
     to: [{ name: 'Lars Johansson', email: 'lars.johansson@fjord-systems.example' }],
-    cc: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }, { name: 'Élise Moreau', email: 'elise.moreau@fjord-systems.example' }],
+    cc: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }, { name: 'Élise Moreau', email: 'elise.moreau@fjord-systems.example' }],
     subject: 'Re: Sprint planning - next week priorities',
     preview: 'Great suggestions Sophie. 10:30 works for me. I\'ll update the calendar invite.',
     hasAttachment: false,
@@ -640,7 +640,7 @@ const emails: MockEmail[] = [
   },
   {
     id: 'email-012', threadId: 'thread-011', mailboxIds: { 'mb-archive': true }, keywords: { $seen: true, $flagged: true }, size: 2600, receivedAt: daysAgo(30),
-    from: [{ name: 'Sophie Müller', email: 'sophie@eurotech.example' }],
+    from: [{ name: 'Sophie Example', email: 'sophie@eurotech.example' }],
     to: [{ name: 'Dev User', email: 'dev@localhost' }], cc: [],
     subject: 'Conference talk accepted!',
     preview: 'Toll! Your talk proposal for the JMAP Conf has been accepted!',
@@ -729,8 +729,8 @@ const IDENTITIES = [
     email: 'dev@localhost',
     replyTo: null,
     bcc: null,
-    textSignature: '-- \nDev User\nBulwark Webmail Developer',
-    htmlSignature: '<p>--<br>Dev User<br><em>Bulwark Webmail Developer</em></p>',
+    textSignature: 'Dev User\nBulwark Webmail Developer',
+    htmlSignature: '<p>Dev User<br><em>Bulwark Webmail Developer</em></p>',
     mayDelete: false,
   },
 ];
@@ -744,6 +744,12 @@ const addressBooks = [
   { id: 'ab-2', name: 'Arbeit / Work', isDefault: false },
 ];
 
+// Profile photos served straight from randomuser.me's CDN; the API at
+// https://randomuser.me/api/ also returns these portrait URLs, but for a
+// fixed mock dataset we link them directly to keep things offline-friendly.
+// See https://randomuser.me/documentation#howto
+const PORTRAIT = (gender: 'men' | 'women', n: number) => `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
+
 const contacts = [
   // --- Personal address book ---
   { id: 'contact-001', uid: 'urn:uuid:c0000001-0000-0000-0000-000000000001', addressBookIds: { 'ab-1': true }, kind: 'individual',
@@ -753,6 +759,7 @@ const contacts = [
     organizations: { o1: { name: 'EuroTech GmbH' } },
     addresses: { a1: { street: [{ value: 'Kurfürstendamm 42' }], locality: 'Berlin', region: '', country: 'Germany', postcode: '10719' } },
     notes: { n1: { note: 'Frontend lead. Always brings Kuchen to the office.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 14), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-002', uid: 'urn:uuid:c0000002-0000-0000-0000-000000000002', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Pierre' }, { kind: 'surname', value: 'Dubois' }] },
@@ -761,6 +768,7 @@ const contacts = [
     organizations: { o1: { name: 'Dubois Consulting' } },
     addresses: { a1: { street: [{ value: '42 Rue de Rivoli' }], locality: 'Paris', country: 'France', postcode: '75001' } },
     notes: { n1: { note: 'Product manager. Knows every boulangerie in Paris.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 23), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-003', uid: 'urn:uuid:c0000003-0000-0000-0000-000000000003', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Chiara' }, { kind: 'surname', value: 'Rossi' }] },
@@ -769,6 +777,7 @@ const contacts = [
     organizations: { o1: { name: 'Rossi Design Studio' } },
     addresses: { a1: { street: [{ value: 'Via Montenapoleone 8' }], locality: 'Milano', country: 'Italy', postcode: '20121' } },
     notes: { n1: { note: 'UX designer. Her risotto recipes are legendary.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 40), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-004', uid: 'urn:uuid:c0000004-0000-0000-0000-000000000004', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Karel' }, { kind: 'surname', value: 'de Vries' }] },
@@ -776,6 +785,7 @@ const contacts = [
     phones: { p1: { number: '+31 20 555 0142' } },
     addresses: { a1: { street: [{ value: 'Herengracht 142' }], locality: 'Amsterdam', country: 'Netherlands', postcode: '1015 BN' } },
     notes: { n1: { note: 'Backend developer. Cycles to work rain or shine - true Dutchman.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 45), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-005', uid: 'urn:uuid:c0000005-0000-0000-0000-000000000005', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Lars' }, { kind: 'surname', value: 'Johansson' }] },
@@ -784,6 +794,7 @@ const contacts = [
     organizations: { o1: { name: 'Fjord Systems AB' } },
     addresses: { a1: { street: [{ value: 'Drottninggatan 42' }], locality: 'Stockholm', country: 'Sweden', postcode: '111 51' } },
     notes: { n1: { note: 'Tech lead. FIKA is sacred. Do not schedule meetings during fika.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 61), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-006', uid: 'urn:uuid:c0000006-0000-0000-0000-000000000006', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Élise' }, { kind: 'surname', value: 'Moreau' }] },
@@ -792,6 +803,7 @@ const contacts = [
     organizations: { o1: { name: 'Fjord Systems AB' } },
     addresses: { a1: { street: [{ value: '15 Boulevard Saint-Germain' }], locality: 'Paris', country: 'France', postcode: '75005' } },
     notes: { n1: { note: 'Backend dev. Remote from Paris. Once fixed a production bug from a café terrace.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 29), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-007', uid: 'urn:uuid:c0000007-0000-0000-0000-000000000007', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Francesco' }, { kind: 'surname', value: 'Bianchi' }] },
@@ -799,6 +811,7 @@ const contacts = [
     phones: { p1: { number: '+39 06 9876 5432' } },
     addresses: { a1: { street: [{ value: 'Via dei Condotti 22' }], locality: 'Roma', country: 'Italy', postcode: '00187' } },
     notes: { n1: { note: 'Old university friend. Once tried to implement RFC 2549 (IP over Avian Carriers) with actual pigeons. It did not scale.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 72), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-008', uid: 'urn:uuid:c0000008-0000-0000-0000-000000000008', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Astrid' }, { kind: 'surname', value: 'van der Berg' }] },
@@ -807,6 +820,7 @@ const contacts = [
     organizations: { o1: { name: 'BergLabs' } },
     addresses: { a1: { street: [{ value: 'Prinsengracht 263' }], locality: 'Amsterdam', country: 'Netherlands', postcode: '1016 GV' } },
     notes: { n1: { note: 'Solutions architect. Her whiteboard diagrams belong in a museum.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 58), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-009', uid: 'urn:uuid:c0000009-0000-0000-0000-000000000009', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Henrik' }, { kind: 'surname', value: 'Nielsen' }] },
@@ -815,6 +829,7 @@ const contacts = [
     organizations: { o1: { name: 'Nielsen Konsult' } },
     addresses: { a1: { street: [{ value: 'Nyhavn 42' }], locality: 'København', country: 'Denmark', postcode: '1051' } },
     notes: { n1: { note: 'Freelance DevOps. Speaks 5 languages. Kubernetes kubectl alias: k → kansen.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 35), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-010', uid: 'urn:uuid:c0000010-0000-0000-0000-000000000010', addressBookIds: { 'ab-1': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Isabelle' }, { kind: 'surname', value: 'Martin' }] },
@@ -823,6 +838,7 @@ const contacts = [
     organizations: { o1: { name: 'Sorbonne Université' } },
     addresses: { a1: { street: [{ value: '21 Rue de l\'École de Médecine' }], locality: 'Paris', country: 'France', postcode: '75006' } },
     notes: { n1: { note: 'Professor of computer science. Thesis on formal verification of email protocols.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 63), mediaType: 'image/jpeg' } },
   },
   // --- Work address book ---
   { id: 'contact-011', uid: 'urn:uuid:c0000011-0000-0000-0000-000000000011', addressBookIds: { 'ab-2': true }, kind: 'individual',
@@ -832,6 +848,7 @@ const contacts = [
     organizations: { o1: { name: 'Lefèvre & Associés' } },
     addresses: { a1: { street: [{ value: '8 Avenue de l\'Opéra' }], locality: 'Paris', country: 'France', postcode: '75001' } },
     notes: { n1: { note: 'Lawyer. Specializes in IP and tech law. Always replies within 42 minutes.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 81), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-012', uid: 'urn:uuid:c0000012-0000-0000-0000-000000000012', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Katrin' }, { kind: 'surname', value: 'Bauer' }] },
@@ -840,6 +857,7 @@ const contacts = [
     organizations: { o1: { name: 'Charité Klinik Berlin' } },
     addresses: { a1: { street: [{ value: 'Charitéplatz 1' }], locality: 'Berlin', country: 'Germany', postcode: '10117' } },
     notes: { n1: { note: 'Medical center admin. Organizes the best team events in Berlin.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 26), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-013', uid: 'urn:uuid:c0000013-0000-0000-0000-000000000013', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Liam' }, { kind: 'surname', value: 'Ó Donaill' }] },
@@ -848,6 +866,7 @@ const contacts = [
     organizations: { o1: { name: 'Finanz Dublin' } },
     addresses: { a1: { street: [{ value: '42 St. Stephen\'s Green' }], locality: 'Dublin', country: 'Ireland', postcode: 'D02 HX65' } },
     notes: { n1: { note: 'Finance lead. Can explain SEPA regulations over a pint of Guinness.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 19), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-014', uid: 'urn:uuid:c0000014-0000-0000-0000-000000000014', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'María' }, { kind: 'surname', value: 'García' }] },
@@ -856,6 +875,7 @@ const contacts = [
     organizations: { o1: { name: 'García Design Studio' } },
     addresses: { a1: { street: [{ value: 'Calle Gran Vía 42' }], locality: 'Madrid', country: 'Spain', postcode: '28013' } },
     notes: { n1: { note: 'Brand designer. Her color palettes are pure art. Siesta enthusiast.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 50), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-015', uid: 'urn:uuid:c0000015-0000-0000-0000-000000000015', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Nils' }, { kind: 'surname', value: 'Andersson' }] },
@@ -864,6 +884,7 @@ const contacts = [
     organizations: { o1: { name: 'Digitaal BV' } },
     addresses: { a1: { street: [{ value: 'Vijzelstraat 42' }], locality: 'Amsterdam', country: 'Netherlands', postcode: '1017 HK' } },
     notes: { n1: { note: 'Platform engineer. fika buddy. Appreciates a good kanelbulle.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 57), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-016', uid: 'urn:uuid:c0000016-0000-0000-0000-000000000016', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Olivia' }, { kind: 'surname', value: 'Kowalska' }] },
@@ -872,6 +893,7 @@ const contacts = [
     organizations: { o1: { name: 'Kowalska Marketing' } },
     addresses: { a1: { street: [{ value: 'ul. Nowy Świat 42' }], locality: 'Warszawa', country: 'Poland', postcode: '00-363' } },
     notes: { n1: { note: 'Marketing strategist. Her campaign analytics dashboards are works of art.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 71), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-017', uid: 'urn:uuid:c0000017-0000-0000-0000-000000000017', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Pádraig' }, { kind: 'surname', value: 'Murphy' }] },
@@ -880,6 +902,7 @@ const contacts = [
     organizations: { o1: { name: 'Murphy Bau GmbH' } },
     addresses: { a1: { street: [{ value: 'Grafton Street 42' }], locality: 'Dublin', country: 'Ireland', postcode: 'D02 R296' } },
     notes: { n1: { note: 'Construction project manager. Irish-German bilingual. Builds things that last.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 93), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-018', uid: 'urn:uuid:c0000018-0000-0000-0000-000000000018', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Raquel' }, { kind: 'surname', value: 'Ferreira' }] },
@@ -888,6 +911,7 @@ const contacts = [
     organizations: { o1: { name: 'Ferreira Media' } },
     addresses: { a1: { street: [{ value: 'Rua Augusta 42' }], locality: 'Lisboa', country: 'Portugal', postcode: '1100-053' } },
     notes: { n1: { note: 'Media consultant. Can turn any press release into poetry. Loves pastéis de nata.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 82), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-019', uid: 'urn:uuid:c0000019-0000-0000-0000-000000000019', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Sébastien' }, { kind: 'surname', value: 'Dumont' }] },
@@ -896,6 +920,7 @@ const contacts = [
     organizations: { o1: { name: 'Dumont Conseil' } },
     addresses: { a1: { street: [{ value: 'Avenue Louise 42' }], locality: 'Bruxelles', country: 'Belgium', postcode: '1050' } },
     notes: { n1: { note: 'Strategy consultant. Knows the difference between Belgian and French chocolate. Will argue passionately about it.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('men', 4), mediaType: 'image/jpeg' } },
   },
   { id: 'contact-020', uid: 'urn:uuid:c0000020-0000-0000-0000-000000000020', addressBookIds: { 'ab-2': true }, kind: 'individual',
     name: { components: [{ kind: 'given', value: 'Annika' }, { kind: 'surname', value: 'Lindgren' }] },
@@ -905,6 +930,7 @@ const contacts = [
     addresses: { a1: { street: [{ value: 'Strandvägen 42' }], locality: 'Stockholm', country: 'Sweden', postcode: '114 56' } },
     nicknames: { n1: { name: 'Anni' } },
     notes: { n1: { note: 'Independent consultant specializing in GDPR compliance. Yes, she has opinions about cookie banners.' } },
+    media: { photo1: { kind: 'photo' as const, uri: PORTRAIT('women', 36), mediaType: 'image/jpeg' } },
   },
   // --- Groups ---
   { id: 'contact-group-001', addressBookIds: { 'ab-1': true }, kind: 'group' as const,
@@ -977,7 +1003,7 @@ const calendarEvents = [
     participants: {
       p1: participant('Dev User', 'dev@localhost', 'owner'),
       p2: participant('Lars Johansson', 'lars.johansson@fjord-systems.example'),
-      p3: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p3: participant('Sophie Example', 'sophie@eurotech.example'),
       p4: participant('Élise Moreau', 'elise.moreau@fjord-systems.example'),
     },
     alerts: { a1: { trigger: { '@type': 'OffsetTrigger', offset: '-PT5M', relativeTo: 'start' }, action: 'display' } },
@@ -987,7 +1013,7 @@ const calendarEvents = [
     participants: {
       p1: participant('Dev User', 'dev@localhost', 'owner'),
       p2: participant('Lars Johansson', 'lars.johansson@fjord-systems.example'),
-      p3: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p3: participant('Sophie Example', 'sophie@eurotech.example'),
       p4: participant('Élise Moreau', 'elise.moreau@fjord-systems.example'),
       p5: participant('Astrid van der Berg', 'astrid@berglabs.example'),
     },
@@ -1025,7 +1051,7 @@ const calendarEvents = [
     virtualLocations: { vl1: { uri: 'https://meet.example/eurotech', name: 'Teams' } },
     participants: {
       p1: participant('Dev User', 'dev@localhost', 'owner'),
-      p2: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p2: participant('Sophie Example', 'sophie@eurotech.example'),
       p3: participant('Pierre Dubois', 'pierre@dubois.example'),
     },
     description: 'Discuss API rate limit escalation for EuroTech enterprise account.',
@@ -1055,7 +1081,7 @@ const calendarEvents = [
     participants: {
       p1: participant('Dev User', 'dev@localhost', 'owner'),
       p2: participant('Lars Johansson', 'lars.johansson@fjord-systems.example'),
-      p3: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p3: participant('Sophie Example', 'sophie@eurotech.example'),
       p4: participant('Élise Moreau', 'elise.moreau@fjord-systems.example'),
       p5: participant('Astrid van der Berg', 'astrid@berglabs.example'),
       p6: participant('Pierre Dubois', 'pierre@dubois.example'),
@@ -1067,7 +1093,7 @@ const calendarEvents = [
     participants: {
       p1: participant('Dev User', 'dev@localhost'),
       p2: participant('María García', 'maria@garcia-design.example', 'owner'),
-      p3: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p3: participant('Sophie Example', 'sophie@eurotech.example'),
     },
   }),
   makeEvent('evt-011', 'cal-2', 'API Deprecation Deadline', localDateTime(30, 0, 0), 'P1D', {
@@ -1085,7 +1111,7 @@ const calendarEvents = [
       p2: participant('Dev User', 'dev@localhost'),
       p3: participant('Pierre Dubois', 'pierre@dubois.example'),
       p4: participant('Chiara Rossi', 'chiara@rossi.example'),
-      p5: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p5: participant('Sophie Example', 'sophie@eurotech.example'),
     },
   }),
   makeEvent('evt-013', 'cal-3', 'Team Retro: What went well?', localDateTime(-2, 16, 0), 'PT1H', {
@@ -1094,7 +1120,7 @@ const calendarEvents = [
       p1: participant('Dev User', 'dev@localhost', 'owner'),
       p2: participant('Lars Johansson', 'lars.johansson@fjord-systems.example'),
       p3: participant('Élise Moreau', 'elise.moreau@fjord-systems.example'),
-      p4: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p4: participant('Sophie Example', 'sophie@eurotech.example'),
     },
   }),
   makeEvent('evt-014', 'cal-3', 'Lunch & Learn: JMAP Protocol Deep Dive', localDateTime(4, 12, 0), 'PT1H', {
@@ -1110,7 +1136,7 @@ const calendarEvents = [
     location: 'Sophie\'s apartment, Kreuzberg, Berlin',
     description: 'Annual Eurovision Song Contest watch party!\n\nRules:\n1. Scorecards mandatory (printed copies provided)\n2. Drink when someone says "douze points"\n3. Best costume contest (prize: a waffle iron)\n4. No spoilers from the semis!\n\nBring: snacks from your home country.',
     participants: {
-      p1: participant('Sophie Müller', 'sophie@eurotech.example', 'owner'),
+      p1: participant('Sophie Example', 'sophie@eurotech.example', 'owner'),
       p2: participant('Dev User', 'dev@localhost'),
       p3: participant('Pierre Dubois', 'pierre@dubois.example'),
       p4: participant('Chiara Rossi', 'chiara@rossi.example'),
@@ -1193,7 +1219,7 @@ const calendarEvents = [
   }),
 
   // ===== Birthday calendar (cal-5) =====
-  makeEvent('evt-030', 'cal-5', '🎂 Sophie Müller', localDateTime(8, 0, 0), 'P1D', {
+  makeEvent('evt-030', 'cal-5', '🎂 Sophie Example', localDateTime(8, 0, 0), 'P1D', {
     showWithoutTime: true,
     recurrence: [{ frequency: 'yearly' }],
     description: 'Don\'t forget to bring Kuchen!',
@@ -1221,7 +1247,7 @@ const calendarEvents = [
     description: 'Your talk: "Building Modern Webmail with JMAP" - Day 1, 14:00, Main Hall.\nDon\'t forget slide deck!',
     participants: {
       p1: participant('Dev User', 'dev@localhost'),
-      p2: participant('Sophie Müller', 'sophie@eurotech.example'),
+      p2: participant('Sophie Example', 'sophie@eurotech.example'),
       p3: participant('Isabelle Martin', 'isabelle.martin@sorbonne.example'),
     },
   }),

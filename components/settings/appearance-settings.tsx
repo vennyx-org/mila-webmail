@@ -67,7 +67,7 @@ export function AppearanceSettings() {
   const tAdvanced = useTranslations('settings.advanced');
   const tTour = useTranslations('tour');
   const { theme, setTheme } = useThemeStore();
-  const { fontSize, density, animationsEnabled, senderFavicons, showAvatarsInJunk, updateSetting } = useSettingsStore();
+  const { fontSize, density, animationsEnabled, senderFavicons, showAvatarsInJunk, showOnboardingOnNewDevices, updateSetting } = useSettingsStore();
   const { startTour, resetTourCompletion } = useTour();
   const { isSettingLocked, isSettingHidden } = usePolicyStore();
 
@@ -144,6 +144,13 @@ export function AppearanceSettings() {
           <PlayCircle className="w-3.5 h-3.5 mr-1" />
           {tTour('restart_button')}
         </Button>
+      </SettingItem>
+
+      <SettingItem label={tTour('show_on_new_devices_title')} description={tTour('show_on_new_devices_desc')}>
+        <ToggleSwitch
+          checked={showOnboardingOnNewDevices}
+          onChange={(checked) => updateSetting('showOnboardingOnNewDevices', checked)}
+        />
       </SettingItem>
     </SettingsSection>
   );

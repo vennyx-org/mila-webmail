@@ -1,6 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { OAuthMetadata } from '../oauth/discovery';
 
+const validateEndpoint = async (urlString: string) => {
+  try {
+    const url = new URL(urlString);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (url.username || url.password) return false;
+    const host = url.hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return false;
+    if (/^(127\.|169\.254\.|10\.|192\.168\.)/.test(host)) return false;
+    if (host === '::1' || host === '0.0.0.0') return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const VALID_METADATA: OAuthMetadata = {
   issuer: 'https://auth.example.com',
   authorization_endpoint: 'https://auth.example.com/authorize',
@@ -26,7 +41,7 @@ describe('oauth/discovery', () => {
       json: () => Promise.resolve(VALID_METADATA),
     }));
 
-    const result = await discoverOAuth('https://mail.example.com');
+    const result = await discoverOAuth('https://mail.example.com', { validateEndpoint });
 
     expect(result).toEqual(VALID_METADATA);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -43,7 +58,7 @@ describe('oauth/discovery', () => {
         json: () => Promise.resolve(VALID_METADATA),
       }));
 
-    const result = await discoverOAuth('https://fallback.example.com');
+    const result = await discoverOAuth('https://fallback.example.com', { validateEndpoint });
 
     expect(result).toEqual(VALID_METADATA);
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -59,7 +74,7 @@ describe('oauth/discovery', () => {
       .mockResolvedValueOnce({ ok: false, status: 404 })
       .mockResolvedValueOnce({ ok: false, status: 404 }));
 
-    const result = await discoverOAuth('https://fail.example.com');
+    const result = await discoverOAuth('https://fail.example.com', { validateEndpoint });
 
     expect(result).toBeNull();
     expect(consoleSpy).toHaveBeenCalled();
@@ -71,7 +86,7 @@ describe('oauth/discovery', () => {
       json: () => Promise.resolve(VALID_METADATA),
     }));
 
-    const result = await discoverOAuth('https://optional.example.com');
+    const result = await discoverOAuth('https://optional.example.com', { validateEndpoint });
 
     expect(result?.revocation_endpoint).toBe('https://auth.example.com/revoke');
     expect(result?.end_session_endpoint).toBe('https://auth.example.com/logout');
@@ -86,7 +101,46 @@ describe('oauth/discovery', () => {
       })
       .mockResolvedValueOnce({ ok: false, status: 404 }));
 
-    const result = await discoverOAuth('https://incomplete.example.com');
+    const result = await discoverOAuth('https://incomplete.example.com', { validateEndpoint });
+
+    expect(result).toBeNull();
+    expect(consoleSpy).toHaveBeenCalled();
+  });
+
+  it('rejects metadata pointing at loopback / link-local hosts (SSRF guard)', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          issuer: 'https://evil.example.com',
+          authorization_endpoint: 'https://evil.example.com/authorize',
+          token_endpoint: 'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
+        }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404 }));
+
+    const result = await discoverOAuth('https://evil.example.com', { validateEndpoint });
+
+    expect(result).toBeNull();
+    expect(consoleSpy).toHaveBeenCalled();
+  });
+
+  it('rejects metadata pointing at private RFC1918 hosts (SSRF guard)', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          issuer: 'https://evil.example.com',
+          authorization_endpoint: 'https://evil.example.com/authorize',
+          token_endpoint: 'https://evil.example.com/token',
+          revocation_endpoint: 'http://127.0.0.1:9200/_cluster/state',
+        }),
+      })
+      .mockResolvedValueOnce({ ok: false, status: 404 }));
+
+    const result = await discoverOAuth('https://private-revoke.example.com', { validateEndpoint });
 
     expect(result).toBeNull();
     expect(consoleSpy).toHaveBeenCalled();
@@ -98,8 +152,8 @@ describe('oauth/discovery', () => {
       json: () => Promise.resolve(VALID_METADATA),
     }));
 
-    const first = await discoverOAuth('https://cached.example.com');
-    const second = await discoverOAuth('https://cached.example.com');
+    const first = await discoverOAuth('https://cached.example.com', { validateEndpoint });
+    const second = await discoverOAuth('https://cached.example.com', { validateEndpoint });
 
     expect(first).toEqual(VALID_METADATA);
     expect(second).toEqual(VALID_METADATA);

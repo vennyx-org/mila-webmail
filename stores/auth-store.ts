@@ -377,27 +377,30 @@ export const useAuthStore = create<AuthState>()(
           const client = new JMAPClient(serverUrl, username, effectivePassword);
           await client.connect();
 
-          const { identities, primaryIdentity } = loadIdentities(await client.getIdentities(), username);
-          initializeFeatureStores(client);
-
-          // Register in account store
+          // Resolve account/slot info up front so writes can start immediately.
           const accountStore = useAccountStore.getState();
           const accountId = generateAccountId(username, serverUrl);
           const cookieSlot = accountStore.hasAccount(username, serverUrl)
             ? (accountStore.getAccountById(accountId)?.cookieSlot ?? accountStore.getNextCookieSlot())
             : accountStore.getNextCookieSlot();
 
-          // Snapshot current account if switching away and clear stores so
-          // the new account starts with a clean email/contact/calendar state.
+          // Snapshot/clear before kicking off any feature-store fetches so they
+          // don't write into stores we're about to wipe.
           const prevAccountId = get().activeAccountId;
           if (prevAccountId && prevAccountId !== accountId) {
             snapshotAccount(prevAccountId);
             clearAllStores();
           }
 
+          // Identities can fly in parallel with everything below. JMAPClient
+          // captures the auth header per-request, so the optional TOTP upgrade
+          // doesn't affect this already-issued request.
+          const identitiesPromise = client.getIdentities();
+
           // When TOTP was used, try to upgrade to token-based auth so the
           // session survives TOTP rotation (basic auth embeds the TOTP in
-          // every request, which expires after ~30 seconds).
+          // every request, which expires after ~30 seconds). Must complete
+          // before stalwart-context reads the auth header.
           let upgradedToOAuth = false;
           let oauthAccessToken: string | null = null;
           let oauthExpiresIn = 0;
@@ -439,6 +442,29 @@ export const useAuthStore = create<AuthState>()(
 
           const effectiveAuthMode = upgradedToOAuth ? 'oauth' : 'basic';
 
+          // Run the remaining independent requests in parallel. The session
+          // write and stalwart-context write are best-effort persistence; the
+          // outer login still succeeds even if they log a warning. Errors are
+          // caught locally so Promise.all doesn't reject on either.
+          const sessionWrite: Promise<unknown> = (rememberMe && !upgradedToOAuth)
+            ? apiFetch(`/api/auth/session?slot=${cookieSlot}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ serverUrl, username, password: effectivePassword, slot: cookieSlot }),
+              }).then((res) => {
+                if (!res.ok) debug.error('Failed to store session: server returned', res.status);
+              }).catch((err) => debug.error('Failed to store session:', err))
+            : Promise.resolve();
+
+          const [rawIdentities] = await Promise.all([
+            identitiesPromise,
+            sessionWrite,
+            syncStalwartAuthContext(serverUrl, username, client.getAuthHeader(), cookieSlot),
+          ]);
+
+          const { identities, primaryIdentity } = loadIdentities(rawIdentities, username);
+          initializeFeatureStores(client);
+
           // Store client in multi-account map
           clients.set(accountId, client);
           bindClientStatusHandlers(client, set, get, accountId);
@@ -468,27 +494,6 @@ export const useAuthStore = create<AuthState>()(
             lastLoginAt: Date.now(),
           });
 
-          // Store session cookie BEFORE setting isAuthenticated to avoid a race
-          // condition: setting isAuthenticated triggers navigation to the main page,
-          // whose checkAuth() would try to read the cookie before it was stored.
-          if (rememberMe && !upgradedToOAuth) {
-            // For basic auth (no TOTP or TOTP upgrade failed), store encrypted credentials
-            try {
-              const res = await apiFetch(`/api/auth/session?slot=${cookieSlot}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serverUrl, username, password: effectivePassword, slot: cookieSlot }),
-              });
-              if (!res.ok) {
-                debug.error('Failed to store session: server returned', res.status);
-              }
-            } catch (err) {
-              debug.error('Failed to store session:', err);
-            }
-          }
-
-          await syncStalwartAuthContext(serverUrl, username, client.getAuthHeader(), cookieSlot);
-
           set({
             isAuthenticated: true,
             isLoading: false,
@@ -506,6 +511,15 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             activeAccountId: accountId,
           });
+
+          // Kick off mailbox/quota/email fetches now so they overlap with the
+          // soft-nav + home-page hydration that follows login. Dynamic import
+          // avoids a static circular dep with email-store.
+          import('@/stores/email-store').then(({ useEmailStore }) => {
+            useEmailStore.getState().prefetchInitialData(client).catch((err) => {
+              debug.error('Initial data prefetch failed:', err);
+            });
+          }).catch(() => {});
 
           // Schedule token refresh for TOTP-upgraded sessions
           if (upgradedToOAuth && oauthExpiresIn > 0) {
@@ -704,6 +718,12 @@ export const useAuthStore = create<AuthState>()(
             activeAccountId: accountId,
           });
 
+          import('@/stores/email-store').then(({ useEmailStore }) => {
+            useEmailStore.getState().prefetchInitialData(client).catch((err) => {
+              debug.error('Initial data prefetch failed:', err);
+            });
+          }).catch(() => {});
+
           scheduleRefresh(expires_in, get().refreshAccessToken, accountId);
 
           notifyParent('sso:auth-success', { username });
@@ -750,12 +770,17 @@ export const useAuthStore = create<AuthState>()(
           const accountStore = useAccountStore.getState();
           const slot = accountStore.getNextCookieSlot();
 
-          const ssoRes = await apiFetch('/api/auth/sso/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ code, state, slot }),
-          });
+          // SSO token exchange and config fetch are independent - fire both
+          // up front and let them resolve in parallel.
+          const [ssoRes, config] = await Promise.all([
+            apiFetch('/api/auth/sso/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ code, state, slot }),
+            }),
+            fetchConfig(),
+          ]);
 
           if (!ssoRes.ok) {
             const errorData = await ssoRes.json().catch(() => ({ error: 'token_exchange_failed' }));
@@ -764,8 +789,6 @@ export const useAuthStore = create<AuthState>()(
 
           const { access_token, expires_in } = await ssoRes.json();
 
-          // We need the server URL from config
-          const config = await fetchConfig();
           const ssoServerUrl = config.jmapServerUrl;
 
           if (!ssoServerUrl) {
@@ -832,6 +855,12 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             activeAccountId: accountId,
           });
+
+          import('@/stores/email-store').then(({ useEmailStore }) => {
+            useEmailStore.getState().prefetchInitialData(client).catch((err) => {
+              debug.error('Initial data prefetch failed:', err);
+            });
+          }).catch(() => {});
 
           scheduleRefresh(expires_in, get().refreshAccessToken, accountId);
 
@@ -1217,13 +1246,53 @@ export const useAuthStore = create<AuthState>()(
 
       checkAuth: async () => {
         const accountStore = useAccountStore.getState();
-        const accounts = accountStore.accounts;
+        let accounts = accountStore.accounts;
 
         // If the only account is the demo account, re-initialize demo mode
         // instead of trying to restore a server session (which doesn't exist).
         if (accounts.length === 1 && accounts[0].serverUrl === 'https://demo.example.com') {
           await get().loginDemo();
           return;
+        }
+
+        // Orphan-cookie adoption — when no accounts are registered but a
+        // basic-auth session cookie is present (set by /api/auth/impersonate
+        // or by another server-side hand-off), promote it into the account
+        // registry so the normal restoration path picks it up. Without this
+        // the cookies sit unused and the SPA bounces to the login screen.
+        if (accounts.length === 0) {
+          try {
+            const restore = await apiFetch('/api/auth/session', { method: 'PUT' });
+            if (restore.ok) {
+              const data = await restore.json();
+              if (data?.serverUrl && data?.username && data?.password) {
+                // Stalwart master-user impersonation uses "target%master" as
+                // the auth username. The full string must be preserved for
+                // JMAP auth, but the user-facing display (avatar, switcher,
+                // sign-out copy) should only show the target mailbox.
+                const fullUsername: string = data.username;
+                const displayMailbox = fullUsername.includes('%')
+                  ? fullUsername.split('%', 1)[0]
+                  : fullUsername;
+                accountStore.addAccount({
+                  label: displayMailbox,
+                  serverUrl: data.serverUrl,
+                  username: fullUsername,
+                  authMode: 'basic',
+                  rememberMe: true,
+                  displayName: displayMailbox,
+                  email: displayMailbox,
+                  lastLoginAt: Date.now(),
+                  isConnected: false,
+                  hasError: false,
+                  isDefault: true,
+                });
+                accounts = useAccountStore.getState().accounts;
+              }
+            }
+          } catch (err) {
+            debug.error('Orphan session cookie adoption failed:', err);
+          }
         }
 
         // Multi-account restoration: restore all registered accounts

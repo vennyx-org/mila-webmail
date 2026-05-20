@@ -3,6 +3,7 @@
 import { Menu, ArrowLeft, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/ui-store";
+import { useIsDesktop } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -25,6 +26,12 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const t = useTranslations('sidebar');
   const { toggleSidebar, goBack, sidebarOpen } = useUIStore();
+  // Pane-aware: in Pro split mode the viewport is desktop-wide while the
+  // pane is narrow. The Tailwind `lg:hidden` variant alone would never fire
+  // there, so we additionally hide via JS when the surrounding pane is
+  // desktop-sized. Outside of Pro this still returns the viewport value.
+  const isPaneDesktop = useIsDesktop();
+  if (isPaneDesktop) return null;
 
   const handleLeftAction = () => {
     if (showBack && onBack) {
@@ -40,7 +47,6 @@ export function MobileHeader({
     <header
       className={cn(
         "flex items-center justify-between px-4 h-14 border-b border-border bg-background shrink-0",
-        "lg:hidden", // Only visible on mobile/tablet
         className
       )}
     >
@@ -118,12 +124,13 @@ export function MobileViewerHeader({
   className,
 }: MobileViewerHeaderProps) {
   const t = useTranslations('sidebar');
+  const isPaneDesktop = useIsDesktop();
+  if (isPaneDesktop) return null;
 
   return (
     <header
       className={cn(
         "flex items-center justify-between px-2 h-14 border-b border-border bg-background shrink-0",
-        "lg:hidden", // Only visible on mobile/tablet
         className
       )}
     >

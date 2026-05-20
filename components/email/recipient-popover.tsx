@@ -39,7 +39,11 @@ export function RecipientPopover({ name, email, displayLabel, onViewContact, cla
   const phones = contact?.phones ? Object.values(contact.phones) : [];
   const orgs = contact?.organizations ? Object.values(contact.organizations) : [];
 
-  const handleOpen = () => {
+  const handleToggle = () => {
+    if (isOpen) {
+      handleClose();
+      return;
+    }
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const popoverWidth = 300;
@@ -125,9 +129,9 @@ export function RecipientPopover({ name, email, displayLabel, onViewContact, cla
     <>
       <button
         ref={triggerRef}
-        onClick={handleOpen}
+        onClick={handleToggle}
         className={cn(
-          "text-foreground hover:text-primary hover:underline cursor-pointer transition-colors",
+          "text-foreground hover:text-primary hover:underline cursor-pointer transition-colors min-w-0 break-words",
           className
         )}
       >

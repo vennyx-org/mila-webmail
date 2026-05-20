@@ -127,6 +127,15 @@ export interface PluginManifest {
    * The remote host must serve CORS headers permitting the webmail origin.
    */
   httpOrigins?: string[];
+  /**
+   * Same-origin `/api/*` paths this plugin may target via `api.http.post()`.
+   * Each entry is a path prefix; a call to `api.http.post('/api/X', ...)` is
+   * accepted iff `'/api/X'` exactly equals an entry OR an entry ends in
+   * `/` and `'/api/X'` starts with it. With no entry (or an empty array),
+   * the plugin may not call `api.http.post` even with the `http:post`
+   * permission. Validated at install time.
+   */
+  apiPostPaths?: string[];
 
   // ─── Marketplace media (NOT shipped in the runtime zip) ──────
   /**
@@ -224,12 +233,26 @@ export interface InstalledPlugin {
    * `api.http.fetch()`. Carried over from the manifest at install time.
    */
   httpOrigins?: string[];
+  /**
+   * Validated allowlist of same-origin `/api/*` paths this plugin may target
+   * via `api.http.post()`. Carried over from the manifest at install time.
+   */
+  apiPostPaths?: string[];
+  /**
+   * Permissions the user has explicitly granted. Populated by the in-app
+   * consent dialog the first time the plugin is enabled. The host API gate
+   * checks this set in addition to `permissions`, so an unapproved permission
+   * cannot be exercised even if it appears in the manifest. Managed plugins
+   * skip the consent prompt (admin pre-approval).
+   */
+  grantedPermissions?: string[];
 }
 
 // ─── UI Slots ────────────────────────────────────────────────
 
 export type SlotName =
   | 'toolbar-actions'
+  | 'app-top-banner'
   | 'email-banner'
   | 'email-footer'
   | 'composer-toolbar'
@@ -623,6 +646,52 @@ export interface ReplyContext {
 }
 
 /**
+ * Second argument to onBuildQuoteHeader transform handlers. Describes the
+ * original message and how the host plans to render the quote header so
+ * plugins can produce a replacement block (e.g. an Outlook-style
+ * From/Sent/To/Cc/Subject section).
+ */
+export interface QuoteHeaderContext {
+  mode: 'reply' | 'replyAll' | 'forward';
+  /** Recipients of the new outgoing message (already resolved by the host). */
+  newTo: string[];
+  newCc: string[];
+  /** Original message metadata. */
+  from: { name?: string; email: string } | null;
+  to: { name?: string; email: string }[];
+  cc: { name?: string; email: string }[];
+  subject: string;
+  /** Pre-formatted date string the host already produced (locale-aware). */
+  date: string;
+  /** Raw ISO datetime, in case the plugin wants to reformat. */
+  receivedAt?: string;
+  /** Active UI locale (BCP-47), useful for Intl.DateTimeFormat in plugins. */
+  locale: string;
+}
+
+/**
+ * Initial value for the onBuildQuoteHeader transform hook. Plugins return a
+ * replacement; returning undefined falls through to the next handler or the
+ * default. The composer splices `html` into HTML drafts and `text` into
+ * plain-text drafts.
+ *
+ * For HTML, returning a header that includes its own surrounding wrapper
+ * (`<div>...</div>`) is fine; the composer does not add extra wrappers.
+ * For text, the host appends the quoted body after the header.
+ */
+export interface QuoteHeader {
+  html: string;
+  text: string;
+  /**
+   * When false, the composer skips its default blockquote wrapping around the
+   * quoted body (HTML mode only). Use this for the Outlook style where the
+   * quoted message is intended to follow the header without indentation.
+   * Defaults to true (preserve the existing blockquote wrapping).
+   */
+  wrapInBlockquote?: boolean;
+}
+
+/**
  * Describes an attachment crossing an attachment hook (upload, download, preview).
  */
 export interface AttachmentInfo {
@@ -778,7 +847,7 @@ export const ALL_PERMISSIONS = [
   'security:read',
   'auth:observe',
   'http:post', 'http:fetch',
-  'ui:observe', 'ui:toolbar', 'ui:email-banner', 'ui:email-footer',
+  'ui:observe', 'ui:toolbar', 'ui:app-top-banner', 'ui:email-banner', 'ui:email-footer',
   'ui:composer-toolbar', 'ui:composer-sidebar',
   'ui:sidebar-widget', 'ui:settings-section',
   'ui:context-menu', 'ui:navigation-rail', 'ui:keyboard',

@@ -6,8 +6,21 @@
 
 import type { IJMAPClient } from '@/lib/jmap/client-interface';
 
-const DEVICE_CLIENT_ID_KEY = 'bulwark.push.deviceClientId.v1';
-const SUBSCRIPTION_ID_KEY = 'bulwark.push.subscriptionId.v1';
+// Per-account keys: a single browser may be signed in to multiple accounts,
+// each with its own JMAP PushSubscription and its own relay record. Scoping
+// the deviceClientId per account is what makes per-account notifications work
+// at all - the relay keys subscriptions on subscriptionId (= deviceClientId),
+// so a globally-shared key meant re-registering account B overwrote A.
+const DEVICE_CLIENT_ID_PREFIX = 'bulwark.push.deviceClientId.v1.';
+const SUBSCRIPTION_ID_PREFIX = 'bulwark.push.subscriptionId.v1.';
+
+function deviceClientIdKey(accountId: string): string {
+  return DEVICE_CLIENT_ID_PREFIX + accountId;
+}
+
+function subscriptionIdKey(accountId: string): string {
+  return SUBSCRIPTION_ID_PREFIX + accountId;
+}
 
 const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '');
 const SW_SCOPE = `${BASE_PATH}/`;
@@ -79,12 +92,22 @@ function randomDeviceClientId(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-function getOrCreateDeviceClientId(): string {
-  const existing = localStorage.getItem(DEVICE_CLIENT_ID_KEY);
+function getOrCreateDeviceClientId(accountId: string): string {
+  const key = deviceClientIdKey(accountId);
+  const existing = localStorage.getItem(key);
   if (existing) return existing;
   const next = randomDeviceClientId();
-  localStorage.setItem(DEVICE_CLIENT_ID_KEY, next);
+  localStorage.setItem(key, next);
   return next;
+}
+
+function anyOtherAccountHasSubscription(accountId: string): boolean {
+  const skip = subscriptionIdKey(accountId);
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k !== skip && k.startsWith(SUBSCRIPTION_ID_PREFIX)) return true;
+  }
+  return false;
 }
 
 // PushManager.subscribe wants the VAPID public key as a BufferSource.
@@ -260,7 +283,8 @@ export async function enableWebPush(
     });
   }
 
-  const deviceClientId = getOrCreateDeviceClientId();
+  const accountId = params.client.getAccountId();
+  const deviceClientId = getOrCreateDeviceClientId(accountId);
 
   await registerWithRelay({
     relayBaseUrl,
@@ -278,7 +302,8 @@ export async function enableWebPush(
   // Reuse the JMAP-side PushSubscription if the server still has it, just
   // refreshing the expiry so it doesn't time out between sessions.
   const existingSubs = await params.client.listPushSubscriptions().catch(() => []);
-  const storedServerId = localStorage.getItem(SUBSCRIPTION_ID_KEY);
+  const subIdKey = subscriptionIdKey(accountId);
+  const storedServerId = localStorage.getItem(subIdKey);
   if (storedServerId) {
     const match = existingSubs.find((s) => s.id === storedServerId);
     if (match) {
@@ -286,7 +311,7 @@ export async function enableWebPush(
       if (refreshed) return { subscriptionId: storedServerId };
       await params.client.destroyPushSubscription(storedServerId).catch(() => undefined);
     }
-    localStorage.removeItem(SUBSCRIPTION_ID_KEY);
+    localStorage.removeItem(subIdKey);
   }
 
   // Reap any leftover subscriptions still bound to this device. These pile
@@ -309,7 +334,7 @@ export async function enableWebPush(
 
   const verificationCode = await pollVerificationCode(relayBaseUrl, deviceClientId);
   await params.client.verifyPushSubscription(serverAssignedId, verificationCode);
-  localStorage.setItem(SUBSCRIPTION_ID_KEY, serverAssignedId);
+  localStorage.setItem(subIdKey, serverAssignedId);
 
   return { subscriptionId: serverAssignedId };
 }
@@ -320,37 +345,50 @@ export interface DisableWebPushParams {
 }
 
 // Best-effort teardown: clear the JMAP subscription, the relay mapping, and
-// the browser PushSubscription. Any single failure is swallowed so the user
-// always ends up in a "disabled" state locally.
+// (only when no other accounts still need it) the browser-wide
+// PushSubscription. Any single failure is swallowed so the user always ends
+// up in a "disabled" state locally.
 export async function disableWebPush(params: DisableWebPushParams): Promise<void> {
   const relayBaseUrl = (params.relayBaseUrl ?? DEFAULT_RELAY_BASE_URL).replace(/\/+$/, '');
+  const accountId = params.client.getAccountId();
 
-  const storedServerId = localStorage.getItem(SUBSCRIPTION_ID_KEY);
+  const subIdKey = subscriptionIdKey(accountId);
+  const devIdKey = deviceClientIdKey(accountId);
+
+  const storedServerId = localStorage.getItem(subIdKey);
   if (storedServerId) {
     await params.client.destroyPushSubscription(storedServerId).catch(() => undefined);
-    localStorage.removeItem(SUBSCRIPTION_ID_KEY);
+    localStorage.removeItem(subIdKey);
   }
 
-  const deviceClientId = localStorage.getItem(DEVICE_CLIENT_ID_KEY);
+  const deviceClientId = localStorage.getItem(devIdKey);
   if (deviceClientId && relayBaseUrl) {
     await fetch(
       buildRelayUrl(relayBaseUrl, `/api/push/register/${encodeURIComponent(deviceClientId)}`),
       { method: 'DELETE' },
     ).catch(() => undefined);
   }
+  // Keep the deviceClientId around so a later re-enable for this account
+  // reuses the same relay subscriptionId rather than scattering orphans.
 
-  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  // The browser-wide PushSubscription is shared by every account on this
+  // origin, so only tear it down if no other account is still using it.
+  if (
+    !anyOtherAccountHasSubscription(accountId)
+    && typeof navigator !== 'undefined'
+    && 'serviceWorker' in navigator
+  ) {
     const registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
     const sub = await registration?.pushManager.getSubscription();
     if (sub) await sub.unsubscribe().catch(() => undefined);
   }
 }
 
-export async function isWebPushEnabled(): Promise<boolean> {
+export async function isWebPushEnabled(accountId: string): Promise<boolean> {
   if (!isWebPushSupported()) return false;
   if (Notification.permission !== 'granted') return false;
   const registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
   if (!registration) return false;
   const sub = await registration.pushManager.getSubscription();
-  return sub !== null && localStorage.getItem(SUBSCRIPTION_ID_KEY) !== null;
+  return sub !== null && localStorage.getItem(subscriptionIdKey(accountId)) !== null;
 }

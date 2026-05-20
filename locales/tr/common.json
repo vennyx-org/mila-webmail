@@ -135,6 +135,40 @@
     "add_app": "Uygulamalar",
     "scheduled": "Zamanlandı"
   },
+  "protocol_handlers": {
+    "title": "Varsayılan uygulamalar",
+    "description": "E-posta ve takvim bağlantılarının Bulwark'ta açılıp açılmayacağını seçin. Teknik olarak Bulwark, mailto: ve webcal: bağlantıları için protokol işleyicisi olarak kaydolur.",
+    "unsupported": "Bu tarayıcı veya bağlantı manuel protokol işleyicisi kaydını desteklemiyor. Yüklü PWA'yı yine de tarayıcı veya işletim sistemi ayarlarından kullanabilirsiniz.",
+    "mailto_label": "E-posta bağlantıları",
+    "mailto_description": "mailto: bağlantılarını Bulwark'ta önceden doldurulmuş düzenleyiciyle açın.",
+    "protocol_open_mode_label": "Protokol bağlantıları açılırken",
+    "protocol_open_mode_description": "Bulwark'ın mailto: ve webcal: bağlantılarını yeni bir sekmede açmasını mı yoksa açık bir oturumu yeniden kullanmasını mı istediğinizi seçin. Etkin oturum seçeneği, tarayıcı odağı engellerse Bulwark'ı öne getirmek için yedek bildirime tıklayabilmeniz amacıyla bildirim izni gerektirir.",
+    "protocol_open_mode_active_session": "Mümkünse etkin oturumda aç",
+    "protocol_open_mode_new_tab": "Her zaman yeni sekme aç",
+    "focus_notification_title": "Bulwark'ı aç",
+    "focus_notification_body": "Bağlantı Bulwark'ta açıldı. Pencereyi öne getirmek için tıklayın.",
+    "webcal_label": "Takvim bağlantıları",
+    "webcal_description": "webcal: bağlantılarını Bulwark'ta önceden doldurulmuş takvim aboneliği penceresiyle açın.",
+    "register_mailto": "E-posta uygulaması olarak kaydet",
+    "register_webcal": "Takvim uygulaması olarak kaydet",
+    "mailto_registered": "E-posta işleyicisi kaydı istendi",
+    "webcal_registered": "Takvim işleyicisi kaydı istendi",
+    "registration_failed": "Protokol işleyicisi kaydı başarısız oldu",
+    "opening_mailto": "Düzenleyici açılıyor...",
+    "opening_webcal": "Takvim açılıyor...",
+    "browser_note": "Tarayıcınız veya işletim sisteminiz bunu onaylamanızı isteyebilir ve Bulwark'ın varsayılan uygulama olarak seçilebilmesi için yüklenmiş olmasını gerektirebilir.",
+    "select_account_title": "Hesap seç",
+    "select_mailto_account": "Bu e-posta bağlantısını hangi hesabın açacağını seçin.",
+    "select_webcal_account": "Bu takvim bağlantısını hangi hesabın açacağını seçin.",
+    "select_account_note": "Bu seçim yalnızca bu protokol bağlantısı için geçerlidir.",
+    "detail_to": "Kime",
+    "detail_subject": "Konu",
+    "detail_no_subject": "Konu yok",
+    "detail_calendar": "Takvim",
+    "detail_source": "Kaynak",
+    "active_account": "Etkin",
+    "switching_account": "Hesap değiştiriliyor..."
+  },
   "sidebar_apps": {
     "modal_title": "Kenar Çubuğu Uygulamaları",
     "add_new": "Uygulama Ekle",
@@ -225,6 +259,8 @@
     "compose": "Yeni E-posta",
     "compose_hint": "Yeni e-posta oluştur",
     "no_subject": "(Konu Yok)",
+    "no_body_content": "(İçerik yok)",
+    "no_preview_available": "Önizleme kullanılamıyor",
     "loading_email": "E-posta yükleniyor...",
     "loading": "Yükleniyor...",
     "reply": "Yanıtla",
@@ -551,6 +587,15 @@
       "to": "Kime: {recipients}"
     },
     "remove_sub_address": "Alt adresi kaldır",
+    "from_override": {
+      "toggle_off": "Geçersiz kıl",
+      "toggle_on": "Geçersiz kılmayı iptal et",
+      "toggle_tooltip": "Gönderen adını ve adresini serbestçe düzenleyin. Posta hâlâ kimliğiniz üzerinden gönderilir - yalnızca görünür Kimden başlığı değişir.",
+      "name_label": "Gönderen adı",
+      "name_placeholder": "Ad",
+      "email_label": "Gönderen e-posta adresi",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Şablon",
     "save_as_template": "Şablon Olarak Kaydet",
     "validation": {
@@ -757,6 +802,7 @@
       "contacts": "Kişiler",
       "encryption": "Şifreleme",
       "sidebar_apps": "Kenar Çubuğu Uygulamaları",
+      "protocol_handlers": "Varsayılan uygulamalar",
       "notifications": "Bildirimler",
       "layout": "Düzen",
       "reading": "Okuma",
@@ -973,7 +1019,9 @@
         "split": "Bölünmüş bölme",
         "split_description": "İleti listesi ve okuma bölmesini yan yana görünür tutun.",
         "focus": "Odaklı liste",
-        "focus_description": "İleti başına bir satır gösterin ve klasör kenar çubuğu görünürken postayı tam genişlikte açın."
+        "focus_description": "İleti başına bir satır gösterin ve klasör kenar çubuğu görünürken postayı tam genişlikte açın.",
+        "horizontal": "Okuma bölmesi altta",
+        "horizontal_description": "Mesaj listesini üstte gösterin ve seçilen mesajı altındaki okuma bölmesinde açın."
       },
       "show_preview": {
         "label": "Önizleme Metnini Göster",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "Yanıt Adresini Otomatik Seç",
         "description": "Yanıtlarken, Kimden adresini iletiyi başlangıçta alan kimliğe otomatik olarak değiştir"
+      },
+      "signature_position": {
+        "label": "İmza konumu",
+        "description": "Yanıtlarda ve iletmelerde imzanızın nereye ekleneceği. Alıntılanan metnin üzerinde, yanıt için doğal bir kapanış olarak okunur; altında ise orijinal mesajı bir bütün hâlinde tutar.",
+        "above_quote": "Alıntılanan metinden önce",
+        "below_quote": "Alıntılanan metinden sonra"
+      },
+      "signature_separator": {
+        "label": "İmza ayırıcı",
+        "description": "İmzayı standart \"-- \" ayırıcı satırıyla başlat (RFC 3676). Mesajdan doğrudan imzaya geçmek istiyorsanız kapatın."
       },
       "sub_address_delimiter": {
         "label": "Alt Adres Ayırıcı",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Yeni alt klasör...",
     "new_folder": "Yeni klasör...",
     "rename": "Yeniden adlandır...",
+    "import_email": ".eml içe aktar...",
     "empty_folder": "Klasörü boşalt",
     "empty_folder_generic": "Klasörü boşalt",
     "delete_folder": "Klasörü sil",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "arsiv@email.com",
       "text_signature_label": "Metin İmzası",
       "html_signature_label": "HTML İmzası",
+      "signature_byte_counter": "{bytes} / {max} bayt",
+      "signature_byte_limit_reached": "Sunucu sınırına ulaşıldı",
       "save": "Kimliği Kaydet",
       "cancel": "İptal",
       "creating": "Oluşturuluyor...",
@@ -2466,6 +2527,15 @@
       "file_too_large": "Dosya 10 MB sınırını aşıyor",
       "invalid_format": "Geçersiz takvim dosyası biçimi"
     },
+    "webcal_action": {
+      "title": "Takvim bağlantısını aç",
+      "description": "\"{name}\" öğesini nasıl kullanmak istersiniz?",
+      "import_title": "Bir kez içe aktar",
+      "import_description": "Etkinlikleri şimdi alıp takvimlerinizden birine kopyalayın.",
+      "subscribe_title": "Abone ol",
+      "subscribe_description": "Bu takvimi ayrı bir takvim olarak otomatik eşitlenmiş tutun.",
+      "cancel": "İptal"
+    },
     "management": {
       "title": "Takvim Yönetimi",
       "description": "Takvimlerinizi oluşturun, yeniden adlandırın ve özelleştirin. Rengini hızlıca değiştirmek için kenar çubuğundaki bir takvime sağ tıklayın.",
@@ -2844,6 +2914,8 @@
     "restart_title": "Tanıtım turu",
     "restart_desc": "Arayüzün rehberli gezintisini tekrar oynat",
     "restart_button": "Turu yeniden başlat",
+    "show_on_new_devices_title": "Yeni cihazlarda göster",
+    "show_on_new_devices_desc": "Başka bir yerde tamamlamış olsanız bile, yeni bir cihazda ilk oturum açtığınızda karşılama afişini ve turu yeniden gösterin",
     "sidebar_title": "Posta kutularınız",
     "sidebar_desc": "Bu sizin klasör kenar çubuğunuzdur. E-postalarını görüntülemek için herhangi bir posta kutusuna tıklayın. Klasörler oluşturabilir, e-postaları aralarında sürükleyebilir ve okunmamış sayılarını bir bakışta görebilirsiniz.",
     "compose_title": "E-posta oluştur",

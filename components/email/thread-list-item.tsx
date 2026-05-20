@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, stripInvisibleLeading } from "@/lib/utils";
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -25,6 +25,7 @@ interface ThreadListItemProps {
   expandedEmails?: Email[];
   onToggleExpand: () => void;
   onEmailSelect: (email: Email) => void;
+  onEmailDoubleClick?: (email: Email) => void;
   onContextMenu?: (e: React.MouseEvent, email: Email) => void;
   onOpenConversation?: (thread: ThreadGroup) => void;
   onToggleStar?: (email: Email) => void;
@@ -39,6 +40,7 @@ interface SingleEmailItemProps {
   email: Email;
   selected: boolean;
   onClick: () => void;
+  onDoubleClick?: () => void;
   onContextMenu?: (e: React.MouseEvent, email: Email) => void;
   showPreview: boolean;
   colorTag: string | null;
@@ -51,7 +53,8 @@ interface SingleEmailItemProps {
 }
 
 const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
-  function SingleEmailItem({ email, selected, onClick, onContextMenu, showPreview, colorTag, onToggleStar, onMarkAsRead, onDelete, onArchive, onSetColorTag, onMarkAsSpam }, ref) {
+  function SingleEmailItem({ email, selected, onClick, onDoubleClick, onContextMenu, showPreview, colorTag, onToggleStar, onMarkAsRead, onDelete, onArchive, onSetColorTag, onMarkAsSpam }, ref) {
+    const t = useTranslations('email_viewer');
     const isUnread = !email.keywords?.$seen;
     const isStarred = email.keywords?.$flagged;
     const isAnswered = email.keywords?.$answered;
@@ -71,7 +74,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const accountColor = email.accountId ? getAccountById(email.accountId)?.avatarColor : undefined;
     const isChecked = selectedEmailIds.has(email.id);
     const isFocusedMailLayout = mailLayout === 'focus';
-    const inlinePreview = showPreview && email.preview ? ` ${email.preview}` : '';
+    const trimmedPreview = stripInvisibleLeading(email.preview ?? '');
+    const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
 
     // Resolve color tags using keyword definitions; unknown tags fall back to gray
     const tagIds = getEmailColorTags(email.keywords);
@@ -144,12 +148,18 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
           isPressed && "bg-muted scale-[0.98] ring-2 ring-primary/30"
         )}
         onClick={handleClick}
+        onDoubleClick={(e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+          if (!onDoubleClick) return;
+          e.preventDefault();
+          onDoubleClick();
+        }}
         onContextMenu={handleContextMenu}
         style={{ minHeight: isFocusedMailLayout ? undefined : 'var(--list-item-height)' }}
       >
         <div
-          className={cn('px-3', isFocusedMailLayout ? 'flex items-center py-2.5' : 'flex items-start')}
-          style={isFocusedMailLayout ? { gap: '12px' } : { gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
+          className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
+          style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
         >
           {/* Checkbox - only visible when in selection mode */}
           {selectedEmailIds.size > 0 && (
@@ -178,11 +188,11 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
             </div>
           )}
 
-          {!isFocusedMailLayout && density !== 'extra-compact' && (
+          {density !== 'extra-compact' && (
             <Avatar
               name={sender?.name}
               email={sender?.email}
-              size="md"
+              size={isFocusedMailLayout ? "sm" : "md"}
               className="flex-shrink-0 shadow-sm"
               disableImages={hideJunkAvatarImages}
             />
@@ -316,7 +326,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                       ? "text-muted-foreground"
                       : "text-muted-foreground/80"
                   )}>
-                    {email.preview || "No preview available"}
+                    {trimmedPreview || t('no_preview_available')}
                   </p>
                 )}
               </>
@@ -349,6 +359,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     expandedEmails,
     onToggleExpand,
     onEmailSelect,
+    onEmailDoubleClick,
     onContextMenu,
     onOpenConversation,
     onToggleStar,
@@ -359,6 +370,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     onMarkAsSpam,
   }, ref) {
     const t = useTranslations('threads');
+    const tEmailViewer = useTranslations('email_viewer');
     const showPreview = useSettingsStore((state) => state.showPreview);
     const density = useSettingsStore((state) => state.density);
     const mailLayout = useSettingsStore((state) => state.mailLayout);
@@ -366,7 +378,8 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     const isMobile = useUIStore((state) => state.isMobile);
     const { latestEmail, participantNames, hasUnread, hasStarred, hasAttachment, hasAnswered, hasForwarded, emailCount } = thread;
     const isFocusedMailLayout = mailLayout === 'focus';
-    const inlinePreview = showPreview && latestEmail.preview ? ` ${latestEmail.preview}` : '';
+    const trimmedPreview = stripInvisibleLeading(latestEmail.preview ?? '');
+    const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
 
     const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView } = useEmailStore();
     const getAccountById = useAccountStore((state) => state.getAccountById);
@@ -416,6 +429,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
           email={latestEmail}
           selected={selectedEmailId === latestEmail.id}
           onClick={() => onEmailSelect(latestEmail)}
+          onDoubleClick={onEmailDoubleClick ? () => onEmailDoubleClick(latestEmail) : undefined}
           onContextMenu={onContextMenu}
           showPreview={showPreview}
           colorTag={colorTag}
@@ -502,12 +516,18 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
             isThreadPressed && "bg-muted scale-[0.98] ring-2 ring-primary/30"
           )}
           onClick={handleHeaderClick}
+          onDoubleClick={(e) => {
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+            if (!onEmailDoubleClick) return;
+            e.preventDefault();
+            onEmailDoubleClick(latestEmail);
+          }}
           onContextMenu={handleContextMenu}
           style={{ minHeight: isFocusedMailLayout ? undefined : 'var(--list-item-height)' }}
         >
           <div
-            className={cn('px-3', isFocusedMailLayout ? 'flex items-center py-2.5' : 'flex items-start')}
-            style={isFocusedMailLayout ? { gap: '12px' } : { gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
+            className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
+            style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
           >
             {/* Checkbox for thread selection - only visible when in selection mode */}
             {selectedEmailIds.size > 0 && (
@@ -562,11 +582,11 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
               </div>
             )}
 
-            {!isFocusedMailLayout && density !== 'extra-compact' && (
+            {density !== 'extra-compact' && (
               <Avatar
                 name={avatarPerson?.name}
                 email={avatarPerson?.email}
-                size="md"
+                size={isFocusedMailLayout ? "sm" : "md"}
                 className="flex-shrink-0 shadow-sm"
                 disableImages={hideJunkAvatarImages}
               />
@@ -722,7 +742,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                         ? "text-muted-foreground"
                         : "text-muted-foreground/80"
                     )}>
-                      {latestEmail.preview || "No preview available"}
+                      {trimmedPreview || tEmailViewer('no_preview_available')}
                     </p>
                   )}
                 </>
@@ -758,6 +778,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                   selected={email.id === selectedEmailId}
                   isLast={index === emailsToShow.length - 1}
                   onClick={() => onEmailSelect(email)}
+                  onDoubleClick={onEmailDoubleClick ? () => onEmailDoubleClick(email) : undefined}
                   onContextMenu={onContextMenu}
                 />
               ))

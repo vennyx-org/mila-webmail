@@ -26,6 +26,7 @@ import {
   Bell,
   Puzzle,
   LayoutGrid,
+  Link as LinkIcon,
   BookOpen,
   PenLine,
   EyeOff,
@@ -38,6 +39,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
+import { AppTopBannerSlot } from '@/components/plugins/app-top-banner-slot';
 import { LayoutSettings } from '@/components/settings/layout-settings';
 import { LanguageSettings } from '@/components/settings/language-settings';
 import { ReadingSettings } from '@/components/settings/reading-settings';
@@ -63,6 +65,7 @@ import { SidebarAppsSettings } from '@/components/settings/sidebar-apps-settings
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { ThemesSettings } from '@/components/settings/themes-settings';
 import { PluginsSettings } from '@/components/settings/plugins-settings';
+import { ProtocolHandlerSettings } from '@/components/settings/protocol-handler-settings';
 import { useAuthStore, redirectToLogin } from '@/stores/auth-store';
 import { useEmailStore } from '@/stores/email-store';
 import { usePluginStore } from '@/stores/plugin-store';
@@ -73,6 +76,7 @@ import { NavigationRail } from '@/components/layout/navigation-rail';
 import { SidebarAppsModal } from '@/components/layout/sidebar-apps-modal';
 import { InlineAppView } from '@/components/layout/inline-app-view';
 import { useSidebarApps } from '@/hooks/use-sidebar-apps';
+import { useIsEmbedded } from '@/hooks/use-is-embedded';
 import { ResizeHandle } from '@/components/layout/resize-handle';
 import { useConfig } from '@/hooks/use-config';
 import { usePolicyStore } from '@/stores/policy-store';
@@ -98,6 +102,7 @@ type Tab =
   | 'calendar'
   | 'contacts'
   | 'files'
+  | 'protocol_handlers'
   | 'sidebar_apps'
   | 'about_data'
   | 'themes'
@@ -133,6 +138,7 @@ const tabIcons: Record<Tab, LucideIcon> = {
   calendar: Calendar,
   contacts: BookUser,
   files: HardDrive,
+  protocol_handlers: LinkIcon,
   sidebar_apps: PanelLeftClose,
   about_data: Info,
   themes: Palette,
@@ -192,6 +198,7 @@ const tabSearchPaths: Record<Tab, string[]> = {
     'settings.email_behavior.attachment_reminder',
     'settings.email_behavior.auto_select_reply_identity',
     'settings.email_behavior.default_mail_program',
+    'settings.email_behavior.signature_position',
     'settings.email_behavior.sub_address_delimiter',
   ],
   identities: ['settings.identities'],
@@ -210,6 +217,7 @@ const tabSearchPaths: Record<Tab, string[]> = {
   calendar: ['calendar.settings', 'calendar.management'],
   contacts: ['settings.contacts', 'contacts'],
   files: ['settings.files'],
+  protocol_handlers: ['protocol_handlers'],
   sidebar_apps: ['settings.sidebar_apps', 'sidebar_apps'],
   about_data: ['settings.advanced'],
   themes: [],
@@ -239,6 +247,7 @@ const tabKeywords: Record<Tab, string> = {
   calendar: 'event schedule appointment meeting timezone',
   contacts: 'address book contact',
   files: 'attachments cloud drive storage upload',
+  protocol_handlers: 'mailto webcal links default app protocol handler',
   sidebar_apps: 'apps webview iframe',
   about_data: 'export import storage quota privacy backup',
   themes: 'custom theme css skin appearance',
@@ -338,6 +347,7 @@ export default function SettingsPage() {
   const tSidebar = useTranslations('sidebar');
   const { client, isAuthenticated, logout, checkAuth, isLoading: authLoading } = useAuthStore();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
+  const isEmbedded = useIsEmbedded();
   const [initialCheckDone, setInitialCheckDone] = useState(() => useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().client);
   const { quota, isPushConnected } = useEmailStore();
   const { stalwartFeaturesEnabled } = useConfig();
@@ -559,6 +569,7 @@ export default function SettingsPage() {
     { id: 'account', label: t('tabs.account'), icon: tabIcons.account, group: 'general' },
     { id: 'language', label: t('tabs.language'), icon: tabIcons.language, group: 'general' },
     { id: 'notifications', label: t('tabs.notifications'), icon: tabIcons.notifications, group: 'general' },
+    { id: 'protocol_handlers', label: t('tabs.protocol_handlers'), icon: tabIcons.protocol_handlers, group: 'general' },
 
     // Appearance
     { id: 'appearance', label: t('tabs.appearance'), icon: tabIcons.appearance, group: 'appearance' },
@@ -581,8 +592,8 @@ export default function SettingsPage() {
 
     // Apps
     ...(supportsCalendar ? [{ id: 'calendar' as Tab, label: t('tabs.calendar'), icon: tabIcons.calendar, group: 'apps' as TabGroup }] : []),
-    { id: 'contacts', label: t('tabs.contacts'), icon: tabIcons.contacts, group: 'apps' },
-    ...(supportsFiles ? [{ id: 'files' as Tab, label: t('tabs.files'), icon: tabIcons.files, group: 'apps' as TabGroup }] : []),
+    ...(isFeatureEnabled('contactsEnabled') ? [{ id: 'contacts' as Tab, label: t('tabs.contacts'), icon: tabIcons.contacts, group: 'apps' as TabGroup }] : []),
+    ...(supportsFiles && isFeatureEnabled('filesEnabled') ? [{ id: 'files' as Tab, label: t('tabs.files'), icon: tabIcons.files, group: 'apps' as TabGroup }] : []),
     ...(isFeatureEnabled('sidebarAppsEnabled') ? [{ id: 'sidebar_apps' as Tab, label: t('tabs.sidebar_apps'), icon: tabIcons.sidebar_apps, group: 'apps' as TabGroup }] : []),
 
     // Advanced
@@ -665,6 +676,7 @@ export default function SettingsPage() {
       {effectiveActiveTab === 'calendar' && <><CalendarSettings /><div className="mt-8"><CalendarManagementSettings /></div></>}
       {effectiveActiveTab === 'contacts' && <><ContactsSettings /><div className="mt-8"><AddressBookManagementSettings /></div></>}
       {effectiveActiveTab === 'files' && <FilesSettingsComponent />}
+      {effectiveActiveTab === 'protocol_handlers' && <ProtocolHandlerSettings supportsCalendar={supportsCalendar} />}
       {effectiveActiveTab === 'sidebar_apps' && <SidebarAppsSettings />}
       {effectiveActiveTab === 'about_data' && <AboutDataSettings />}
       {effectiveActiveTab === 'themes' && <ThemesSettings />}
@@ -677,7 +689,8 @@ export default function SettingsPage() {
   if (!isDesktop) {
     if (mobileShowContent) {
       return (
-        <div className="flex flex-col h-dvh bg-background">
+        <div className={cn("flex flex-col bg-background pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+          <AppTopBannerSlot />
           <div className="flex items-center gap-2 px-4 h-14 border-b border-border bg-background shrink-0">
             <Button
               variant="ghost"
@@ -694,20 +707,23 @@ export default function SettingsPage() {
             {renderTabContent()}
           </div>
 
-          <NavigationRail
-            orientation="horizontal"
-            onManageApps={handleManageApps}
-            onInlineApp={handleInlineApp}
-            onCloseInlineApp={closeInlineApp}
-            activeAppId={inlineApp?.id ?? null}
-          />
+          {!isEmbedded && (
+            <NavigationRail
+              orientation="horizontal"
+              onManageApps={handleManageApps}
+              onInlineApp={handleInlineApp}
+              onCloseInlineApp={closeInlineApp}
+              activeAppId={inlineApp?.id ?? null}
+            />
+          )}
           <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
         </div>
       );
     }
 
     return (
-      <div className="flex flex-col h-dvh bg-background">
+      <div className={cn("flex flex-col bg-background pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+        <AppTopBannerSlot />
         <div className="flex items-center gap-2 px-4 h-14 border-b border-border bg-background shrink-0">
           <Button
             variant="ghost"
@@ -803,13 +819,15 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <NavigationRail
-          orientation="horizontal"
-          onManageApps={handleManageApps}
-          onInlineApp={handleInlineApp}
-          onCloseInlineApp={closeInlineApp}
-          activeAppId={inlineApp?.id ?? null}
-        />
+        {!isEmbedded && (
+          <NavigationRail
+            orientation="horizontal"
+            onManageApps={handleManageApps}
+            onInlineApp={handleInlineApp}
+            onCloseInlineApp={closeInlineApp}
+            activeAppId={inlineApp?.id ?? null}
+          />
+        )}
         <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
       </div>
     );
@@ -817,19 +835,23 @@ export default function SettingsPage() {
 
   // Desktop layout
   return (
-    <div className="flex h-dvh bg-background">
-      <div className="w-14 bg-secondary flex flex-col flex-shrink-0" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.3)' }}>
-        <NavigationRail
-          collapsed
-          quota={quota}
-          isPushConnected={isPushConnected}
-          onLogout={logout}
-          onManageApps={handleManageApps}
-          onInlineApp={handleInlineApp}
-          onCloseInlineApp={closeInlineApp}
-          activeAppId={inlineApp?.id ?? null}
-        />
-      </div>
+    <div className={cn("flex flex-col bg-background pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+      <AppTopBannerSlot />
+      <div className="flex flex-1 min-h-0">
+      {!isEmbedded && (
+        <div className="w-14 bg-secondary flex flex-col flex-shrink-0" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.3)' }}>
+          <NavigationRail
+            collapsed
+            quota={quota}
+            isPushConnected={isPushConnected}
+            onLogout={logout}
+            onManageApps={handleManageApps}
+            onInlineApp={handleInlineApp}
+            onCloseInlineApp={closeInlineApp}
+            activeAppId={inlineApp?.id ?? null}
+          />
+        </div>
+      )}
 
       {inlineApp && (
         <InlineAppView apps={loadedApps} activeAppId={inlineApp!.id} onClose={closeInlineApp} className="flex-1" />
@@ -949,6 +971,7 @@ export default function SettingsPage() {
       </>
       )}
       <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
+      </div>
     </div>
   );
 }

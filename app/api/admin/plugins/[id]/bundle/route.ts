@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPluginBundle, getPlugin } from '@/lib/admin/plugin-registry';
 import { getDevPlugin, readDevBundle } from '@/lib/admin/plugin-dev';
+import { signBytes } from '@/lib/admin/plugin-signing';
+
+async function safeSign(code: string): Promise<string | null> {
+  try { return await signBytes(code); } catch { return null; }
+}
 
 /**
  * GET /api/admin/plugins/[id]/bundle - Serve plugin JS bundle
@@ -25,14 +30,15 @@ export async function GET(
     const devEntry = await getDevPlugin(id);
     if (devEntry) {
       const code = await readDevBundle(devEntry);
-      return new NextResponse(code, {
-        headers: {
-          'Content-Type': 'application/javascript; charset=utf-8',
-          'Cache-Control': 'no-store',
-          'ETag': `"${devEntry.plugin.bundleHash}"`,
-          'Content-Length': String(Buffer.byteLength(code, 'utf-8')),
-        },
-      });
+      const signature = await safeSign(code);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'ETag': `"${devEntry.plugin.bundleHash}"`,
+        'Content-Length': String(Buffer.byteLength(code, 'utf-8')),
+      };
+      if (signature) headers['X-Bundle-Signature'] = signature;
+      return new NextResponse(code, { headers });
     }
 
     const plugin = await getPlugin(id);
@@ -58,6 +64,9 @@ export async function GET(
       'Cache-Control': 'private, no-cache, must-revalidate',
     };
     if (etag) headers['ETag'] = etag;
+
+    const signature = await safeSign(code);
+    if (signature) headers['X-Bundle-Signature'] = signature;
 
     if (etag && request.headers.get('if-none-match') === etag) {
       return new NextResponse(null, { status: 304, headers });

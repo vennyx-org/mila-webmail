@@ -48,7 +48,12 @@ export function CalendarSidebarPanel({
   const tSub = useTranslations("calendar.subscription");
   const tMgmt = useTranslations("calendar.management");
   const isSubscriptionCalendar = useCalendarStore((s) => s.isSubscriptionCalendar);
-  const icalSubscriptions = useCalendarStore((s) => s.icalSubscriptions);
+  const allSubs = useCalendarStore((s) => s.icalSubscriptions);
+  const currentAccountId = client?.getAccountId();
+  const icalSubscriptions = useMemo(
+    () => allSubs.filter(s => !s.accountId || s.accountId === currentAccountId),
+    [allSubs, currentAccountId],
+  );
   const refreshICalSubscription = useCalendarStore((s) => s.refreshICalSubscription);
   const removeICalSubscription = useCalendarStore((s) => s.removeICalSubscription);
   const timeFormat = useSettingsStore((s) => s.timeFormat);

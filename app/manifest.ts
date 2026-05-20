@@ -2,13 +2,26 @@ import type { MetadataRoute } from "next";
 
 export const dynamic = "force-dynamic";
 
+type WebAppProtocolHandler = {
+  protocol: string;
+  url: string;
+};
+
+type ExtendedManifest = MetadataRoute.Manifest & {
+  protocol_handlers?: WebAppProtocolHandler[];
+  launch_handler?: {
+    client_mode?: "navigate-existing" | "auto" | "focus-existing" | "navigate-new"
+      | Array<"navigate-existing" | "auto" | "focus-existing" | "navigate-new">;
+  };
+};
+
 // Manifest paths must include the deployment subpath - browsers resolve them
 // against the document origin, not the manifest's location, and Next.js does
 // not auto-prefix string literals inside MetadataRoute payloads.
 const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/+$/, "");
 const withBase = (p: string) => `${BASE_PATH}${p}`;
 
-export default function manifest(): MetadataRoute.Manifest {
+export default function manifest(): ExtendedManifest {
   const appName =
     process.env.APP_NAME ||
     process.env.NEXT_PUBLIC_APP_NAME ||
@@ -57,5 +70,12 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: withBase("/screenshot-540x720.png"), sizes: "540x720", type: "image/png" },
       { src: withBase("/screenshot-1280x720.png"), sizes: "1280x720", type: "image/png" },
     ],
+    protocol_handlers: [
+      { protocol: "mailto", url: withBase("/protocol/mailto?url=%s") },
+      { protocol: "webcal", url: withBase("/protocol/webcal?url=%s") },
+    ],
+    launch_handler: {
+      client_mode: ["focus-existing", "navigate-new"],
+    },
   };
 }

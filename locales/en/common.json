@@ -135,6 +135,40 @@
     "add_app": "Apps",
     "scheduled": "Scheduled"
   },
+  "protocol_handlers": {
+    "title": "Default apps",
+    "description": "Choose whether email and calendar links open in Bulwark. Technically, Bulwark registers as a protocol handler for mailto: and webcal: links.",
+    "unsupported": "This browser or connection does not support manual protocol-handler registration. You may still be able to use the installed PWA via browser or OS settings.",
+    "mailto_label": "Email links",
+    "mailto_description": "Open mailto: links in Bulwark with a prefilled composer.",
+    "protocol_open_mode_label": "When opening protocol links",
+    "protocol_open_mode_description": "Choose whether Bulwark opens mailto: and webcal: links in a new tab or reuses an open session. The active-session option needs notification permission so you can click a fallback notification to bring Bulwark to the front if the browser blocks focus.",
+    "protocol_open_mode_active_session": "Open in active session if possible",
+    "protocol_open_mode_new_tab": "Always open a new tab",
+    "focus_notification_title": "Open Bulwark",
+    "focus_notification_body": "The link was opened in Bulwark. Click to bring the window to the front.",
+    "webcal_label": "Calendar links",
+    "webcal_description": "Open webcal: links in Bulwark with a prefilled calendar subscription dialog.",
+    "register_mailto": "Register email app",
+    "register_webcal": "Register calendar app",
+    "mailto_registered": "Email handler registration requested",
+    "webcal_registered": "Calendar handler registration requested",
+    "registration_failed": "Protocol handler registration failed",
+    "opening_mailto": "Opening composer...",
+    "opening_webcal": "Opening calendar...",
+    "browser_note": "Your browser or operating system may ask you to confirm this and may require Bulwark to be installed before it can be selected as the default app.",
+    "select_account_title": "Choose account",
+    "select_mailto_account": "Choose which account should open this email link.",
+    "select_webcal_account": "Choose which account should open this calendar link.",
+    "select_account_note": "This only applies to this protocol link.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
+    "active_account": "Active",
+    "switching_account": "Switching account..."
+  },
   "sidebar_apps": {
     "modal_title": "Sidebar Apps",
     "add_new": "Add App",
@@ -225,6 +259,8 @@
     "compose": "Compose",
     "compose_hint": "Compose new message",
     "no_subject": "(No Subject)",
+    "no_body_content": "(No body content available)",
+    "no_preview_available": "No preview available",
     "loading_email": "Loading email...",
     "loading": "Loading...",
     "reply": "Reply",
@@ -551,6 +587,15 @@
       "to": "To: {recipients}"
     },
     "remove_sub_address": "Remove sub-address",
+    "from_override": {
+      "toggle_off": "Override",
+      "toggle_on": "Cancel override",
+      "toggle_tooltip": "Edit the From name and address freely. Mail is still sent through your identity - only the visible From header changes.",
+      "name_label": "From name",
+      "name_placeholder": "Name",
+      "email_label": "From email address",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Template",
     "save_as_template": "Save as Template",
     "validation": {
@@ -757,6 +802,7 @@
       "files": "Files",
       "contacts": "Contacts",
       "encryption": "Encryption",
+      "protocol_handlers": "Default apps",
       "sidebar_apps": "Sidebar Apps",
       "notifications": "Notifications",
       "layout": "Layout",
@@ -835,6 +881,12 @@
       "colorful_sidebar_icons": {
         "label": "Colorful Sidebar Icons",
         "description": "Tint folder and tag icons by type (blue Inbox, red Junk, green Sent, etc.). Disable for a monochrome sidebar."
+      },
+      "pro_interface": {
+        "label": "Pro Interface (Experimental)",
+        "description": "Desktop-only power-user layout with multi-tab message browsing and cross-account workflows. The standard interface is unaffected; you can switch back at any time.",
+        "open_label": "Open Pro Interface",
+        "back_to_standard": "Back to standard"
       }
     },
     "keywords": {
@@ -970,11 +1022,13 @@
       },
       "mail_layout": {
         "label": "Mail Layout",
-        "description": "Choose between the classic split reading pane and a Gmail-style focused reading flow.",
+        "description": "Choose between the classic split reading pane, a Gmail-style focused reading flow, or a Zimbra-style bottom reading pane.",
         "split": "Split pane",
         "split_description": "Keep the message list and reading pane visible side by side.",
         "focus": "Focused list",
-        "focus_description": "Show one line per message and open mail full-width while keeping the folder sidebar visible."
+        "focus_description": "Show one line per message and open mail full-width while keeping the folder sidebar visible.",
+        "horizontal": "Reading pane at bottom",
+        "horizontal_description": "Show the message list on top and open the selected message in a reading pane below it."
       },
       "show_preview": {
         "label": "Show Preview Text",
@@ -990,8 +1044,18 @@
         "description": "Disable the rich text editor and send all emails as plain text only, including replies and forwards"
       },
       "auto_select_reply_identity": {
-        "label": "Auto-select Reply Address",
-        "description": "When replying, automatically switch the From address to the identity that originally received the message"
+        "label": "Reply From Received Address",
+        "description": "When replying, send from the address the message was originally sent to. Matches identities first; for domain catch-all deliveries, rewrites the From header to the alias while sending through your primary identity."
+      },
+      "signature_position": {
+        "label": "Signature Position",
+        "description": "Where to insert your signature in replies and forwards. Above the quoted text reads naturally as a closing for the reply; below keeps the original message contiguous.",
+        "above_quote": "Before quoted text",
+        "below_quote": "After quoted text"
+      },
+      "signature_separator": {
+        "label": "Signature Delimiter",
+        "description": "Prefix the signature with the standard \"-- \" delimiter line (RFC 3676). Turn off if you'd rather flow straight from your message into the signature."
       },
       "sub_address_delimiter": {
         "label": "Sub-Address Delimiter",
@@ -1725,6 +1789,7 @@
     "new_subfolder": "New subfolder...",
     "new_folder": "New folder...",
     "rename": "Rename...",
+    "import_email": "Import .eml...",
     "empty_folder": "Empty folder",
     "empty_folder_generic": "Empty folder",
     "delete_folder": "Delete folder",
@@ -1845,6 +1910,8 @@
       "bcc_placeholder": "archive@email.com",
       "text_signature_label": "Text Signature",
       "html_signature_label": "HTML Signature",
+      "signature_byte_counter": "{bytes} / {max} bytes",
+      "signature_byte_limit_reached": "Server limit reached",
       "save": "Save Identity",
       "cancel": "Cancel",
       "creating": "Creating...",
@@ -2337,12 +2404,21 @@
       "delete": "Delete"
     },
     "alerts": {
-      "title": "Reminder",
-      "none": "No reminder",
+      "title": "Reminders",
+      "none": "No reminders",
       "at_time": "At time of event",
       "minutes_before": "{count, plural, one {# minute before} other {# minutes before}}",
       "hours_before": "{count, plural, one {# hour before} other {# hours before}}",
-      "days_before": "{count, plural, one {# day before} other {# days before}}"
+      "days_before": "{count, plural, one {# day before} other {# days before}}",
+      "weeks_before": "{count, plural, one {# week before} other {# weeks before}}",
+      "unit_minutes_before": "minutes before",
+      "unit_hours_before": "hours before",
+      "unit_days_before": "days before",
+      "unit_weeks_before": "weeks before",
+      "add": "Add reminder",
+      "remove": "Remove reminder",
+      "amount": "Reminder amount",
+      "unit": "Reminder unit"
     },
     "settings": {
       "title": "Calendar settings",
@@ -2463,6 +2539,15 @@
       "error": "Failed to import calendar",
       "file_too_large": "File exceeds 10MB limit",
       "invalid_format": "Invalid calendar file format"
+    },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
     },
     "management": {
       "title": "Calendar Management",
@@ -2842,6 +2927,8 @@
     "restart_title": "Introductory tour",
     "restart_desc": "Replay the guided walkthrough of the interface",
     "restart_button": "Restart tour",
+    "show_on_new_devices_title": "Show on new devices",
+    "show_on_new_devices_desc": "Replay the welcome banner and tour the first time you sign in on a new device, even if you've already completed them elsewhere",
     "sidebar_title": "Your mailboxes",
     "sidebar_desc": "This is your folder sidebar. Click any mailbox to view its emails. You can create folders, drag emails between them, and see unread counts at a glance.",
     "compose_title": "Compose an email",

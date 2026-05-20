@@ -414,8 +414,8 @@ export class DemoJMAPClient implements IJMAPClient {
       receivedAt: new Date().toISOString(),
       from: [{ name: 'Demo User', email: 'demo@example.com' }],
       to: to.map(e => ({ email: e })),
-      cc: cc?.map(e => ({ email: e })),
-      bcc: bcc?.map(e => ({ email: e })),
+      cc: cc?.length ? cc.map(e => ({ email: e })) : undefined,
+      bcc: bcc?.length ? bcc.map(e => ({ email: e })) : undefined,
       subject,
       sentAt: new Date().toISOString(),
       preview: body.substring(0, 200),
@@ -455,6 +455,7 @@ export class DemoJMAPClient implements IJMAPClient {
     inReplyTo?: string[],
     references?: string[],
     delayedUntil?: string,
+    _envelopeMailFrom?: string,
   ): Promise<SendEmailResult> {
     // Remove draft if updating
     if (draftId) {
@@ -469,8 +470,8 @@ export class DemoJMAPClient implements IJMAPClient {
       receivedAt: new Date().toISOString(),
       from: [{ name: 'Demo User', email: 'demo@example.com' }],
       to: to.map(e => ({ email: e })),
-      cc: cc?.map(e => ({ email: e })),
-      bcc: bcc?.map(e => ({ email: e })),
+      cc: cc?.length ? cc.map(e => ({ email: e })) : undefined,
+      bcc: bcc?.length ? bcc.map(e => ({ email: e })) : undefined,
       subject,
       sentAt: new Date().toISOString(),
       preview: body.substring(0, 200),
@@ -551,7 +552,7 @@ export class DemoJMAPClient implements IJMAPClient {
   async createIdentity(
     name: string, email: string,
     replyTo?: EmailAddress[] | null, bcc?: EmailAddress[] | null,
-    htmlSignature?: string, textSignature?: string,
+    textSignature?: string | null, htmlSignature?: string | null,
   ): Promise<Identity> {
     const identity: Identity = {
       id: generateDemoId('identity'), name, email,
@@ -563,9 +564,14 @@ export class DemoJMAPClient implements IJMAPClient {
     return identity;
   }
 
-  async updateIdentity(identityId: string, updates: { name?: string; replyTo?: EmailAddress[] | null; bcc?: EmailAddress[] | null; htmlSignature?: string; textSignature?: string }): Promise<void> {
+  async updateIdentity(identityId: string, updates: { name?: string | null; replyTo?: EmailAddress[] | null; bcc?: EmailAddress[] | null; textSignature?: string | null; htmlSignature?: string | null }): Promise<void> {
     const identity = this.data.identities.find(i => i.id === identityId);
-    if (identity) Object.assign(identity, updates);
+    if (!identity) return;
+    if (updates.name !== undefined) identity.name = updates.name ?? '';
+    if (updates.replyTo !== undefined) identity.replyTo = updates.replyTo ?? undefined;
+    if (updates.bcc !== undefined) identity.bcc = updates.bcc ?? undefined;
+    if (updates.textSignature !== undefined) identity.textSignature = updates.textSignature ?? '';
+    if (updates.htmlSignature !== undefined) identity.htmlSignature = updates.htmlSignature ?? '';
   }
 
   async deleteIdentity(identityId: string): Promise<void> {

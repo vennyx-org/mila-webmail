@@ -1,16 +1,24 @@
 "use client";
 
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { useSettingsStore, type ToolbarPosition, type MailLayout } from '@/stores/settings-store';
 import { SettingsSection, SettingItem, RadioGroup, ToggleSwitch } from './settings-section';
 import { cn } from '@/lib/utils';
 import { usePolicyStore } from '@/stores/policy-store';
 import { useAccountStore } from '@/stores/account-store';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 const MAIL_LAYOUT_PREVIEW_ROWS = [
   { sender: 'Alice', subject: 'Quarterly roadmap', preview: 'The draft is ready for review.', selected: false },
   { sender: 'Nadia', subject: 'Design sync', preview: 'Pushed updated mocks and notes.', selected: true },
   { sender: 'Billing', subject: 'Invoice 1042', preview: 'Your receipt is attached.', selected: false },
+];
+
+const MAIL_LAYOUT_PREVIEW_ROWS_FOCUS = [
+  ...MAIL_LAYOUT_PREVIEW_ROWS,
+  { sender: 'Sam', subject: 'Lunch?', preview: '', selected: false },
+  { sender: 'Newsletter', subject: 'Weekly digest', preview: '', selected: false },
 ];
 
 function MailLayoutPreview({
@@ -20,8 +28,6 @@ function MailLayoutPreview({
   value: MailLayout;
   t: (key: string) => string;
 }) {
-  const isSplit = value === 'split';
-
   return (
     <div className="mt-3 rounded-xl border border-border bg-background p-3">
       <div>
@@ -33,7 +39,7 @@ function MailLayoutPreview({
         <div className="flex h-28">
           <div className="w-11 border-r border-border bg-muted/40" />
 
-          {isSplit ? (
+          {value === 'split' && (
             <>
               <div className="w-28 border-r border-border bg-background">
                 {MAIL_LAYOUT_PREVIEW_ROWS.map((row) => (
@@ -56,15 +62,36 @@ function MailLayoutPreview({
                 <div className="mt-1.5 h-2 w-2/3 rounded bg-foreground/10" />
               </div>
             </>
-          ) : (
-            <div className="flex-1 bg-background px-2 py-2">
-              <div className="space-y-1.5">
+          )}
+
+          {value === 'focus' && (
+            <div className="flex-1 bg-background">
+              {MAIL_LAYOUT_PREVIEW_ROWS_FOCUS.map((row) => (
+                <div
+                  key={row.subject}
+                  className={cn(
+                    'border-b border-border px-2 py-1 text-[10px] last:border-b-0',
+                    row.selected && 'bg-primary/10'
+                  )}
+                >
+                  <div className="truncate text-foreground">
+                    <span className="font-medium">{row.sender}</span>
+                    <span className="mx-1.5 text-muted-foreground">{row.subject}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {value === 'horizontal' && (
+            <div className="flex-1 flex flex-col bg-background">
+              <div className="border-b border-border bg-background">
                 {MAIL_LAYOUT_PREVIEW_ROWS.map((row) => (
                   <div
                     key={row.subject}
                     className={cn(
-                      'rounded-md px-2 py-1 text-[10px]',
-                      row.selected ? 'bg-primary/10' : 'bg-muted/20'
+                      'border-b border-border px-2 py-1 text-[10px] last:border-b-0',
+                      row.selected && 'bg-primary/10'
                     )}
                   >
                     <div className="truncate text-foreground">
@@ -73,6 +100,11 @@ function MailLayoutPreview({
                     </div>
                   </div>
                 ))}
+              </div>
+              <div className="flex-1 bg-background px-3 py-2">
+                <div className="h-2 w-20 rounded bg-foreground/10" />
+                <div className="mt-1.5 h-1.5 w-full rounded bg-foreground/10" />
+                <div className="mt-1 h-1.5 w-5/6 rounded bg-foreground/10" />
               </div>
             </div>
           )}
@@ -85,9 +117,10 @@ function MailLayoutPreview({
 export function LayoutSettings() {
   const t = useTranslations('settings.appearance');
   const tEmail = useTranslations('settings.email_behavior');
-  const { toolbarPosition, showToolbarLabels, hideAccountSwitcher, showRailAccountList, enableUnifiedMailbox, colorfulSidebarIcons, mailLayout, updateSetting } = useSettingsStore();
+  const { toolbarPosition, showToolbarLabels, hideAccountSwitcher, showRailAccountList, enableUnifiedMailbox, colorfulSidebarIcons, mailLayout, proInterface, updateSetting } = useSettingsStore();
   const { isSettingLocked, isSettingHidden } = usePolicyStore();
   const accounts = useAccountStore(s => s.accounts);
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   return (
     <SettingsSection title={t('title')} description={t('description')}>
@@ -100,6 +133,7 @@ export function LayoutSettings() {
             options={[
               { value: 'split', label: tEmail('mail_layout.split') },
               { value: 'focus', label: tEmail('mail_layout.focus') },
+              { value: 'horizontal', label: tEmail('mail_layout.horizontal') },
             ]}
           />
           <MailLayoutPreview value={mailLayout} t={tEmail} />
@@ -157,6 +191,23 @@ export function LayoutSettings() {
           />
         </SettingItem>
       )}
+
+      <SettingItem label={t('pro_interface.label')} description={t('pro_interface.description')}>
+        <div className="flex items-center gap-3">
+          {proInterface && isDesktop && (
+            <Link
+              href="/pro"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('pro_interface.open_label')}
+            </Link>
+          )}
+          <ToggleSwitch
+            checked={proInterface}
+            onChange={(v) => updateSetting('proInterface', v)}
+          />
+        </div>
+      </SettingItem>
     </SettingsSection>
   );
 }

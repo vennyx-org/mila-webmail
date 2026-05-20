@@ -78,11 +78,67 @@ describe('email-sanitization', () => {
       expect(clean).toContain('John Doe');
     });
 
-    it('should remove images from signatures', () => {
-      const signature = '<p>John</p><img src="logo.png" alt="Logo">';
+    it('should allow img with https src', () => {
+      const signature = '<p>John</p><img src="https://cdn.example.com/logo.png" alt="Logo" width="120" height="40">';
       const clean = sanitizeSignatureHtml(signature);
+      expect(clean).toContain('<img');
+      expect(clean).toContain('src="https://cdn.example.com/logo.png"');
+      expect(clean).toContain('alt="Logo"');
+      expect(clean).toContain('width="120"');
+      expect(clean).toContain('height="40"');
+    });
+
+    it('should allow img with data:image/png;base64 src', () => {
+      const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEX/AAAZ4gk3AAAAAXRSTlPM0jRW/QAAAAlwSFlzAAALEwAACxMBAJqcGAAAAA1JREFUCNdjYGBgAAAABAABc7Rs9wAAAABJRU5ErkJggg==';
+      const signature = `<img src="${dataUri}" alt="Logo">`;
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).toContain('<img');
+      expect(clean).toContain('data:image/png;base64,');
+    });
+
+    it('should allow img with data:image/jpeg, gif, webp', () => {
+      const cases = ['data:image/jpeg;base64,AAA', 'data:image/jpg;base64,AAA', 'data:image/gif;base64,AAA', 'data:image/webp;base64,AAA'];
+      for (const src of cases) {
+        const clean = sanitizeSignatureHtml(`<img src="${src}" alt="x">`);
+        expect(clean).toContain('<img');
+        expect(clean).toContain(src);
+      }
+    });
+
+    it('should strip img with http: src (https only)', () => {
+      const signature = '<img src="http://insecure.example.com/logo.png" alt="Logo">';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).not.toContain('http://insecure.example.com');
       expect(clean).not.toContain('<img');
-      expect(clean).toContain('John');
+    });
+
+    it('should strip img with javascript: src', () => {
+      const signature = '<img src="javascript:alert(1)" alt="x">';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).not.toContain('javascript:');
+      expect(clean).not.toContain('<img');
+    });
+
+    it('should strip img with data:image/svg+xml src (SVG forbidden)', () => {
+      const signature = '<img src="data:image/svg+xml;base64,PHN2Zy8+" alt="x">';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).not.toContain('data:image/svg');
+      expect(clean).not.toContain('<img');
+    });
+
+    it('should strip img with non-image data: URI', () => {
+      const signature = '<img src="data:text/html;base64,PHA+aGk8L3A+" alt="x">';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).not.toContain('data:text/html');
+      expect(clean).not.toContain('<img');
+    });
+
+    it('should strip event handlers on img', () => {
+      const signature = '<img src="https://cdn.example.com/logo.png" alt="x" onerror="alert(1)" onload="alert(2)">';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).not.toContain('onerror');
+      expect(clean).not.toContain('onload');
+      expect(clean).toContain('https://cdn.example.com/logo.png');
     });
 
     it('should remove video and audio tags', () => {
@@ -112,17 +168,31 @@ describe('email-sanitization', () => {
       expect(sanitizeSignatureHtml('   ')).toBe('');
     });
 
-    it('should be stricter than email sanitization', () => {
-      const html = '<p>Text</p><img src="pic.jpg"><table><tr><td>Data</td></tr></table>';
+    it('should be stricter than email sanitization for script-bearing tags', () => {
+      const html = '<p>Text</p><table><tr><td>Data</td></tr></table><video src="v.mp4"></video><iframe src="x"></iframe>';
       const emailClean = sanitizeEmailHtml(html);
       const signatureClean = sanitizeSignatureHtml(html);
 
-      // Email allows img and table
-      expect(emailClean).toContain('<img');
+      // Both preserve tables (signatures are universally table-based)
       expect(emailClean).toContain('<table>');
+      expect(signatureClean).toContain('<table');
+      expect(signatureClean).toContain('Data');
 
-      // Signature blocks img but may allow some tables (verify in implementation)
-      expect(signatureClean).not.toContain('<img');
+      // Signature still blocks media and frames
+      expect(signatureClean).not.toContain('<video');
+      expect(signatureClean).not.toContain('<iframe');
+      expect(signatureClean).toContain('Text');
+    });
+
+    it('should preserve table layout attributes used by email signatures', () => {
+      const signature = '<table cellpadding="0" cellspacing="0" border="0"><tr><td valign="top" align="left" bgcolor="#fafafa" colspan="2">Name</td></tr></table>';
+      const clean = sanitizeSignatureHtml(signature);
+      expect(clean).toContain('cellpadding');
+      expect(clean).toContain('cellspacing');
+      expect(clean).toContain('valign');
+      expect(clean).toContain('align');
+      expect(clean).toContain('bgcolor');
+      expect(clean).toContain('colspan');
     });
   });
 

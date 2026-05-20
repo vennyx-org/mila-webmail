@@ -11,8 +11,13 @@ services:
     volumes:
       # Encrypted user settings (SETTINGS_DATA_DIR).
       - bulwark-settings:/app/data/settings
-      # Admin dashboard state: config, password hash, plugins, audit logs (ADMIN_DATA_DIR).
+      # Admin configuration: config.json, policy.json, admin.json (passwordHash),
+      # plugins, themes, branding uploads (ADMIN_CONFIG_DIR). Can be mounted
+      # read-only after running the setup wizard - append `:ro` to lock it.
       - bulwark-admin:/app/data/admin
+      # Admin runtime state: admin-state.json (login timestamps), audit.log,
+      # setup token (ADMIN_STATE_DIR). Always read-write.
+      - bulwark-admin-state:/app/data/admin-state
       # Anonymous telemetry: instance id, consent state, login HMACs (TELEMETRY_DATA_DIR).
       # Persisting this preserves the admin's consent choice and stable instance id across upgrades.
       - bulwark-telemetry:/app/data/telemetry
@@ -35,4 +40,5 @@ services:
 volumes:
   bulwark-settings:
   bulwark-admin:
+  bulwark-admin-state:
   bulwark-telemetry:

@@ -8,6 +8,7 @@ import { EmailList } from "@/components/email/email-list";
 import { EmailViewer } from "@/components/email/email-viewer";
 import { EmailComposer } from "@/components/email/email-composer";
 import type { ComposerDraftData } from "@/components/email/email-composer";
+import { ProtocolAccountPicker } from "@/components/protocol/protocol-account-picker";
 import { ThreadConversationView } from "@/components/email/thread-conversation-view";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { ThreadGroup, Email, isUnifiedMailboxId, UNIFIED_ROLE_BY_ID } from "@/lib/jmap/types";
@@ -48,19 +49,29 @@ import { SidebarAppsModal } from "@/components/layout/sidebar-apps-modal";
 import { InlineAppView } from "@/components/layout/inline-app-view";
 import { useSidebarApps } from "@/hooks/use-sidebar-apps";
 import { useIdentitySync } from "@/hooks/use-identity-sync";
+import { useIsEmbedded } from "@/hooks/use-is-embedded";
+import { useProTabStore } from "@/stores/pro-tab-store";
 import { Input } from "@/components/ui/input";
 import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import { isFilePreviewable } from "@/lib/file-preview";
 import { appendPlainTextSignature } from "@/lib/signature-utils";
 import { computeReplyThreadingHeaders } from "@/lib/email-threading";
+import { resolveReplyFrom } from "@/lib/reply-identity";
 import { Search, Filter, ChevronDown, X, Paperclip, Star, Mail, MailOpen, RotateCcw, PenSquare, PenLine, CheckSquare, Square, AlertTriangle } from "lucide-react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Button } from "@/components/ui/button";
 import { useConfig } from "@/hooks/use-config";
 import { usePluginStore } from "@/stores/plugin-store";
+import { AppTopBannerSlot } from "@/components/plugins/app-top-banner-slot";
 import { useThemeStore } from "@/stores/theme-store";
+import { consumePendingMailto, subscribeToPendingMailto } from "@/lib/protocol-handlers/session";
+import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
+import { plainTextToComposerBody } from "@/lib/email-composer-utils";
 import { appLifecycleHooks, uiHooks, routerHooks, toastHooks, emailHooks } from "@/lib/plugin-hooks";
 import { emailToReadView } from "@/lib/plugin-projection";
+import { buildQuoteHeader } from "@/lib/quote-header";
+import { useLocaleStore } from "@/stores/locale-store";
+import type { QuoteHeader } from "@/lib/plugin-types";
 
 const SCHEDULED_MAILBOX_ID = '__scheduled__';
 
@@ -75,6 +86,10 @@ export default function Home() {
   const [composerDraftText, setComposerDraftText] = useState("");
   const [pendingDraft, setPendingDraft] = useState<ComposerDraftData | null>(null);
   const [composerSessionId, setComposerSessionId] = useState(0);
+  // Plugin-resolved quote header for the next reply/forward composer open.
+  // Cleared on close so a subsequent "compose new" doesn't reuse stale state.
+  const [composerQuoteHeader, setComposerQuoteHeader] = useState<QuoteHeader | null>(null);
+  const suppressComposerStateSaveSessionRef = useRef<number | null>(null);
   const { dialogProps: confirmDialogProps, confirm: confirmDialog } = useConfirmDialog();
   const { dialogProps: promptDialogProps, prompt: promptDialog } = usePromptDialog();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
@@ -90,8 +105,10 @@ export default function Home() {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [rateLimitSecondsLeft, setRateLimitSecondsLeft] = useState<number | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{ blobId: string; name: string; type?: string } | null>(null);
+  const [pendingMailtoAccountChoice, setPendingMailtoAccountChoice] = useState<ParsedMailto | null>(null);
+  const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { isAuthenticated, client, logout, checkAuth, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
+  const { isAuthenticated, client, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
   const { identities } = useIdentityStore();
   useIdentitySync();
   const trustedSendersAddressBook = useSettingsStore((state) => state.trustedSendersAddressBook);
@@ -204,7 +221,8 @@ export default function Home() {
 
   // Mobile/tablet responsive hooks
   const { isMobile, isTablet } = useDeviceDetection();
-  const { activeView, sidebarOpen, setSidebarOpen, setActiveView, tabletListVisible, setTabletListVisible, sidebarWidth, emailListWidth, setSidebarWidth, setEmailListWidth, persistColumnWidths, sidebarCollapsed, resetSidebarWidth, resetEmailListWidth } = useUIStore();
+  const isEmbedded = useIsEmbedded();
+  const { activeView, sidebarOpen, setSidebarOpen, setActiveView, tabletListVisible, setTabletListVisible, sidebarWidth, emailListWidth, emailListHeight, setSidebarWidth, setEmailListWidth, setEmailListHeight, persistColumnWidths, sidebarCollapsed, resetSidebarWidth, resetEmailListWidth, resetEmailListHeight } = useUIStore();
   const {
     emails,
     mailboxes,
@@ -326,6 +344,13 @@ export default function Home() {
     },
     [],
   );
+
+  const getMailtoProtocolAccounts = useCallback(() => {
+    const connectedClients = useAuthStore.getState().getAllConnectedClients();
+    return useAccountStore.getState().accounts.filter((account) =>
+      account.isConnected && connectedClients.has(account.id)
+    );
+  }, []);
 
   // Browser back / forward integration. The restore handler reads the
   // latest values from a ref so we don't have to recreate the callback on
@@ -671,6 +696,65 @@ export default function Home() {
     document.title = title;
   }, [showComposer, composerMode, selectedEmail, selectedMailbox, mailboxes, t, appName]);
 
+  // When this page is rendered inside the Pro shell as the Mail tab body,
+  // we hoist every "show composer" intent into its own Pro tab and reset
+  // the in-page state so the inline composer never appears in the Mail tab.
+  // This makes the Pro composer behave like Thunderbird's pop-out window.
+  useEffect(() => {
+    if (!isEmbedded || !showComposer) return;
+    const replyTo = selectedEmail ? {
+      from: selectedEmail.from,
+      replyToAddresses: selectedEmail.replyTo,
+      to: selectedEmail.to,
+      cc: selectedEmail.cc,
+      bcc: selectedEmail.bcc,
+      subject: selectedEmail.subject,
+      body: selectedEmail.bodyValues?.[selectedEmail.textBody?.[0]?.partId || '']?.value || selectedEmail.preview || '',
+      htmlBody: selectedEmail.bodyValues?.[selectedEmail.htmlBody?.[0]?.partId || '']?.value || undefined,
+      receivedAt: selectedEmail.receivedAt,
+      attachments: selectedEmail.attachments,
+      messageId: selectedEmail.messageId,
+      inReplyTo: selectedEmail.inReplyTo,
+      references: selectedEmail.references,
+      quoteHeaderHtml: composerQuoteHeader?.html,
+      quoteHeaderText: composerQuoteHeader?.text,
+      quoteWrapInBlockquote: composerQuoteHeader?.wrapInBlockquote,
+    } : undefined;
+
+    const effectiveMode = pendingDraft?.mode ?? composerMode;
+    const baseSubject = (pendingDraft?.subject?.trim() || selectedEmail?.subject?.trim()) ?? '';
+    let title = t('email_composer.new_message');
+    if (baseSubject) {
+      if (effectiveMode === 'reply' || effectiveMode === 'replyAll') {
+        title = baseSubject.startsWith('Re:') ? baseSubject : `Re: ${baseSubject}`;
+      } else if (effectiveMode === 'forward') {
+        title = baseSubject.startsWith('Fwd:') ? baseSubject : `Fwd: ${baseSubject}`;
+      } else {
+        title = baseSubject;
+      }
+    }
+
+    useProTabStore.getState().openComposeTab({
+      sessionId: composerSessionId + 1,
+      mode: effectiveMode,
+      replyTo,
+      initialDraftText: composerDraftText,
+      initialData: pendingDraft,
+      sourceEmailId: selectedEmail?.id ?? null,
+      title,
+    });
+
+    setComposerSessionId((s) => s + 1);
+    setShowComposer(false);
+    setComposerDraftText("");
+    setPendingDraft(null);
+    setComposerQuoteHeader(null);
+    // We only react to the rising edge of `showComposer` here; the other
+    // variables read above are captured-but-stale-safe because the next
+    // open will fire a fresh effect with new values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmbedded, showComposer]);
+
   // Check auth on mount – skip when already authenticated so that navigating
   // between routes doesn't retrigger checkAuth's transient `{ client: null,
   // isLoading: true }` reset, which was flashing the spinner on every nav.
@@ -700,6 +784,7 @@ export default function Home() {
         const parsed = JSON.parse(stored);
         if (parsed.sidebarWidth) setSidebarWidth(parsed.sidebarWidth);
         if (parsed.emailListWidth) setEmailListWidth(parsed.emailListWidth);
+        if (parsed.emailListHeight) setEmailListHeight(parsed.emailListHeight);
       }
     } catch { /* ignore parse errors */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -713,7 +798,78 @@ export default function Home() {
     }
   }, [initialCheckDone, isAuthenticated, authLoading]);
 
-  // Load mailboxes and emails when authenticated (only if not already loaded)
+  const openMailtoDraft = useCallback((pending: ParsedMailto) => {
+    const body = useSettingsStore.getState().plainTextMode
+      ? pending.body
+      : plainTextToComposerBody(pending.body);
+
+    if (showComposer) {
+      suppressComposerStateSaveSessionRef.current = composerSessionId;
+    }
+    setComposerSessionId((id) => id + 1);
+    setPendingDraft({
+      to: pending.to.join(", "),
+      cc: pending.cc.join(", "),
+      bcc: pending.bcc.join(", "),
+      subject: pending.subject,
+      body,
+      showCc: pending.cc.length > 0,
+      showBcc: pending.bcc.length > 0,
+      selectedIdentityId: null,
+      subAddressTag: "",
+      mode: "compose",
+      draftId: null,
+    });
+    setComposerMode("compose");
+    setShowComposer(true);
+    if (isMobile) setActiveView("viewer");
+  }, [composerSessionId, isMobile, setActiveView, showComposer]);
+
+  const openMailtoForAccount = useCallback(async (pending: ParsedMailto, accountId: string) => {
+    setIsProtocolAccountSwitching(true);
+    try {
+      if (useAuthStore.getState().activeAccountId !== accountId) {
+        await switchAccount(accountId);
+      }
+      setPendingMailtoAccountChoice(null);
+      openMailtoDraft(pending);
+    } finally {
+      setIsProtocolAccountSwitching(false);
+    }
+  }, [openMailtoDraft, switchAccount]);
+
+  const handleMailtoProtocolRequest = useCallback((pending: ParsedMailto) => {
+    const protocolAccounts = getMailtoProtocolAccounts();
+    if (protocolAccounts.length > 1) {
+      setPendingMailtoAccountChoice(pending);
+      return;
+    }
+
+    const accountId = protocolAccounts[0]?.id ?? activeAccountId;
+    if (accountId) {
+      void openMailtoForAccount(pending, accountId);
+      return;
+    }
+
+    openMailtoDraft(pending);
+  }, [activeAccountId, getMailtoProtocolAccounts, openMailtoDraft, openMailtoForAccount]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    const openPendingMailto = () => {
+      const pending = consumePendingMailto();
+      if (pending) handleMailtoProtocolRequest(pending);
+    };
+
+    openPendingMailto();
+    return subscribeToPendingMailto(openPendingMailto);
+  }, [isAuthenticated, client, handleMailtoProtocolRequest]);
+
+  // Fallback fetch for paths that didn't go through login()'s prefetch
+  // (notably checkAuth on page refresh). The prefetch in auth-store/login()
+  // populates mailboxes before this effect first runs, so on the post-login
+  // path this block is a no-op.
   useEffect(() => {
     if (isAuthenticated && client && mailboxes.length === 0) {
       let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -721,18 +877,14 @@ export default function Home() {
 
       const loadData = async (attempt = 1) => {
         try {
-          // First fetch mailboxes and quota (inbox will be auto-selected in fetchMailboxes)
           await Promise.all([
             fetchMailboxes(client),
             fetchQuota(client)
           ]);
 
-          // Get the selected mailbox (should be inbox by default)
           const state = useEmailStore.getState();
           const selectedMailboxId = state.selectedMailbox;
 
-          // On first login the server may still be provisioning mailboxes.
-          // Retry a few times with back-off before giving up.
           if (state.mailboxes.length === 0 && attempt <= 5 && !cancelled) {
             const delay = Math.min(1000 * attempt, 5000);
             debug.log('jmap', `[Mailbox] No mailboxes returned (attempt ${attempt}), retrying in ${delay}ms`);
@@ -749,27 +901,7 @@ export default function Home() {
             await fetchEmails(client);
           }
 
-          // Fetch tag counts
           fetchTagCounts(client);
-
-          // Setup push notifications after successful data load
-          try {
-            // Register state change callback
-            client.onStateChange((change) => handleStateChange(change, client));
-
-            // Start receiving push notifications
-            const pushEnabled = client.setupPushNotifications();
-
-            if (pushEnabled) {
-              setPushConnected(true);
-              debug.log('push', '[Push] Push notifications successfully enabled');
-            } else {
-              debug.log('push', '[Push] Push notifications not available on this server');
-            }
-          } catch (error) {
-            // Push notifications are optional - don't break the app if they fail
-            debug.log('push', '[Push] Failed to setup push notifications:', error);
-          }
         } catch (error) {
           console.error('Error loading email data:', error);
         }
@@ -779,17 +911,33 @@ export default function Home() {
       return () => {
         cancelled = true;
         if (retryTimer) clearTimeout(retryTimer);
-        client.closePushNotifications();
       };
     }
+  }, [isAuthenticated, client, mailboxes.length, fetchMailboxes, fetchEmails, fetchQuota, fetchTagCounts, refreshScheduledMetadata]);
 
-    // Cleanup push notifications on unmount
-    return () => {
-      if (client) {
-        client.closePushNotifications();
+  // Push notifications: set up once per client and tear down when the client
+  // goes away (logout or account switch). Kept separate from the fetch effect
+  // above so it still runs when data was prefetched at login time.
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    try {
+      client.onStateChange((change) => handleStateChange(change, client));
+      const pushEnabled = client.setupPushNotifications();
+      if (pushEnabled) {
+        setPushConnected(true);
+        debug.log('push', '[Push] Push notifications successfully enabled');
+      } else {
+        debug.log('push', '[Push] Push notifications not available on this server');
       }
+    } catch (error) {
+      debug.log('push', '[Push] Failed to setup push notifications:', error);
+    }
+
+    return () => {
+      client.closePushNotifications();
     };
-  }, [isAuthenticated, client, mailboxes.length, fetchMailboxes, fetchEmails, fetchQuota, fetchTagCounts, refreshScheduledMetadata, handleStateChange, setPushConnected]);
+  }, [isAuthenticated, client, handleStateChange, setPushConnected]);
 
   // Keep unified mailbox counts in sync when the feature is enabled and more
   // than one account is connected. Runs whenever the set of connected accounts
@@ -941,6 +1089,7 @@ export default function Home() {
     fromEmail?: string;
     fromName?: string;
     identityId?: string;
+    envelopeMailFrom?: string;
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>;
     inReplyTo?: string[];
     references?: string[];
@@ -952,7 +1101,7 @@ export default function Home() {
       const effectiveMode = pendingDraft?.mode ?? composerMode;
       const originalEmailId = selectedEmail?.id;
 
-      const result = await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil);
+      const result = await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil, data.envelopeMailFrom);
       setShowComposer(false);
       if (result.scheduled) {
         await refreshScheduledMetadata(client);
@@ -993,6 +1142,50 @@ export default function Home() {
     }
   };
 
+  // Build the quote header for a reply/forward open, running it through the
+  // emailHooks.onBuildQuoteHeader transform so plugins can replace it. Stores
+  // the result in composerQuoteHeader; the render site spreads it into
+  // EmailComposer.replyTo. Errors fall back to the composer's built-in
+  // header (state set to null).
+  const prepareComposerQuoteHeader = useCallback(async (
+    email: Email | null,
+    mode: 'reply' | 'replyAll' | 'forward',
+  ) => {
+    if (!email) { setComposerQuoteHeader(null); return; }
+    try {
+      const replyTargets = (email.replyTo?.length
+        ? email.replyTo
+        : email.from ?? []).filter(r => r.email).map(r => r.email!);
+      const newTo = mode === 'reply'
+        ? replyTargets
+        : mode === 'replyAll'
+          ? [...replyTargets, ...(email.to ?? []).filter(r => r.email).map(r => r.email!)]
+          : [];
+      const newCc = mode === 'replyAll'
+        ? (email.cc ?? []).filter(r => r.email).map(r => r.email!)
+        : [];
+      const header = await buildQuoteHeader({
+        mode,
+        email: {
+          from: email.from,
+          to: email.to,
+          cc: email.cc,
+          subject: email.subject,
+          receivedAt: email.receivedAt,
+        },
+        newTo,
+        newCc,
+        locale: useLocaleStore.getState().locale,
+        timeFormat: useSettingsStore.getState().timeFormat,
+        unknownLabel: tCommon('unknown'),
+      });
+      setComposerQuoteHeader(header);
+    } catch (err) {
+      console.warn('[quote-header] plugin transform failed; using default', err);
+      setComposerQuoteHeader(null);
+    }
+  }, [tCommon]);
+
   const handleReply = async (draftText?: string) => {
     if (selectedEmail) {
       const ok = await emailHooks.onBeforeReply.intercept({
@@ -1001,6 +1194,9 @@ export default function Home() {
         mode: 'reply' as const,
       });
       if (!ok) return;
+      await prepareComposerQuoteHeader(selectedEmail, 'reply');
+    } else {
+      setComposerQuoteHeader(null);
     }
     setComposerDraftText(draftText || "");
     setComposerMode('reply');
@@ -1068,6 +1264,9 @@ export default function Home() {
         mode: 'reply-all' as const,
       });
       if (!ok) return;
+      await prepareComposerQuoteHeader(selectedEmail, 'replyAll');
+    } else {
+      setComposerQuoteHeader(null);
     }
     setComposerMode('replyAll');
     setShowComposer(true);
@@ -1082,6 +1281,9 @@ export default function Home() {
         mode: 'forward' as const,
       });
       if (!ok) return;
+      await prepareComposerQuoteHeader(selectedEmail, 'forward');
+    } else {
+      setComposerQuoteHeader(null);
     }
     setComposerMode('forward');
     setShowComposer(true);
@@ -1597,6 +1799,43 @@ export default function Home() {
     }
   };
 
+  const handleImportEmailFromContextMenu = (mailboxId: string) => {
+    if (!client) return;
+    const mailbox = mailboxes.find(mb => mb.id === mailboxId);
+    if (!mailbox) return;
+    const targetMailboxId = mailbox.originalId || mailbox.id;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.eml,message/rfc822';
+    input.multiple = true;
+    input.onchange = async (e) => {
+      const files = Array.from((e.target as HTMLInputElement).files ?? []);
+      if (files.length === 0) return;
+
+      let imported = 0;
+      let failed = 0;
+      for (const file of files) {
+        try {
+          const blob = new Blob([await file.arrayBuffer()], { type: 'message/rfc822' });
+          await client.importRawEmail(blob, { [targetMailboxId]: true }, { '$seen': true });
+          imported++;
+        } catch {
+          failed++;
+        }
+      }
+
+      if (imported > 0) {
+        toast.success(t('notifications.import_email_success'));
+        if (selectedMailbox) await fetchEmails(client, selectedMailbox);
+      }
+      if (failed > 0) {
+        toast.error(t('notifications.import_email_error'));
+      }
+    };
+    input.click();
+  };
+
   const handleRefreshMailboxes = async () => {
     if (!client) return;
     try {
@@ -1697,9 +1936,30 @@ export default function Home() {
     }
 
     const primaryIdentity = identities[0];
+    const autoSelectReplyIdentity = useSettingsStore.getState().autoSelectReplyIdentity;
 
-    // Append signature from the primary identity
-    const finalBody = appendPlainTextSignature(body, primaryIdentity);
+    // Decide the sending identity and (for domain-catch-all) an optional
+    // header From override that matches the address the message was sent to.
+    // When the setting is off, fall through to primary-identity behavior.
+    const resolved = autoSelectReplyIdentity
+      ? resolveReplyFrom(identities, {
+          to: selectedEmail.to,
+          cc: selectedEmail.cc,
+          bcc: selectedEmail.bcc,
+        })
+      : null;
+    const sendingIdentity = resolved
+      ? (identities.find((i) => i.id === resolved.identityId) || primaryIdentity)
+      : primaryIdentity;
+    const headerFromEmail = resolved?.overrideEmail || sendingIdentity?.email;
+    const headerFromName = resolved?.overrideName || sendingIdentity?.name || undefined;
+    const envelopeMailFrom = resolved?.overrideEmail ? sendingIdentity?.email : undefined;
+
+    // Append signature from the sending identity (fall back to primary
+    // when the reply-from lives on the same identity but a different alias).
+    const finalBody = appendPlainTextSignature(body, sendingIdentity, {
+      separator: useSettingsStore.getState().signatureSeparatorEnabled,
+    });
 
     const originalEmailId = selectedEmail.id;
     const sendDelaySeconds = useSettingsStore.getState().sendDelaySeconds;
@@ -1727,15 +1987,16 @@ export default function Home() {
       finalBody,
       undefined,
       undefined,
-      primaryIdentity?.id,
-      primaryIdentity?.email,
+      sendingIdentity?.id,
+      headerFromEmail,
       undefined,
-      primaryIdentity?.name || undefined,
+      headerFromName,
       undefined,
       undefined,
       threading?.inReplyTo,
       threading?.references,
       delayedUntil,
+      envelopeMailFrom,
     );
 
     if (result.scheduled) {
@@ -1769,9 +2030,11 @@ export default function Home() {
   // Get current mailbox name for mobile header
   const currentMailboxName = isScheduledView ? t('sidebar.scheduled') : mailboxes.find(m => m.id === selectedMailbox)?.name || "Inbox";
   const isFocusedMailLayout = mailLayout === 'focus';
+  const isHorizontalMailLayout = mailLayout === 'horizontal' && !isMobile && !isTablet;
   const hasViewerContent = showComposer || Boolean(conversationThread) || Boolean(selectedEmail);
   const shouldCollapseListPane = (isTablet && !tabletListVisible) || (!isMobile && isFocusedMailLayout && hasViewerContent);
   const shouldHideViewerPane = !isMobile && isFocusedMailLayout && !hasViewerContent;
+  const shouldHideHorizontalViewerPane = isHorizontalMailLayout && !hasViewerContent;
 
   // Handle email selection with mobile view switching
   const handleEmailSelect = async (email: { id: string }) => {
@@ -1892,22 +2155,25 @@ export default function Home() {
   };
 
   // Handle reply from conversation view
-  const handleConversationReply = (email: Email) => {
+  const handleConversationReply = async (email: Email) => {
     selectEmail(email);
+    await prepareComposerQuoteHeader(email, 'reply');
     setComposerMode('reply');
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
   };
 
-  const handleConversationReplyAll = (email: Email) => {
+  const handleConversationReplyAll = async (email: Email) => {
     selectEmail(email);
+    await prepareComposerQuoteHeader(email, 'replyAll');
     setComposerMode('replyAll');
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
   };
 
-  const handleConversationForward = (email: Email) => {
+  const handleConversationForward = async (email: Email) => {
     selectEmail(email);
+    await prepareComposerQuoteHeader(email, 'forward');
     setComposerMode('forward');
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
@@ -1935,7 +2201,8 @@ export default function Home() {
 
   return (
     <DragDropProvider>
-      <div className="flex flex-col h-dvh bg-background overflow-hidden">
+      <div className={cn("flex flex-col bg-background overflow-hidden pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+        <AppTopBannerSlot />
         {isRateLimited && rateLimitSecondsLeft !== null && (
           <div className="flex items-center justify-center gap-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300 text-sm py-1.5 px-4 flex-shrink-0">
             <AlertTriangle className="h-3.5 w-3.5" />
@@ -1950,8 +2217,8 @@ export default function Home() {
           </div>
         )}
         <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Navigation Rail */}
-        {!isMobile && !isTablet && (
+        {/* Desktop Navigation Rail (hidden when embedded inside Pro shell) */}
+        {!isMobile && !isTablet && !isEmbedded && (
           <div className="w-14 bg-secondary flex flex-col flex-shrink-0" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.3)' }}>
             <NavigationRail
               collapsed
@@ -1971,25 +2238,44 @@ export default function Home() {
           <InlineAppView apps={loadedApps} activeAppId={inlineApp!.id} onClose={closeInlineApp} className="flex-1" />
         )}
 
-        {/* Mobile/Tablet Sidebar Overlay Backdrop */}
+        {/* Mobile/Tablet Sidebar Overlay Backdrop.
+            When embedded in a Pro pane the viewport is desktop-wide, so the
+            `lg:hidden` viewport-variant alone wouldn't gate this overlay;
+            scope to the pane via `absolute` so the backdrop stays inside
+            the pane instead of covering the whole window. */}
         {(isMobile || isTablet) && sidebarOpen && !inlineApp && (
           <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            className={cn(
+              "inset-0 bg-black/50 z-40",
+              isEmbedded ? "absolute" : "fixed lg:hidden"
+            )}
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
-        {/* Sidebar - overlay on mobile/tablet, fixed on desktop */}
+        {/* Sidebar - overlay on mobile/tablet, in-flow on desktop.
+            When embedded, overlay-mode is driven by pane-aware JS rather
+            than viewport-variants (which still see the full window). */}
         <div
           className={cn(
             "flex-shrink-0 h-full z-50",
             !isResizing && "transition-[width] duration-300",
-            // Mobile/Tablet: fixed overlay
-            "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-72",
-            "max-lg:transform max-lg:transition-transform max-lg:duration-300 max-lg:ease-in-out",
-            !sidebarOpen && "max-lg:-translate-x-full",
-            // Desktop: normal flow
-            "lg:relative lg:translate-x-0",
+            isEmbedded
+              ? (isMobile || isTablet
+                  ? cn(
+                      "absolute inset-y-0 left-0 w-72 pt-[env(safe-area-inset-top)]",
+                      "transform transition-transform duration-300 ease-in-out",
+                      !sidebarOpen && "-translate-x-full"
+                    )
+                  : "relative translate-x-0")
+              : cn(
+                  // Mobile/Tablet: fixed overlay
+                  "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-72 max-lg:pt-[env(safe-area-inset-top)]",
+                  "max-lg:transform max-lg:transition-transform max-lg:duration-300 max-lg:ease-in-out",
+                  !sidebarOpen && "max-lg:-translate-x-full",
+                  // Desktop: normal flow
+                  "lg:relative lg:translate-x-0"
+                ),
             inlineApp && "hidden"
           )}
           style={!isMobile && !isTablet ? { width: sidebarCollapsed ? 64 : sidebarWidth } : undefined}
@@ -2011,6 +2297,7 @@ export default function Home() {
               onCreateFolder={handleCreateFolderFromContextMenu}
               onRenameFolder={handleRenameFolderFromContextMenu}
               onDeleteFolder={handleDeleteFolderFromContextMenu}
+              onImportEmail={handleImportEmailFromContextMenu}
               onRefreshMailboxes={handleRefreshMailboxes}
               onCompose={() => {
                 setComposerMode('compose');
@@ -2037,21 +2324,30 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className={cn("flex flex-col flex-1 min-w-0 h-full", inlineApp && "hidden")}>
-          <div className="flex flex-1 min-h-0">
-          {/* Email List - full width on mobile, fixed width on tablet/desktop */}
+          <div className={cn("flex flex-1 min-h-0", isHorizontalMailLayout && "md:flex-col")}>
+          {/* Email List - full width on mobile, fixed width/height on tablet/desktop */}
           <div
             className={cn(
-              "relative flex flex-col h-full bg-background border-r border-border",
+              "relative flex flex-col bg-background",
+              isHorizontalMailLayout ? "md:w-full md:h-auto" : "h-full border-r border-border",
               // Mobile: full width, hidden when viewing email
-              "max-md:flex-1 max-md:border-r-0",
+              "max-md:flex-1 max-md:border-r-0 max-md:border-b-0",
               isMobile && activeView !== "list" && "max-md:hidden",
               // Tablet/Desktop: fixed width with collapse animation
-              shouldHideViewerPane ? "md:flex-1 md:border-r-0" : "md:flex-shrink-0",
-              "md:shadow-sm",
+              !isHorizontalMailLayout && (shouldHideViewerPane ? "md:flex-1 md:border-r-0" : "md:flex-shrink-0"),
+              isHorizontalMailLayout && (shouldHideHorizontalViewerPane ? "md:flex-1" : "md:flex-shrink-0"),
+              isHorizontalMailLayout && !shouldHideHorizontalViewerPane && "md:shadow-[0_8px_12px_-6px_rgba(0,0,0,0.18)] dark:md:shadow-[0_8px_14px_-6px_rgba(0,0,0,0.55)]",
+              !isHorizontalMailLayout && "md:shadow-sm",
               !isResizing && "transition-all duration-200 ease-out",
               shouldCollapseListPane && "md:w-0 md:opacity-0 md:overflow-hidden md:border-r-0"
             )}
-            style={!isMobile && !shouldCollapseListPane && !shouldHideViewerPane ? { width: emailListWidth } : undefined}
+            style={
+              isMobile
+                ? undefined
+                : isHorizontalMailLayout
+                  ? (!shouldHideHorizontalViewerPane ? { height: emailListHeight } : undefined)
+                  : (!shouldCollapseListPane && !shouldHideViewerPane ? { width: emailListWidth } : undefined)
+            }
           >
             {/* Mobile Header for List View */}
             <MobileHeader
@@ -2318,6 +2614,14 @@ export default function Home() {
                   }
                 }}
                 onEmailSelect={handleEmailSelect}
+                onEmailDoubleClick={isEmbedded ? ((email) => {
+                  useProTabStore.getState().openEmailTab({
+                    accountId: email.accountId ?? '',
+                    emailId: email.id,
+                    mailboxId: selectedMailbox,
+                    title: email.subject?.trim() || t('email_composer.new_message'),
+                  });
+                }) : undefined}
                 onOpenConversation={handleOpenConversation}
                 // Context menu handlers
                 onReply={(email) => {
@@ -2390,7 +2694,7 @@ export default function Home() {
           </div>
 
           {/* Email list resize handle (desktop only) */}
-          {!isMobile && !isTablet && !isFocusedMailLayout && (
+          {!isMobile && !isTablet && !isFocusedMailLayout && !isHorizontalMailLayout && (
             <ResizeHandle
               onResizeStart={() => { dragStartWidth.current = emailListWidth; setIsResizing(true); }}
               onResize={(delta) => setEmailListWidth(dragStartWidth.current + delta)}
@@ -2398,26 +2702,41 @@ export default function Home() {
               onDoubleClick={resetEmailListWidth}
             />
           )}
+          {!isMobile && !isTablet && isHorizontalMailLayout && !shouldHideHorizontalViewerPane && (
+            <ResizeHandle
+              orientation="horizontal"
+              onResizeStart={() => { dragStartWidth.current = emailListHeight; setIsResizing(true); }}
+              onResize={(delta) => setEmailListHeight(dragStartWidth.current + delta)}
+              onResizeEnd={() => { setIsResizing(false); persistColumnWidths(); }}
+              onDoubleClick={resetEmailListHeight}
+            />
+          )}
 
           {/* Email Viewer / Composer - full screen on mobile, flex on tablet/desktop */}
           <div
             className={cn(
-              "flex flex-col h-full bg-background flex-1 min-w-0",
+              "flex flex-col bg-background flex-1 min-w-0",
+              isHorizontalMailLayout ? "min-h-0" : "h-full",
               // Mobile: full screen overlay when active
               "max-md:fixed max-md:inset-0 max-md:z-30",
+              "max-md:h-full max-md:pt-[env(safe-area-inset-top)]",
               isMobile && activeView !== "viewer" && "max-md:hidden",
               // Tablet/Desktop: relative
               "md:relative",
-              shouldHideViewerPane && "md:hidden"
+              shouldHideViewerPane && "md:hidden",
+              shouldHideHorizontalViewerPane && "md:hidden"
             )}
           >
-            {/* Inline Composer - shown in viewer pane */}
-            {showComposer ? (
+            {/* Inline Composer - shown in viewer pane.
+                In Pro/embedded mode the composer is hoisted into its own
+                Pro tab (see the effect below), so we never render it inline. */}
+            {(showComposer && !isEmbedded) ? (
               <ErrorBoundary
                 fallback={ComposerErrorFallback}
                 onReset={() => {
                   setShowComposer(false);
                   setComposerMode('compose');
+                  setComposerQuoteHeader(null);
                 }}
               >
                 <EmailComposer
@@ -2437,10 +2756,19 @@ export default function Home() {
                     messageId: selectedEmail.messageId,
                     inReplyTo: selectedEmail.inReplyTo,
                     references: selectedEmail.references,
+                    quoteHeaderHtml: composerQuoteHeader?.html,
+                    quoteHeaderText: composerQuoteHeader?.text,
+                    quoteWrapInBlockquote: composerQuoteHeader?.wrapInBlockquote,
                   } : undefined)}
                   initialDraftText={composerDraftText}
                   initialData={pendingDraft}
-                  onSaveState={(data) => setPendingDraft(data)}
+                  onSaveState={(data) => {
+                    if (suppressComposerStateSaveSessionRef.current === composerSessionId) {
+                      suppressComposerStateSaveSessionRef.current = null;
+                      return;
+                    }
+                    setPendingDraft(data);
+                  }}
                   onSend={async (data) => {
                     await handleEmailSend(data);
                     setPendingDraft(null);
@@ -2459,6 +2787,7 @@ export default function Home() {
                     setComposerMode('compose');
                     setComposerDraftText("");
                     setPendingDraft(null);
+                    setComposerQuoteHeader(null);
                     if (isMobile) {
                       setActiveView('list');
                     }
@@ -2590,8 +2919,8 @@ export default function Home() {
           </div>
           </div>
 
-          {/* Bottom Navigation - mobile and tablet */}
-          {(isMobile || isTablet) && activeView !== "viewer" && (
+          {/* Bottom Navigation - mobile and tablet (hidden when embedded) */}
+          {(isMobile || isTablet) && activeView !== "viewer" && !isEmbedded && (
             <NavigationRail
               orientation="horizontal"
               onManageApps={handleManageApps}
@@ -2622,6 +2951,17 @@ export default function Home() {
         <div className="sr-only" aria-live="polite" aria-atomic="true" id="sr-status" />
 
         <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
+        {pendingMailtoAccountChoice && (
+          <ProtocolAccountPicker
+            kind="mailto"
+            operation={pendingMailtoAccountChoice}
+            accounts={getMailtoProtocolAccounts()}
+            activeAccountId={activeAccountId}
+            isSwitching={isProtocolAccountSwitching}
+            onSelect={(accountId) => void openMailtoForAccount(pendingMailtoAccountChoice, accountId)}
+            onCancel={() => setPendingMailtoAccountChoice(null)}
+          />
+        )}
         <ConfirmDialog {...confirmDialogProps} />
         <PromptDialog {...promptDialogProps} />
         {pendingUndoSend && (

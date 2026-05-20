@@ -1,6 +1,9 @@
 import { readFileSync } from "fs";
 import { configManager } from "./lib/admin/config-manager";
 import { initAdminPassword } from "./lib/admin/password";
+import { migrateLegacyAdminLayout } from "./lib/admin/migrate";
+import { detectSetupState } from "./lib/setup/state";
+import { ensureSetupToken } from "./lib/setup/token";
 
 const pkg = JSON.parse(
   readFileSync(`${process.cwd()}/package.json`, "utf-8")
@@ -8,11 +11,36 @@ const pkg = JSON.parse(
 const current: string = pkg.version ?? "0.0.0";
 console.info(`Bulwark Webmail v${current}`);
 
-// Initialize admin config and password bootstrap
-configManager.load()
+// Initialize admin config and password bootstrap. Migration runs first so
+// existing v1 layouts are split before anything reads admin.json.
+migrateLegacyAdminLayout()
+  .then(() => configManager.load())
   .then(() => initAdminPassword())
-  .then(() => {
+  .then(async () => {
     console.info("Admin dashboard initialized");
+    // If we're in bootstrap state (no JMAP_SERVER_URL env and no
+    // setupComplete in config.json), generate/refresh the setup token and
+    // print it to the logs so the operator can complete the web wizard
+    // without execing into the container.
+    if (detectSetupState() === "bootstrap") {
+      try {
+        const token = await ensureSetupToken();
+        const port = process.env.PORT || "3000";
+        console.info("");
+        console.info("==============================================================");
+        console.info("  SETUP REQUIRED");
+        console.info(`  Token: ${token}`);
+        console.info(`  Open:  http://<host>:${port}/setup?token=${token}`);
+        console.info("  Token expires in 1 hour. Restart the container to reissue.");
+        console.info("==============================================================");
+        console.info("");
+      } catch (err) {
+        console.warn(
+          "Failed to issue setup token:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
   })
   .then(async () => {
     // Anonymous telemetry - on by default. Admins can disable via the

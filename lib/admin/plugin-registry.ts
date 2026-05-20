@@ -3,17 +3,14 @@ import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
-
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
+import { getConfigDir, assertWritable } from './paths';
 
 function getPluginsDir(): string {
-  return path.join(getAdminDir(), 'plugins');
+  return path.join(getConfigDir(), 'plugins');
 }
 
 function getThemesDir(): string {
-  return path.join(getAdminDir(), 'themes');
+  return path.join(getConfigDir(), 'themes');
 }
 
 // ─── Types ───────────────────────────────────────────────────
@@ -59,9 +56,12 @@ export interface ServerPlugin {
   installedAt: string;
   updatedAt: string;
   /**
-   * SHA-256 hex of the bundle code (first 16 chars). Refreshed every save so
+   * Full SHA-256 hex of the bundle code (64 chars). Refreshed every save so
    * the same version re-uploaded with new code still appears as a change to
-   * the client. Also doubles as the HTTP ETag for the bundle endpoint.
+   * the client. Also doubles as the HTTP ETag for the bundle endpoint and is
+   * verified by the sandbox loader on every load
+   * (`lib/plugin-sandbox/bundle-integrity.ts`), so it must match the served
+   * bytes exactly.
    */
   bundleHash?: string;
   /**
@@ -74,6 +74,11 @@ export interface ServerPlugin {
    * Same syntax as `frameOrigins`. Surfaced to clients via /api/plugins.
    */
   httpOrigins?: string[];
+  /**
+   * Same-origin `/api/*` path allowlist for `api.http.post()`. See
+   * `InstalledPlugin.apiPostPaths` in `lib/plugin-types.ts`.
+   */
+  apiPostPaths?: string[];
 }
 
 export interface ServerTheme {
@@ -128,8 +133,38 @@ async function writeJsonFile(filePath: string, data: unknown): Promise<void> {
 
 const pluginRegistryPath = () => path.join(getPluginsDir(), 'registry.json');
 
+const FULL_HASH_RE = /^[0-9a-f]{64}$/;
+
+/**
+ * Older builds wrote a 16-char SHA-256 prefix into `bundleHash`. The current
+ * client-side verifyBundle requires equal-length hex (and the full digest for
+ * real integrity), so any registry entry with a truncated or otherwise
+ * malformed hash needs to be re-hashed from the on-disk bundle. If the bundle
+ * file is missing the hash is cleared so verifyBundle skips the check rather
+ * than refusing to load.
+ */
+async function migrateBundleHashes(registry: PluginRegistry): Promise<boolean> {
+  let changed = false;
+  for (const plugin of registry.plugins) {
+    if (!plugin.bundleHash || FULL_HASH_RE.test(plugin.bundleHash)) continue;
+    const bundlePath = path.join(getPluginsDir(), `${plugin.id}.js`);
+    try {
+      const code = await readFile(bundlePath);
+      plugin.bundleHash = createHash('sha256').update(code).digest('hex');
+    } catch {
+      delete plugin.bundleHash;
+    }
+    changed = true;
+  }
+  return changed;
+}
+
 export async function getPluginRegistry(): Promise<PluginRegistry> {
-  return readJsonFile<PluginRegistry>(pluginRegistryPath(), { plugins: [] });
+  const registry = await readJsonFile<PluginRegistry>(pluginRegistryPath(), { plugins: [] });
+  if (await migrateBundleHashes(registry)) {
+    try { await writeJsonFile(pluginRegistryPath(), registry); } catch { /* read-only fs ok */ }
+  }
+  return registry;
 }
 
 export async function getPlugin(id: string): Promise<ServerPlugin | null> {
@@ -137,10 +172,16 @@ export async function getPlugin(id: string): Promise<ServerPlugin | null> {
   return registry.plugins.find(p => p.id === id) || null;
 }
 
+const SAFE_ID_RE = /^[a-z0-9][a-z0-9-]*[a-z0-9]$/;
+
 export async function savePlugin(
   plugin: ServerPlugin,
   code: string,
 ): Promise<void> {
+  assertWritable('install plugin');
+  if (!SAFE_ID_RE.test(plugin.id)) {
+    throw new Error('Invalid plugin id');
+  }
   const dir = getPluginsDir();
   await ensureDir(dir);
 
@@ -150,8 +191,9 @@ export async function savePlugin(
 
   // Stamp content hash + updatedAt so clients can detect re-uploads even
   // when the manifest version hasn't changed. Preserve the original
-  // installedAt across re-uploads.
-  const bundleHash = createHash('sha256').update(code).digest('hex').slice(0, 16);
+  // installedAt across re-uploads. The full SHA-256 is required because the
+  // client-side verifyBundle compares the entire digest length-checked.
+  const bundleHash = createHash('sha256').update(code).digest('hex');
   const now = new Date().toISOString();
 
   const registry = await getPluginRegistry();
@@ -171,6 +213,7 @@ export async function savePlugin(
 }
 
 export async function updatePluginMeta(id: string, updates: Partial<Pick<ServerPlugin, 'enabled' | 'forceEnabled'>>): Promise<ServerPlugin | null> {
+  assertWritable('update plugin metadata');
   const registry = await getPluginRegistry();
   const idx = registry.plugins.findIndex(p => p.id === id);
   if (idx < 0) return null;
@@ -181,6 +224,7 @@ export async function updatePluginMeta(id: string, updates: Partial<Pick<ServerP
 }
 
 export async function deletePlugin(id: string): Promise<boolean> {
+  assertWritable('delete plugin');
   const registry = await getPluginRegistry();
   const idx = registry.plugins.findIndex(p => p.id === id);
   if (idx < 0) return false;
@@ -221,6 +265,10 @@ export async function saveTheme(
   theme: ServerTheme,
   css: string,
 ): Promise<void> {
+  assertWritable('install theme');
+  if (!SAFE_ID_RE.test(theme.id)) {
+    throw new Error('Invalid theme id');
+  }
   const dir = getThemesDir();
   await ensureDir(dir);
 
@@ -240,6 +288,7 @@ export async function saveTheme(
 }
 
 export async function updateThemeMeta(id: string, updates: Partial<Pick<ServerTheme, 'enabled' | 'forceEnabled'>>): Promise<ServerTheme | null> {
+  assertWritable('update theme metadata');
   const registry = await getThemeRegistry();
   const idx = registry.themes.findIndex(t => t.id === id);
   if (idx < 0) return null;
@@ -250,6 +299,7 @@ export async function updateThemeMeta(id: string, updates: Partial<Pick<ServerTh
 }
 
 export async function deleteTheme(id: string): Promise<boolean> {
+  assertWritable('delete theme');
   const registry = await getThemeRegistry();
   const idx = registry.themes.findIndex(t => t.id === id);
   if (idx < 0) return false;

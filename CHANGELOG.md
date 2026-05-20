@@ -1,5 +1,154 @@
 # Changelog
 
+## 1.6.7 (2026-05-17)
+
+### Features
+
+- **Contacts**: vCard 4.0 parsing and generation support
+- **Admin**: Master-user impersonation route with `app-top-banner` plugin slot rendered on every authenticated page
+- **Admin**: Allow admin password overwrite during setup recovery
+- **Setup**: HTTPS requirement warning in the setup wizard
+- **Mobile**: Show details toggle and expandable panel for sender info
+
+### Performance
+
+- **Calendar**: Speed up calendar invitation banner load
+
+### Security
+
+- **Mail**: Sandbox thread email HTML in `srcDoc` iframe with a CSP `<meta>` tag
+- **Admin**: Redact sensitive config secrets from the admin API response
+- **Admin**: Make impersonation cookies session-only
+
+### Fixes
+
+- **Auth**: Read `OAUTH_SCOPES` at runtime instead of build time
+- **Auth**: Use a relative `Location` header in redirects
+- **Auth**: Adopt orphan session cookie on first SPA load
+- **Mail**: Per-account push subscriptions so multi-account notifications work (#298)
+- **Mail**: Close attachment preview when clicking outside the content area
+- **Mail**: Pin quick reply to the bottom for short emails
+- **Mail**: Show "no body content" instead of an infinite skeleton for bodyless emails
+- **Mail**: Show contact popup when clicking the sender name in the email header
+- **Mail**: Prevent long addresses from overflowing email details columns (#297)
+- **Mobile**: Align quick reply with the mobile bottom toolbar
+- **Mobile**: Respect safe-area insets on mobile bottom bars
+- **Mobile**: Pad `safe-area-inset-top`
+- **UI**: Apply dark background to the email content wrapper in dark mode
+- **UI**: Improve dark mode background colors in the email viewer
+- **UI**: Add viewport export with `initialScale: 1`
+- **UI**: Strip the Stalwart master-user `%` suffix from the displayed account
+- **Plugins**: Warn and block install when the app version is below the plugin's `minAppVersion`
+- **Plugins**: Register `app-top-banner` in plugin-store `SLOT_NAMES`
+- **Plugins**: Carry `configSchema` + `settingsSchema` through marketplace install
+- **Build**: Add `outputFileTracingExcludes` to reduce Turbopack memory tracing
+
+### i18n
+
+- Add missing translation keys across 16 locales
+
+## 1.6.6 (2026-05-15)
+
+### Features
+
+- **Mail**: Sync onboarding completion state across devices so the welcome flow only runs once per account (#285)
+- **Mail**: Distinct icons for Shared, Important, Memos, Scheduled, and Snoozed folders (#288)
+- **Compose**: Raise HTML identity signature length cap to 50,000 characters
+- **Compose**: Allow `<img>` tags in HTML identity signatures for inline logos and banners
+
+### Fixes
+
+- **Files**: Hide Files settings entry and sidebar nav when the `filesEnabled` policy is off (#291)
+- **Admin**: Honor the `cookieSameSite` admin config override instead of always defaulting (#284)
+- **UI**: Standardize punctuation in tooltips and inline comments across locales
+
+### i18n
+
+- Add Danish localization
+- Clean up Danish locale wiring and sort the language picker alphabetically (#286)
+
+## 1.6.5 (2026-05-13)
+
+### Features
+
+- **Protocol**: Register as the system handler for `mailto:` and `webcal:` links from a new protocol handler settings page
+- **Protocol**: Account picker for protocol links when multiple accounts are connected
+- **Protocol**: Import-or-subscribe choice for detected webcal calendars
+- **Protocol**: Reuse the open PWA/session for `mailto:` links instead of always opening a new tab
+- **UI**: Route account avatars through the shared `Avatar` component for consistent fallbacks (#278)
+
+### Fixes
+
+- **Calendar**: Support HTTP basic auth in iCal subscription URLs (#275)
+- **Admin**: Honor admin-uploaded favicon in root metadata (#274)
+- **Admin**: Honor `NEXT_PUBLIC_BASE_PATH` in admin sidebar nav links (#271)
+- **UI**: Broaden body font stack so Thai (and other non-Latin scripts) render correctly in subjects, sender names, and other chrome (#265)
+
+## 1.6.4 (2026-05-11)
+
+### Web Setup Wizard
+
+First-launch web setup wizard. New installs no longer need to hand-edit `.env.local` - point a browser at the container and the wizard probes the JMAP server(s), configures OAuth/OIDC, generates the session secret, accepts branding uploads, and provisions the initial admin password. Admin storage is now split into `ADMIN_CONFIG_DIR` (operator-authored, mountable read-only after setup) and `ADMIN_STATE_DIR` (runtime audit log and login timestamps); the legacy `ADMIN_DATA_DIR` keeps working for existing installs.
+
+### Features
+
+- **Setup**: Web setup wizard with multi-step flow: Server, Auth, Security, Logging, Branding, Review, Admin
+- **Setup**: Admin config/state directory split with optional `ADMIN_CONFIG_READONLY` for immutable deployments (#226)
+- **Setup**: File uploads on the wizard branding step
+- **Setup**: Redesigned review step with grouped summary and an advanced toggle for the full config
+- **Setup**: Require explicit confirmation when JMAP probe finds no session
+- **Mail**: Drag attachments out of the viewer to the local file system (#267)
+- **Mail**: Reading Pane at Bottom mail layout (#262)
+- **Mail**: Configurable signature position - above or below quoted text (#266)
+- **Mail**: Signature position is now searchable from the email behavior settings
+- **Mail**: Show avatar in Focused list for compact density and above
+- **Mail**: Align Focused list preview with other layout previews
+- **Compose**: From-header override in the composer with catch-all auto-reply, replies to an alias on a domain you own pre-fill the alias as the sender even when it isn't a configured identity (#246)
+
+### Performance
+
+- **Mail**: Prefetch initial email data on login
+- **Auth**: Parallelize login round-trips and drop redundant JMAP re-verify
+
+### Fixes
+
+- **Auth**: Skip upstream JMAP reverify for trusted URLs (#237)
+- **Auth**: Show account identity in the switcher header instead of the sending alias
+- **Compose**: Fall back to the primary identity signature on reply
+- **Setup**: Drop redundant first-login banner about removing `ADMIN_PASSWORD` (#222)
+- **UI**: Consistent notice cards for server probe results
+
+### i18n
+
+- Add missing translation keys across 15 locales
+
+## 1.6.3 (2026-05-08)
+
+### Features
+
+- **Mail**: Lift 5-account cap on HTTP/2
+- **Mail**: Import `.eml` files via folder right-click menu
+
+### Fixes
+
+- **Mail**: Trim leading whitespace from email list preview
+- **Mail**: Fall back when only the truncation indicator remains in email preview
+- **Mail**: Hide files/contacts nav items when JMAP server lacks support
+- **Viewer**: Preserve emoji colors in dark mode
+- **Viewer**: Prevent white-on-white in dark mode for nested `bgcolor` containers
+- **Viewer**: Render plain-text-only emails as text, not HTML
+- **Viewer**: Render HTML-only emails and redesign external content prompt
+- **Viewer**: Pad Word/Outlook HTML email rendering
+- **Compose**: Redesign quick reply to match sender/banner layout
+- **Compose**: Disable StarterKit's bundled link/underline to avoid duplicate extensions
+- **Sharing**: Request `shareWith` explicitly so calendar/address book shares survive a re-login (#257)
+- **UI**: Strip leading punctuation when computing avatar initials
+- **Mobile**: Hide email hover actions
+
+### i18n
+
+- Add missing translation keys across 15 locales
+
 ## 1.6.2 (2026-05-06)
 
 ### Features

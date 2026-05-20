@@ -34,7 +34,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid plugin ID' }, { status: 400 });
     }
 
-    const adminAuth = await requireAdminAuth();
+    const adminAuth = await requireAdminAuth(request);
     const isAdmin = !('error' in adminAuth);
 
     if (!isAdmin) {
@@ -51,13 +51,18 @@ export async function GET(
 
     const config = await getPluginConfig(id);
 
-    let response: Record<string, unknown> = config;
-    if (!isAdmin && plugin.configSchema) {
+    let response: Record<string, unknown>;
+    if (isAdmin) {
+      response = config;
+    } else {
       response = {};
-      for (const [key, value] of Object.entries(config)) {
-        const field = plugin.configSchema[key];
-        if (field?.type === 'secret') continue;
-        response[key] = value;
+      const schema = plugin.configSchema;
+      if (schema) {
+        for (const [key, value] of Object.entries(config)) {
+          const field = schema[key];
+          if (!field || field.type === 'secret') continue;
+          response[key] = value;
+        }
       }
     }
 
@@ -80,7 +85,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const { id } = await params;
@@ -110,6 +115,13 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid key format' }, { status: 400 });
     }
 
+    if (plugin.configSchema && !plugin.configSchema[body.key]) {
+      return NextResponse.json(
+        { error: 'Key is not declared in the plugin configSchema' },
+        { status: 400 },
+      );
+    }
+
     await setPluginConfig(id, body.key, body.value);
     return NextResponse.json({ ok: true });
   } catch {
@@ -127,7 +139,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const { id } = await params;

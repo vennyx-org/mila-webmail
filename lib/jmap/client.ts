@@ -101,6 +101,41 @@ const EMAIL_LIST_PROPERTIES = [
   "hasAttachment",
 ] as const;
 
+// Stalwart's default property list for Calendar/get omits shareWith, isVisible,
+// includeInAvailability, and the default-alerts properties. Without an explicit
+// `properties` list the share indicator and share dialog can't see existing
+// shares after a fresh login (only the optimistic in-memory update from the
+// share action would carry it). Always request the full set we render.
+const CALENDAR_PROPERTIES = [
+  "id",
+  "name",
+  "description",
+  "color",
+  "sortOrder",
+  "isSubscribed",
+  "isVisible",
+  "isDefault",
+  "includeInAvailability",
+  "defaultAlertsWithTime",
+  "defaultAlertsWithoutTime",
+  "timeZone",
+  "shareWith",
+  "myRights",
+] as const;
+
+// Stalwart's default property list for AddressBook/get omits shareWith, so
+// existing shares would be invisible after a fresh login.
+const ADDRESS_BOOK_PROPERTIES = [
+  "id",
+  "name",
+  "description",
+  "sortOrder",
+  "isDefault",
+  "isSubscribed",
+  "shareWith",
+  "myRights",
+] as const;
+
 /**
  * Detect whether a calendar object returned by the server is actually a
  * task (VTODO) rather than an event (VEVENT).  CalDAV clients like
@@ -1822,10 +1857,10 @@ export class JMAPClient implements IJMAPClient {
   async createIdentity(
     name: string,
     email: string,
-    replyTo?: EmailAddress[],
-    bcc?: EmailAddress[],
-    textSignature?: string,
-    htmlSignature?: string
+    replyTo?: EmailAddress[] | null,
+    bcc?: EmailAddress[] | null,
+    textSignature?: string | null,
+    htmlSignature?: string | null
   ): Promise<Identity> {
     const response = await this.request([
       ["Identity/set", {
@@ -1868,11 +1903,11 @@ export class JMAPClient implements IJMAPClient {
   async updateIdentity(
     identityId: string,
     updates: {
-      name?: string;
-      replyTo?: EmailAddress[];
-      bcc?: EmailAddress[];
-      textSignature?: string;
-      htmlSignature?: string;
+      name?: string | null;
+      replyTo?: EmailAddress[] | null;
+      bcc?: EmailAddress[] | null;
+      textSignature?: string | null;
+      htmlSignature?: string | null;
     }
   ): Promise<void> {
     const response = await this.request([
@@ -2023,8 +2058,8 @@ export class JMAPClient implements IJMAPClient {
     const emailData: EmailDraft = {
       from: [{ ...(sanitizedFromName ? { name: sanitizedFromName } : {}), email: fromEmail || this.username }],
       to: to.map(email => ({ email })),
-      cc: cc?.map(email => ({ email })),
-      bcc: bcc?.map(email => ({ email })),
+      cc: cc?.length ? cc.map(email => ({ email })) : undefined,
+      bcc: bcc?.length ? bcc.map(email => ({ email })) : undefined,
       subject,
       keywords: { "$draft": true },
       mailboxIds: { [draftsMailbox.id]: true },
@@ -2099,7 +2134,8 @@ export class JMAPClient implements IJMAPClient {
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
     inReplyTo?: string[],
     references?: string[],
-    delayedUntil?: string
+    delayedUntil?: string,
+    envelopeMailFrom?: string
   ): Promise<SendEmailResult> {
     const holdForSeconds = delayedUntil ? this.validateDelayedUntil(delayedUntil) : undefined;
     const emailId = `send-${Date.now()}`;
@@ -2151,8 +2187,11 @@ export class JMAPClient implements IJMAPClient {
       from: [{ ...(sanitizedFromName ? { name: sanitizedFromName } : {}), email: fromEmail || this.username }],
       replyTo: identityReplyTo?.length ? identityReplyTo : undefined,
       to: to.map(email => ({ email })),
-      cc: cc?.map(email => ({ email })),
-      bcc: bcc?.map(email => ({ email })),
+      // RFC 5322 §3.6.3: To/Cc carry an address-list (non-empty). Sending
+      // cc:[] makes the server emit a literal `Cc:` header with no addresses,
+      // which is malformed and a spam signal. Omit the field when empty.
+      cc: cc?.length ? cc.map(email => ({ email })) : undefined,
+      bcc: bcc?.length ? bcc.map(email => ({ email })) : undefined,
       subject,
       inReplyTo: normalizedInReplyTo?.length ? normalizedInReplyTo : undefined,
       references: normalizedReferences?.length ? normalizedReferences : undefined,
@@ -2196,6 +2235,26 @@ export class JMAPClient implements IJMAPClient {
       },
     };
 
+    // When an explicit envelope MAIL FROM is provided (header From ≠ envelope,
+    // e.g. sending from a domain-catch-all alias without a dedicated Identity),
+    // set the EmailSubmission envelope explicitly. JMAP §7.3: when `envelope`
+    // is omitted the server derives mailFrom from the Identity.
+    const buildSubmissionCreate = (submissionId: string): Record<string, unknown> => {
+      const create: Record<string, unknown> = { emailId: `#${emailId}`, identityId: finalIdentityId };
+      if (holdForSeconds || envelopeMailFrom) {
+        create.envelope = {
+          mailFrom: {
+            email: envelopeMailFrom || fromEmail || this.username,
+            ...(holdForSeconds ? { parameters: { HOLDFOR: String(holdForSeconds) } } : {}),
+          },
+          ...(envelopeMailFrom
+            ? { rcptTo: [...to, ...(cc || []), ...(bcc || [])].map((email) => ({ email })) }
+            : {}),
+        };
+      }
+      return { [submissionId]: create };
+    };
+
     if (draftId) {
       // Destroy the old draft and create a new email with the final body
       methodCalls.push(["Email/set", {
@@ -2206,14 +2265,9 @@ export class JMAPClient implements IJMAPClient {
         accountId: this.accountId,
         create: { [emailId]: emailCreate },
       }, "1"]);
-      const submissionCreate = {
-        emailId: `#${emailId}`,
-        identityId: finalIdentityId,
-        ...(holdForSeconds ? { envelope: createDelayedSubmissionEnvelope(fromEmail || this.username, holdForSeconds) } : {}),
-      };
       methodCalls.push(["EmailSubmission/set", {
         accountId: this.getSubmissionAccountId(),
-        create: { "1": submissionCreate },
+        create: buildSubmissionCreate("1"),
         onSuccessUpdateEmail,
       }, "2"]);
     } else {
@@ -2221,14 +2275,9 @@ export class JMAPClient implements IJMAPClient {
         accountId: this.accountId,
         create: { [emailId]: emailCreate },
       }, "0"]);
-      const submissionCreate = {
-        emailId: `#${emailId}`,
-        identityId: finalIdentityId,
-        ...(holdForSeconds ? { envelope: createDelayedSubmissionEnvelope(fromEmail || this.username, holdForSeconds) } : {}),
-      };
       methodCalls.push(["EmailSubmission/set", {
         accountId: this.getSubmissionAccountId(),
-        create: { "1": submissionCreate },
+        create: buildSubmissionCreate("1"),
         onSuccessUpdateEmail,
       }, "1"]);
     }
@@ -2242,15 +2291,33 @@ export class JMAPClient implements IJMAPClient {
     if (response.methodResponses) {
       for (const [methodName, result] of response.methodResponses) {
         if (methodName.endsWith('/error')) {
-          console.error('JMAP method error:', result);
+          console.error('[sendEmail] JMAP method error:', methodName, result);
           throw new Error(result.description || `Failed to send email: ${result.type}`);
         }
 
         if (result.notCreated) {
-          const errors = result.notCreated;
-          const firstError = Object.values(errors)[0] as { description?: string; type?: string };
-          console.error('Email send error:', firstError);
-          throw new Error(firstError?.description || firstError?.type || 'Failed to send email');
+          // Include method name + full error object so it's clear whether the
+          // failure came from Email/set (draft create) or EmailSubmission/set
+          // (actual send) and which JMAP error type/properties were returned.
+          // Without this the user sees a generic "Failed to send" toast and
+          // the draft sits in Drafts with no indication of why (#303).
+          const errors = result.notCreated as Record<string, {
+            type?: string;
+            description?: string;
+            properties?: string[];
+          }>;
+          const firstError = Object.values(errors)[0];
+          console.error(
+            `[sendEmail] ${methodName} notCreated:`,
+            JSON.stringify(errors, null, 2),
+          );
+          const propsHint = firstError?.properties?.length
+            ? ` (properties: ${firstError.properties.join(', ')})`
+            : '';
+          const typeHint = firstError?.type ? ` [${firstError.type}]` : '';
+          throw new Error(
+            `${firstError?.description || firstError?.type || 'Failed to send email'}${typeHint}${propsHint}`,
+          );
         }
 
         if (methodName === 'Email/set' && result.created?.[emailId]?.id) {
@@ -3286,7 +3353,7 @@ export class JMAPClient implements IJMAPClient {
     try {
       const accountId = this.getContactsAccountId();
       const response = await this.request([
-        ["AddressBook/get", { accountId }, "0"]
+        ["AddressBook/get", { accountId, properties: ADDRESS_BOOK_PROPERTIES }, "0"]
       ], this.contactUsing());
 
       if (response.methodResponses?.[0]?.[0] === "AddressBook/get") {
@@ -3311,7 +3378,7 @@ export class JMAPClient implements IJMAPClient {
 
         try {
           const response = await this.request([
-            ["AddressBook/get", { accountId }, "0"]
+            ["AddressBook/get", { accountId, properties: ADDRESS_BOOK_PROPERTIES }, "0"]
           ], this.contactUsing());
 
           if (response.methodResponses?.[0]?.[0] === "AddressBook/get") {
@@ -3755,7 +3822,7 @@ export class JMAPClient implements IJMAPClient {
     try {
       const accountId = this.getCalendarsAccountId();
       const response = await this.request([
-        ["Calendar/get", { accountId }, "0"]
+        ["Calendar/get", { accountId, properties: CALENDAR_PROPERTIES }, "0"]
       ], this.calendarUsing());
 
       if (response.methodResponses?.[0]?.[0] === "Calendar/get") {
@@ -3780,7 +3847,7 @@ export class JMAPClient implements IJMAPClient {
 
         try {
           const response = await this.request([
-            ["Calendar/get", { accountId }, "0"]
+            ["Calendar/get", { accountId, properties: CALENDAR_PROPERTIES }, "0"]
           ], this.calendarUsing());
 
           if (response.methodResponses?.[0]?.[0] === "Calendar/get") {
@@ -3832,7 +3899,7 @@ export class JMAPClient implements IJMAPClient {
         // Fetch from the target account to find the created calendar
         const fetchAccountId = targetAccountId || this.getCalendarsAccountId();
         const fetchResponse = await this.request([
-          ["Calendar/get", { accountId: fetchAccountId, ids: [createdId] }, "0"]
+          ["Calendar/get", { accountId: fetchAccountId, ids: [createdId], properties: CALENDAR_PROPERTIES }, "0"]
         ], this.calendarUsing());
         if (fetchResponse.methodResponses?.[0]?.[0] === "Calendar/get") {
           const list = fetchResponse.methodResponses[0][1].list || [];

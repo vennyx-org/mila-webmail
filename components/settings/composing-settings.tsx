@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useConfig } from '@/hooks/use-config';
 import { useSettingsStore } from '@/stores/settings-store';
 import type { SendDelaySeconds } from '@/stores/settings-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { SettingsSection, SettingItem, Select, ToggleSwitch } from './settings-section';
-import { Mail, X } from 'lucide-react';
-import { getPathPrefix } from '@/lib/browser-navigation';
+import { X } from 'lucide-react';
 import {
   SUPPORTED_SUB_ADDRESS_DELIMITERS,
   isSupportedSubAddressDelimiter,
@@ -20,8 +18,6 @@ const DEFAULT_CUSTOM_DELIMITER = '~';
 
 export function ComposingSettings() {
   const t = useTranslations('settings.email_behavior');
-  const { appName } = useConfig();
-  const [defaultMailStatus, setDefaultMailStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [newKeyword, setNewKeyword] = useState('');
 
   const {
@@ -30,21 +26,12 @@ export function ComposingSettings() {
     attachmentReminderKeywords,
     sendDelaySeconds,
     subAddressDelimiter,
+    signaturePosition,
+    signatureSeparatorEnabled,
     updateSetting,
   } = useSettingsStore();
   const { client } = useAuthStore();
   const delayedSendSupported = client?.hasDelayedSend() ?? false;
-
-  const handleSetDefaultMailProgram = useCallback(() => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.registerProtocolHandler) {
-        navigator.registerProtocolHandler('mailto', `${window.location.origin}${getPathPrefix()}/compose?mailto=%s`);
-        setDefaultMailStatus('success');
-      }
-    } catch {
-      setDefaultMailStatus('error');
-    }
-  }, []);
 
   return (
     <SettingsSection title={t('title')} description={t('description')}>
@@ -71,6 +58,24 @@ export function ComposingSettings() {
             <p className="max-w-64 text-right text-xs text-amber-600 dark:text-amber-400">{t('send_delay.unsupported')}</p>
           )}
         </div>
+      </SettingItem>
+
+      <SettingItem label={t('signature_position.label')} description={t('signature_position.description')}>
+        <Select
+          value={signaturePosition}
+          onChange={(value) => updateSetting('signaturePosition', value as 'above_quote' | 'below_quote')}
+          options={[
+            { value: 'above_quote', label: t('signature_position.above_quote') },
+            { value: 'below_quote', label: t('signature_position.below_quote') },
+          ]}
+        />
+      </SettingItem>
+
+      <SettingItem label={t('signature_separator.label')} description={t('signature_separator.description')}>
+        <ToggleSwitch
+          checked={signatureSeparatorEnabled}
+          onChange={(checked) => updateSetting('signatureSeparatorEnabled', checked)}
+        />
       </SettingItem>
 
       <SettingItem
@@ -171,24 +176,6 @@ export function ComposingSettings() {
           </form>
         </div>
       )}
-
-      <SettingItem label={t('default_mail_program.label')} description={t('default_mail_program.description', { appName: appName || 'Bulwark' })}>
-        <div className="flex flex-col items-end gap-1">
-          <button
-            onClick={handleSetDefaultMailProgram}
-            className="flex items-center gap-2 px-3 py-1.5 bg-muted hover:bg-accent rounded-md transition-colors"
-          >
-            <Mail className="w-4 h-4" />
-            <span className="text-sm text-foreground">{t('default_mail_program.button')}</span>
-          </button>
-          {defaultMailStatus === 'success' && (
-            <p className="text-xs text-green-600 dark:text-green-400">{t('default_mail_program.success')}</p>
-          )}
-          {defaultMailStatus === 'error' && (
-            <p className="text-xs text-destructive">{t('default_mail_program.error')}</p>
-          )}
-        </div>
-      </SettingItem>
     </SettingsSection>
   );
 }

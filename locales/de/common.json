@@ -135,6 +135,40 @@
     "shared": "Geteilt",
     "scheduled": "Geplant"
   },
+  "protocol_handlers": {
+    "title": "Standard-Apps",
+    "description": "Legen Sie fest, ob E-Mail- und Kalender-Links in Bulwark geöffnet werden. Technisch registriert sich Bulwark dafür als Protokoll-Handler für mailto: und webcal:.",
+    "unsupported": "Dieser Browser oder diese Verbindung unterstützt die manuelle Registrierung von Protokoll-Handlern nicht. Möglicherweise können Sie die installierte PWA trotzdem über Browser- oder Systemeinstellungen verwenden.",
+    "mailto_label": "E-Mail-Links",
+    "mailto_description": "Öffnet mailto:-Links in Bulwark mit vorausgefülltem Editor.",
+    "protocol_open_mode_label": "Beim Öffnen von Protokoll-Links",
+    "protocol_open_mode_description": "Wähle, ob Bulwark mailto:- und webcal:-Links immer in einem neuen Tab öffnet oder eine offene Sitzung wiederverwendet. Für die aktive Sitzung benötigt Bulwark Benachrichtigungen, damit du das Fenster per Klick in den Vordergrund holen kannst, falls der Browser den Fokus blockiert.",
+    "protocol_open_mode_active_session": "Wenn möglich in aktiver Sitzung öffnen",
+    "protocol_open_mode_new_tab": "Immer neuen Tab öffnen",
+    "focus_notification_title": "Bulwark öffnen",
+    "focus_notification_body": "Der Link wurde in Bulwark geöffnet. Klicke hier, um das Fenster in den Vordergrund zu holen.",
+    "webcal_label": "Kalender-Links",
+    "webcal_description": "Öffnet webcal:-Links in Bulwark mit vorausgefülltem Kalender-Abo-Dialog.",
+    "register_mailto": "Als E-Mail-App registrieren",
+    "register_webcal": "Als Kalender-App registrieren",
+    "mailto_registered": "Registrierung als E-Mail-Handler angefordert",
+    "webcal_registered": "Registrierung als Kalender-Handler angefordert",
+    "registration_failed": "Protokoll-Handler konnte nicht registriert werden",
+    "opening_mailto": "Editor wird geöffnet...",
+    "opening_webcal": "Kalender wird geöffnet...",
+    "browser_note": "Ihr Browser oder Betriebssystem kann eine Bestätigung verlangen. Eventuell muss Bulwark installiert sein, bevor es als Standard-App ausgewählt werden kann.",
+    "select_account_title": "Account auswählen",
+    "select_mailto_account": "Wähle aus, mit welchem Account dieser E-Mail-Link geöffnet werden soll.",
+    "select_webcal_account": "Wähle aus, mit welchem Account dieser Kalender-Link geöffnet werden soll.",
+    "select_account_note": "Diese Auswahl gilt nur für diesen Protokoll-Link.",
+    "detail_to": "An",
+    "detail_subject": "Betreff",
+    "detail_no_subject": "Ohne Betreff",
+    "detail_calendar": "Kalender",
+    "detail_source": "Quelle",
+    "active_account": "Aktiv",
+    "switching_account": "Account wird gewechselt..."
+  },
   "sidebar_apps": {
     "modal_title": "Sidebar-Apps",
     "add_new": "App hinzufügen",
@@ -225,6 +259,8 @@
     "compose": "Verfassen",
     "compose_hint": "Neue Nachricht verfassen",
     "no_subject": "(Kein Betreff)",
+    "no_body_content": "(Kein Inhalt verfügbar)",
+    "no_preview_available": "Keine Vorschau verfügbar",
     "loading_email": "E-Mail wird geladen...",
     "loading": "Lädt...",
     "reply": "Antworten",
@@ -548,6 +584,15 @@
       "to": "An: {recipients}"
     },
     "remove_sub_address": "Sub-Adresse entfernen",
+    "from_override": {
+      "toggle_off": "Überschreiben",
+      "toggle_on": "Überschreibung aufheben",
+      "toggle_tooltip": "Bearbeiten Sie Absendername und -adresse frei. Die E-Mail wird weiterhin über Ihre Identität gesendet - nur die sichtbare Absenderkopfzeile ändert sich.",
+      "name_label": "Absendername",
+      "name_placeholder": "Name",
+      "email_label": "Absender-E-Mail-Adresse",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Vorlage",
     "save_as_template": "Als Vorlage speichern",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Verschlüsselung",
       "files": "Dateien",
       "contacts": "Kontakte",
+      "protocol_handlers": "Standard-Apps",
       "sidebar_apps": "Sidebar-Apps",
       "notifications": "Benachrichtigungen",
       "layout": "Layout",
@@ -973,7 +1019,9 @@
         "split": "Geteilter Bereich",
         "split_description": "Nachrichtenliste und Lesebereich nebeneinander sichtbar halten.",
         "focus": "Fokussierte Liste",
-        "focus_description": "Eine Zeile pro Nachricht anzeigen und E-Mails in voller Breite öffnen, während die Ordner-Seitenleiste sichtbar bleibt."
+        "focus_description": "Eine Zeile pro Nachricht anzeigen und E-Mails in voller Breite öffnen, während die Ordner-Seitenleiste sichtbar bleibt.",
+        "horizontal": "Lesebereich unten",
+        "horizontal_description": "Nachrichtenliste oben anzeigen und ausgewählte Nachricht in einem darunter liegenden Lesebereich öffnen."
       },
       "show_preview": {
         "label": "Vorschautext anzeigen",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "Antwortadresse automatisch wählen",
         "description": "Beim Antworten die Absenderadresse automatisch auf die Identität umstellen, die die ursprüngliche Nachricht erhalten hat"
+      },
+      "signature_position": {
+        "label": "Signaturposition",
+        "description": "Wo Ihre Signatur in Antworten und Weiterleitungen eingefügt wird. Über dem zitierten Text liest sie sich natürlich als Abschluss der Antwort; darunter bleibt die ursprüngliche Nachricht zusammenhängend.",
+        "above_quote": "Vor zitiertem Text",
+        "below_quote": "Nach zitiertem Text"
+      },
+      "signature_separator": {
+        "label": "Signatur-Trenner",
+        "description": "Der Signatur die Standard-Trennerzeile \"-- \" voranstellen (RFC 3676). Deaktivieren, wenn der Nachrichtentext direkt in die Signatur übergehen soll."
       },
       "sub_address_delimiter": {
         "label": "Sub-Adress-Trennzeichen",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Neuer Unterordner...",
     "new_folder": "Neuer Ordner...",
     "rename": "Umbenennen...",
+    "import_email": ".eml importieren...",
     "empty_folder": "Ordner leeren",
     "empty_folder_generic": "Ordner leeren",
     "delete_folder": "Ordner löschen",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archiv@email.de",
       "text_signature_label": "Text-Signatur",
       "html_signature_label": "HTML-Signatur",
+      "signature_byte_counter": "{bytes} / {max} Bytes",
+      "signature_byte_limit_reached": "Serverlimit erreicht",
       "save": "Identität speichern",
       "cancel": "Abbrechen",
       "creating": "Wird erstellt...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "Datei überschreitet das 10-MB-Limit",
       "invalid_format": "Ungültiges Kalenderdateiformat"
     },
+    "webcal_action": {
+      "title": "Kalender-Link öffnen",
+      "description": "Wie möchten Sie \"{name}\" verwenden?",
+      "import_title": "Einmal importieren",
+      "import_description": "Termine jetzt abrufen und in einen Ihrer Kalender kopieren.",
+      "subscribe_title": "Abonnieren",
+      "subscribe_description": "Diesen Kalender automatisch als separaten Kalender synchronisieren.",
+      "cancel": "Abbrechen"
+    },
     "management": {
       "title": "Kalenderverwaltung",
       "description": "Erstellen, umbenennen und anpassen Ihrer Kalender. Rechtsklick auf einen Kalender in der Seitenleiste, um die Farbe schnell zu ändern.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Einführungstour",
     "restart_desc": "Geführte Tour durch die Oberfläche erneut abspielen",
     "restart_button": "Tour neu starten",
+    "show_on_new_devices_title": "Auf neuen Geräten anzeigen",
+    "show_on_new_devices_desc": "Zeige das Willkommensbanner und die Tour beim ersten Anmelden auf einem neuen Gerät erneut, auch wenn du sie bereits anderswo abgeschlossen hast",
     "sidebar_title": "Ihre Postfächer",
     "sidebar_desc": "Dies ist Ihre Ordner-Seitenleiste. Klicken Sie auf ein Postfach, um seine E-Mails anzuzeigen. Sie können Ordner erstellen, E-Mails zwischen ihnen verschieben und ungelesene Zähler auf einen Blick sehen.",
     "compose_title": "E-Mail verfassen",

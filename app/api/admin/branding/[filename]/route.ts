@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { getConfigDir } from '@/lib/admin/paths';
 
-const BRANDING_DIR = path.join(process.cwd(), 'data', 'admin', 'branding');
+function getBrandingDir(): string {
+  return path.join(getConfigDir(), 'branding');
+}
 
 const MIME_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
@@ -38,11 +41,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
     }
 
-    const filePath = path.join(BRANDING_DIR, safe);
+    const filePath = path.join(getBrandingDir(), safe);
 
-    // Ensure resolved path is still within BRANDING_DIR
+    // Ensure resolved path is still within getBrandingDir()
     const resolved = path.resolve(filePath);
-    if (!resolved.startsWith(path.resolve(BRANDING_DIR))) {
+    if (!resolved.startsWith(path.resolve(getBrandingDir()))) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
 

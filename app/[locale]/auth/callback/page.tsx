@@ -78,7 +78,69 @@ function OAuthCallbackInner() {
           setError("token_exchange_failed");
         });
     } else if (state) {
-      // Server-side SSO flow - state was stored in encrypted httpOnly cookie
+      // Server-side SSO flow - state was stored in encrypted httpOnly cookie.
+      // Branch on mobile handoff first: the login page left a marker in
+      // sessionStorage if it kicked this OAuth dance off for the mobile app.
+      let mobileRedirectUri: string | null = null;
+      let mobileState: string | null = null;
+      try {
+        mobileRedirectUri = sessionStorage.getItem("mobile_redirect_uri");
+        mobileState = sessionStorage.getItem("mobile_state");
+      } catch { /* sessionStorage may be unavailable */ }
+
+      if (mobileRedirectUri && mobileRedirectUri.startsWith("bulwarkmobile://")) {
+        // Drive /api/auth/sso/complete directly so we can read the tokens
+        // out of the response — loginWithServerSso would consume them and
+        // wire up the webmail auth store, which isn't useful here. The
+        // server's mobile-flow branch (keyed on the pending cookie) skips
+        // the refresh-token cookie write for the same reason.
+        (async () => {
+          try {
+            const res = await fetch("/api/auth/sso/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ code, state }),
+            });
+            if (!res.ok) {
+              setError("token_exchange_failed");
+              return;
+            }
+            const data = await res.json();
+            const serverUrl = data.server_url as string | undefined;
+            const accessToken = data.access_token as string | undefined;
+            const tokenEndpoint = data.token_endpoint as string | undefined;
+            const clientId = data.client_id as string | undefined;
+            if (!serverUrl || !accessToken || !tokenEndpoint || !clientId) {
+              setError("token_exchange_failed");
+              return;
+            }
+            const fragment = new URLSearchParams({
+              flow: "oauth",
+              server_url: serverUrl,
+              access_token: accessToken,
+              token_endpoint: tokenEndpoint,
+              client_id: clientId,
+              state: mobileState ?? "",
+            });
+            if (typeof data.refresh_token === "string") {
+              fragment.set("refresh_token", data.refresh_token);
+            }
+            if (typeof data.expires_in === "number") {
+              fragment.set("expires_in", String(data.expires_in));
+            }
+            try {
+              sessionStorage.removeItem("mobile_redirect_uri");
+              sessionStorage.removeItem("mobile_state");
+            } catch { /* ignore */ }
+            window.location.replace(`${mobileRedirectUri}#${fragment.toString()}`);
+          } catch {
+            setError("token_exchange_failed");
+          }
+        })();
+        return;
+      }
+
       const ssoPrefix = getPathPrefix(params.locale as string);
       loginWithServerSso(code, state)
         .then((success) => {

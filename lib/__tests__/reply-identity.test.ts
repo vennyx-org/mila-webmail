@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findReplyIdentityId } from '../reply-identity';
+import { findReplyIdentityId, resolveReplyFrom } from '../reply-identity';
 import type { Identity } from '../jmap/types';
 
 const identities: Identity[] = [
@@ -48,5 +48,40 @@ describe('findReplyIdentityId', () => {
     });
 
     expect(selected).toBeNull();
+  });
+});
+
+describe('resolveReplyFrom', () => {
+  it('returns the matching identity with no override when exact match', () => {
+    expect(resolveReplyFrom(identities, { to: [{ email: 'harry@secondary.com' }] }))
+      .toEqual({ identityId: 'secondary' });
+  });
+
+  it('strips +tag before matching identities', () => {
+    expect(resolveReplyFrom(identities, { to: [{ email: 'harry+news@primary.com' }] }))
+      .toEqual({ identityId: 'primary' });
+  });
+
+  it('surfaces catch-all override when recipient is on an identity domain but not an identity', () => {
+    const result = resolveReplyFrom(identities, {
+      to: [{ email: 'stripe@primary.com', name: 'Stripe' }],
+    });
+    expect(result).toEqual({
+      identityId: 'primary',
+      overrideEmail: 'stripe@primary.com',
+      overrideName: 'Stripe',
+    });
+  });
+
+  it('prefers identity match over catch-all override when both appear', () => {
+    const result = resolveReplyFrom(identities, {
+      to: [{ email: 'harry@primary.com' }, { email: 'stripe@primary.com' }],
+    });
+    expect(result).toEqual({ identityId: 'primary' });
+  });
+
+  it('returns null when recipients are on foreign domains', () => {
+    expect(resolveReplyFrom(identities, { to: [{ email: 'nobody@elsewhere.com' }] }))
+      .toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { JmapAuthVerificationError, verifyJmapAuth } from '@/lib/auth/verify-jmap-auth';
+import { JmapAuthVerificationError, assertBasicAuthMatchesUsername, normalizeJmapServerUrl, validateProxyAuthHeader, verifyJmapAuth } from '@/lib/auth/verify-jmap-auth';
 import { setStalwartAuthContext } from '@/lib/stalwart/auth-context';
 import { configManager } from '@/lib/admin/config-manager';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
@@ -57,7 +57,22 @@ export async function POST(request: NextRequest) {
     }
 
     const slot = getSlot(request, bodySlot);
-    const normalizedServerUrl = await verifyJmapAuth(upstreamUrl, authHeader, { trusted: upstreamTrusted });
+    // Trusted (admin-configured) URLs skip the upstream re-fetch, but we
+    // still bind the cookie's `username` to the credential when we can verify
+    // locally. Without this, a caller can POST username="admin@host" +
+    // authHeader=<their own Basic creds>, and downstream consumers that read
+    // the cookie-derived username (audit logs, login tracker) accept the
+    // spoof. Bearer tokens are opaque so only the format check runs;
+    // authorization sinks must key off the credential itself, not the
+    // cookie's username claim (see admin/auth's authHeader-hashed cache key).
+    let normalizedServerUrl: string;
+    if (upstreamTrusted) {
+      validateProxyAuthHeader(authHeader);
+      assertBasicAuthMatchesUsername(authHeader, username);
+      normalizedServerUrl = normalizeJmapServerUrl(upstreamUrl);
+    } else {
+      normalizedServerUrl = await verifyJmapAuth(upstreamUrl, authHeader, { trusted: false });
+    }
 
     await setStalwartAuthContext(slot, {
       serverUrl: normalizedServerUrl,

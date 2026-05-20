@@ -12,7 +12,7 @@ import { useContactStore } from '@/stores/contact-store';
 export function ContentSendersSettings() {
   const t = useTranslations('settings.email_behavior');
   const [showTrustedModal, setShowTrustedModal] = useState(false);
-  const { isSettingLocked, isSettingHidden } = usePolicyStore();
+  const { isSettingLocked, isSettingHidden, isFeatureEnabled } = usePolicyStore();
 
   const {
     externalContentPolicy,
@@ -32,7 +32,7 @@ export function ContentSendersSettings() {
 
   return (
     <SettingsSection title={t('title')} description={t('description')}>
-      {!isSettingHidden('externalContentPolicy') && (
+      {isFeatureEnabled('externalContentEnabled') && !isSettingHidden('externalContentPolicy') && (
       <SettingItem label={t('external_content.label')} description={t('external_content.description')} locked={isSettingLocked('externalContentPolicy')}>
         <Select
           value={externalContentPolicy}

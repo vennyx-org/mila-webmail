@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCalendarStore } from '@/stores/calendar-store';
 import { useAuthStore } from '@/stores/auth-store';
@@ -10,7 +10,7 @@ import { SettingsSection } from './settings-section';
 import { Plus, Pencil, Trash2, Calendar as CalendarIcon, Copy, Link, Upload, Globe, RefreshCw, Eraser, Users } from 'lucide-react';
 import { ShareCollectionDialog } from './share-collection-dialog';
 import type { CalendarRights } from '@/lib/jmap/types';
-import { cn, formatDateTime } from '@/lib/utils';
+import { cn, formatDateTime, redactUrlCredentials } from '@/lib/utils';
 import { ICalImportModal } from '@/components/calendar/ical-import-modal';
 import { ICalSubscriptionModal } from '@/components/calendar/ical-subscription-modal';
 import { useSettingsStore } from '@/stores/settings-store';
@@ -155,7 +155,14 @@ export { CalendarColorPicker, CALENDAR_COLORS };
 export function CalendarManagementSettings() {
   const t = useTranslations('calendar.management');
   const { client, serverUrl, username } = useAuthStore();
-  const { calendars, updateCalendar, shareCalendar, createCalendar, removeCalendar, clearCalendarEvents, fetchCalendars, icalSubscriptions, removeICalSubscription, refreshICalSubscription, isSubscriptionCalendar } = useCalendarStore();
+  const { calendars, updateCalendar, shareCalendar, createCalendar, removeCalendar, clearCalendarEvents, fetchCalendars, icalSubscriptions: allSubs, removeICalSubscription, refreshICalSubscription, isSubscriptionCalendar } = useCalendarStore();
+  // Subscriptions are persisted globally but scoped per JMAP account via
+  // accountId. Legacy entries with no accountId show in the active account.
+  const currentAccountId = client?.getAccountId();
+  const icalSubscriptions = useMemo(
+    () => allSubs.filter(s => !s.accountId || s.accountId === currentAccountId),
+    [allSubs, currentAccountId],
+  );
 
   const [discoveredCalDavUrls, setDiscoveredCalDavUrls] = useState<Record<string, string | null>>({});
   const [wellKnownCalDavUrl, setWellKnownCalDavUrl] = useState<string | null>(null);
@@ -652,9 +659,14 @@ export function CalendarManagementSettings() {
                 <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium truncate block">{sub.name}</span>
-                  <span className="text-xs text-muted-foreground truncate block" title={sub.url}>
-                    {sub.url}
-                  </span>
+                  {(() => {
+                    const safeUrl = redactUrlCredentials(sub.url);
+                    return (
+                      <span className="text-xs text-muted-foreground truncate block" title={safeUrl}>
+                        {safeUrl}
+                      </span>
+                    );
+                  })()}
                   {sub.lastRefreshed && (
                     <span className="text-xs text-muted-foreground">
                       {tSub('last_refreshed', { time: formatDateTime(sub.lastRefreshed, timeFormat, { month: 'short', day: 'numeric', year: 'numeric' }) })}

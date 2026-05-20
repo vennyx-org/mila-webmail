@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { configManager } from '@/lib/admin/config-manager';
-import { readFileEnv } from '@/lib/read-file-env';
 import { parseJmapServers, redactJmapServers } from '@/lib/admin/jmap-servers';
+import { hasSessionSecret } from '@/lib/auth/session-secret';
+import { getOauthScopes } from '@/lib/oauth/tokens';
 
 /**
  * Runtime configuration endpoint
@@ -35,8 +36,9 @@ export async function GET() {
     oauthOnly,
     oauthClientId: configManager.get<string>('oauthClientId', ''),
     oauthIssuerUrl: configManager.get<string>('oauthIssuerUrl', ''),
-    rememberMeEnabled: !!process.env.SESSION_SECRET || !!readFileEnv(process.env.SESSION_SECRET_FILE),
-    settingsSyncEnabled: configManager.get<boolean>('settingsSyncEnabled', false) && (!!process.env.SESSION_SECRET || !!readFileEnv(process.env.SESSION_SECRET_FILE)),
+    oauthScopes: getOauthScopes(),
+    rememberMeEnabled: hasSessionSecret(),
+    settingsSyncEnabled: configManager.get<boolean>('settingsSyncEnabled', false) && hasSessionSecret(),
     stalwartFeaturesEnabled,
     devMode: configManager.get<boolean>('devMode', false),
     faviconUrl: configManager.get<string>('faviconUrl', '/branding/Bulwark_Favicon.svg'),

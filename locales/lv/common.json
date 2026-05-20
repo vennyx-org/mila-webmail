@@ -135,6 +135,40 @@
     "shared": "Koplietots",
     "scheduled": "Ieplānots"
   },
+  "protocol_handlers": {
+    "title": "Noklusējuma lietotnes",
+    "description": "Izvēlieties, vai e-pasta un kalendāra saites atvērt Bulwark. Tehniski Bulwark reģistrējas kā protokola apstrādātājs mailto: un webcal: saitēm.",
+    "unsupported": "Šī pārlūkprogramma vai savienojums neatbalsta manuālu protokola apstrādātāja reģistrāciju. Iespējams, instalēto PWA joprojām var izmantot pārlūkprogrammas vai sistēmas iestatījumos.",
+    "mailto_label": "E-pasta saites",
+    "mailto_description": "Atver mailto: saites Bulwark ar iepriekš aizpildītu ziņojuma redaktoru.",
+    "protocol_open_mode_label": "Atverot protokola saites",
+    "protocol_open_mode_description": "Izvēlieties, vai Bulwark atver mailto: un webcal: saites jaunā cilnē vai atkārtoti izmanto atvērtu sesiju. Aktīvās sesijas opcijai nepieciešama paziņojumu atļauja, lai jūs varētu noklikšķināt uz rezerves paziņojuma un izcelt Bulwark priekšplānā, ja pārlūkprogramma bloķē fokusu.",
+    "protocol_open_mode_active_session": "Ja iespējams, atvērt aktīvajā sesijā",
+    "protocol_open_mode_new_tab": "Vienmēr atvērt jaunu cilni",
+    "focus_notification_title": "Atvērt Bulwark",
+    "focus_notification_body": "Saite tika atvērta Bulwark. Noklikšķiniet, lai izceltu logu priekšplānā.",
+    "webcal_label": "Kalendāra saites",
+    "webcal_description": "Atver webcal: saites Bulwark ar iepriekš aizpildītu kalendāra abonēšanas dialogu.",
+    "register_mailto": "Reģistrēt e-pasta lietotni",
+    "register_webcal": "Reģistrēt kalendāra lietotni",
+    "mailto_registered": "E-pasta apstrādātāja reģistrācija pieprasīta",
+    "webcal_registered": "Kalendāra apstrādātāja reģistrācija pieprasīta",
+    "registration_failed": "Protokola apstrādātāja reģistrācija neizdevās",
+    "opening_mailto": "Tiek atvērts redaktors...",
+    "opening_webcal": "Tiek atvērts kalendārs...",
+    "browser_note": "Pārlūkprogramma vai operētājsistēma var lūgt apstiprinājumu un var prasīt, lai Bulwark būtu instalēts, pirms to var izvēlēties kā noklusējuma lietotni.",
+    "select_account_title": "Izvēlieties kontu",
+    "select_mailto_account": "Izvēlieties, kurā kontā atvērt šo e-pasta saiti.",
+    "select_webcal_account": "Izvēlieties, kurā kontā atvērt šo kalendāra saiti.",
+    "select_account_note": "Šī izvēle attiecas tikai uz šo protokola saiti.",
+    "detail_to": "Kam",
+    "detail_subject": "Temats",
+    "detail_no_subject": "Bez temata",
+    "detail_calendar": "Kalendārs",
+    "detail_source": "Avots",
+    "active_account": "Aktīvs",
+    "switching_account": "Notiek konta pārslēgšana..."
+  },
   "sidebar_apps": {
     "modal_title": "Sānu joslas lietotnes",
     "add_new": "Pievienot lietotni",
@@ -225,6 +259,8 @@
     "compose": "Rakstīt",
     "compose_hint": "Rakstīt jaunu ziņojumu",
     "no_subject": "(nav temata)",
+    "no_body_content": "(nav satura)",
+    "no_preview_available": "Priekšskatījums nav pieejams",
     "loading_email": "Ielādē vēstuli...",
     "loading": "Ielādē...",
     "reply": "Atbildēt",
@@ -548,6 +584,15 @@
       "to": "Kam: {recipients}"
     },
     "remove_sub_address": "Noņemt apakšadresi",
+    "from_override": {
+      "toggle_off": "Pārrakstīt",
+      "toggle_on": "Atcelt pārrakstīšanu",
+      "toggle_tooltip": "Brīvi rediģējiet sūtītāja vārdu un adresi. Pasts joprojām tiek sūtīts caur jūsu identitāti - mainās tikai redzamais No galvenes ieraksts.",
+      "name_label": "Sūtītāja vārds",
+      "name_placeholder": "Vārds",
+      "email_label": "Sūtītāja e-pasta adrese",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Veidne",
     "save_as_template": "Saglabāt kā veidni",
     "validation": {
@@ -756,6 +801,7 @@
       "files": "Faili",
       "contacts": "Kontakti",
       "encryption": "Šifrēšana",
+      "protocol_handlers": "Noklusējuma lietotnes",
       "sidebar_apps": "Sānu joslas lietotnes",
       "notifications": "Paziņojumi",
       "layout": "Izkārtojums",
@@ -973,7 +1019,9 @@
         "split": "Dalīts skats",
         "split_description": "Ziņojumu saraksts un lasīšanas rūts ir redzamas blakus.",
         "focus": "Fokusa saraksts",
-        "focus_description": "Rādīt vienu rindu katram ziņojumam un atvērt vēstuli pilnā platumā."
+        "focus_description": "Rādīt vienu rindu katram ziņojumam un atvērt vēstuli pilnā platumā.",
+        "horizontal": "Lasīšanas rūts apakšā",
+        "horizontal_description": "Rādīt ziņojumu sarakstu augšā un atvērt atlasīto ziņojumu lasīšanas rūtī zem tā."
       },
       "disable_threading": {
         "label": "Izslēgt sarunu grupēšanu",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Automātiski izvēlēties atbildes adresi",
         "description": "Atbildot automātiski izmantot to kontu, uz kuru vēstule tika saņemta"
+      },
+      "signature_position": {
+        "label": "Paraksta novietojums",
+        "description": "Kur ievietot jūsu parakstu atbildēs un pārsūtīšanā. Virs citētā teksta tas dabiski lasās kā atbildes noslēgums; zem tā saglabā oriģinālo ziņojumu vienkopus.",
+        "above_quote": "Pirms citētā teksta",
+        "below_quote": "Pēc citētā teksta"
+      },
+      "signature_separator": {
+        "label": "Paraksta atdalītājs",
+        "description": "Pirms paraksta pievienot standarta atdalītāju \"-- \" (RFC 3676). Izslēdziet, ja vēlaties pāriet no ziņojuma tieši uz parakstu."
       },
       "sub_address_delimiter": {
         "label": "Apakšadreses atdalītājs",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Jauna apakšmape...",
     "new_folder": "Jauna mape...",
     "rename": "Pārsaukt...",
+    "import_email": "Importēt .eml...",
     "empty_folder": "Iztukšot mapi",
     "empty_folder_generic": "Iztukšot mapi",
     "delete_folder": "Dzēst mapi",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "arhivs@piemers.lv",
       "text_signature_label": "Teksta paraksts",
       "html_signature_label": "HTML paraksts",
+      "signature_byte_counter": "{bytes} / {max} baiti",
+      "signature_byte_limit_reached": "Sasniegts servera ierobežojums",
       "save": "Saglabāt identitāti",
       "cancel": "Atcelt",
       "creating": "Izveido...",
@@ -2451,6 +2512,15 @@
       "file_too_large": "Fails pārsniedz 10 MB limitu",
       "invalid_format": "Nederīgs kalendāra faila formāts"
     },
+    "webcal_action": {
+      "title": "Atvērt kalendāra saiti",
+      "description": "Kā vēlaties izmantot \"{name}\"?",
+      "import_title": "Importēt vienreiz",
+      "import_description": "Ielādēt notikumus tagad un kopēt tos vienā no jūsu kalendāriem.",
+      "subscribe_title": "Abonēt",
+      "subscribe_description": "Automātiski sinhronizēt šo kalendāru kā atsevišķu kalendāru.",
+      "cancel": "Atcelt"
+    },
     "management": {
       "title": "Kalendāru pārvaldība",
       "description": "Izveidojiet, pārdēvējiet un konfigurējiet kalendārus. Ar labo klikšķi varat mainīt kalendāra krāsu.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Iepazīšanās ekskursija",
     "restart_desc": "Atkārtot soli pa solim pamācību par saskarni",
     "restart_button": "Restartēt ekskursiju",
+    "show_on_new_devices_title": "Rādīt jaunās ierīcēs",
+    "show_on_new_devices_desc": "Atkārtot sveiciena reklāmkarogu un ekskursiju, pirmoreiz pierakstoties jaunā ierīcē, pat ja esat tos jau pabeidzis citur",
     "sidebar_title": "Jūsu pastkastes",
     "sidebar_desc": "Šī ir sānu josla ar mapēm. Noklikšķiniet uz jebkuras pastkastes, lai skatītu vēstules. Varat izveidot mapes un pārvietot vēstules.",
     "compose_title": "Rakstīt vēstuli",

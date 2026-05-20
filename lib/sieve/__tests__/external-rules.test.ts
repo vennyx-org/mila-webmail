@@ -111,6 +111,30 @@ describe('external rule preservation (issue #201)', () => {
       expect(result.rules).toHaveLength(1);
       expect(result.rules[0].origin).toBeUndefined();
     });
+
+    it('does not duplicate a Bulwark rule whose values contain literal braces', () => {
+      // Regression for an issue where a value like "Report Domain: {x}" caused
+      // parseIfBlockToRule's naive indexOf('{') to point inside the value
+      // instead of at the body, so the if-block fell back to an opaque rule
+      // that escaped the bulwark-name dedup filter.
+      const bulwark = [
+        makeBulwarkRule({
+          name: 'DMARC reports',
+          matchType: 'any',
+          conditions: [
+            { field: 'subject', comparator: 'contains', value: 'Report Domain: mydomain.com' },
+            { field: 'subject', comparator: 'contains', value: 'Report Domain: {mydomain.com}' },
+          ],
+          actions: [{ type: 'mark_read' }, { type: 'move', value: 'DMARC' }],
+        }),
+      ];
+      const script = generateScript(bulwark);
+      const result = parseScript(script);
+
+      expect(result.rules).toHaveLength(1);
+      expect(result.rules[0].origin).toBeUndefined();
+      expect(result.rules[0].name).toBe('DMARC reports');
+    });
   });
 
   describe('generator - external splice', () => {

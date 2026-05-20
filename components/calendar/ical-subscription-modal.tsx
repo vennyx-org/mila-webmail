@@ -13,9 +13,11 @@ interface ICalSubscriptionModalProps {
   client: IJMAPClient;
   onClose: () => void;
   editSubscription?: ICalSubscription;
+  initialUrl?: string;
+  initialName?: string;
 }
 
-export function ICalSubscriptionModal({ client, onClose, editSubscription }: ICalSubscriptionModalProps) {
+export function ICalSubscriptionModal({ client, onClose, editSubscription, initialUrl, initialName }: ICalSubscriptionModalProps) {
   const t = useTranslations("calendar.subscription");
   const tCommon = useTranslations("common");
   const addICalSubscription = useCalendarStore((s) => s.addICalSubscription);
@@ -23,8 +25,8 @@ export function ICalSubscriptionModal({ client, onClose, editSubscription }: ICa
 
   const isEdit = !!editSubscription;
 
-  const [url, setUrl] = useState(editSubscription?.url || "");
-  const [name, setName] = useState(editSubscription?.name || "");
+  const [url, setUrl] = useState(editSubscription?.url || initialUrl || "");
+  const [name, setName] = useState(editSubscription?.name || initialName || "");
   const [color, setColor] = useState(editSubscription?.color || "#3b82f6");
   const [refreshInterval, setRefreshInterval] = useState(editSubscription?.refreshInterval || 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +78,7 @@ export function ICalSubscriptionModal({ client, onClose, editSubscription }: ICa
     } finally {
       setIsSubmitting(false);
     }
-  }, [url, name, color, refreshInterval, client, addICalSubscription, onClose, t]);
+  }, [url, name, color, refreshInterval, client, isEdit, editSubscription, addICalSubscription, updateICalSubscription, onClose, t]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {

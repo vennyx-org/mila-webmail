@@ -4,6 +4,26 @@ import { isPublicHttpUrl } from '@/lib/security/url-guard';
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10MB
 const FETCH_TIMEOUT_MS = 15000;
 
+function extractBasicAuth(rawUrl: string): { cleanUrl: string; authHeader: string | null } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+
+  let authHeader: string | null = null;
+  if (parsed.username || parsed.password) {
+    const username = decodeURIComponent(parsed.username);
+    const password = decodeURIComponent(parsed.password);
+    authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    parsed.username = '';
+    parsed.password = '';
+  }
+
+  return { cleanUrl: parsed.toString(), authHeader };
+}
+
 export async function POST(request: NextRequest) {
   let body: { url?: string };
   try {
@@ -18,7 +38,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'URL is required' }, { status: 400 });
   }
 
-  if (!(await isPublicHttpUrl(url))) {
+  const extracted = extractBasicAuth(url);
+  if (!extracted) {
+    return NextResponse.json({ error: 'Invalid or disallowed URL' }, { status: 400 });
+  }
+
+  const { cleanUrl, authHeader } = extracted;
+
+  if (!(await isPublicHttpUrl(cleanUrl))) {
     return NextResponse.json({ error: 'Invalid or disallowed URL' }, { status: 400 });
   }
 
@@ -27,7 +54,8 @@ export async function POST(request: NextRequest) {
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     const MAX_REDIRECTS = 5;
-    let currentUrl = url;
+    let currentUrl = cleanUrl;
+    const originalOrigin = new URL(cleanUrl).origin;
     let response: Response | undefined;
 
     for (let i = 0; i <= MAX_REDIRECTS; i++) {
@@ -36,12 +64,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Redirect to disallowed URL' }, { status: 400 });
       }
 
+      const headers: Record<string, string> = {
+        'Accept': 'text/calendar, application/ics, text/plain, */*',
+        'User-Agent': 'JMAP-Webmail/1.0 Calendar-Fetcher',
+      };
+      if (authHeader && new URL(currentUrl).origin === originalOrigin) {
+        headers['Authorization'] = authHeader;
+      }
+
       response = await fetch(currentUrl, {
         signal: controller.signal,
-        headers: {
-          'Accept': 'text/calendar, application/ics, text/plain, */*',
-          'User-Agent': 'JMAP-Webmail/1.0 Calendar-Fetcher',
-        },
+        headers,
         redirect: 'manual',
       });
 

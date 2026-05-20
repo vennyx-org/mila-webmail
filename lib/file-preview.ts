@@ -64,3 +64,23 @@ export function getFilePreviewKind(name?: string, type?: string): FilePreviewKin
 export function isFilePreviewable(name?: string, type?: string): boolean {
   return getFilePreviewKind(name, type) !== 'unsupported';
 }
+
+const INLINE_PREVIEW_SAFE_MIME_PREFIXES = ['image/', 'audio/', 'video/'];
+const INLINE_PREVIEW_SAFE_MIME_TYPES = new Set(['application/pdf', 'text/plain']);
+const INLINE_PREVIEW_UNSAFE_MIME_TYPES = new Set([
+  'image/svg+xml',
+  'image/svg',
+]);
+
+// Whether a Blob with this MIME type is safe to open as a top-level navigation
+// (e.g. window.open on a blob: URL). Blob URLs inherit the creator's origin, so
+// script-bearing types like text/html, application/xhtml+xml, image/svg+xml, and
+// XML variants would execute in our origin. Only an explicit allowlist of inert
+// types is permitted; everything else must be downloaded.
+export function isMimeTypeSafeForInlinePreview(type?: string): boolean {
+  const mimeType = type?.split(';')[0]?.trim().toLowerCase() || '';
+  if (!mimeType) return false;
+  if (INLINE_PREVIEW_UNSAFE_MIME_TYPES.has(mimeType)) return false;
+  if (INLINE_PREVIEW_SAFE_MIME_TYPES.has(mimeType)) return true;
+  return INLINE_PREVIEW_SAFE_MIME_PREFIXES.some((prefix) => mimeType.startsWith(prefix));
+}

@@ -1,13 +1,8 @@
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { readFile, writeFile, rename } from 'node:fs/promises';
 import { logger } from '@/lib/logger';
 import { readFileEnv } from '@/lib/read-file-env';
 import { CONFIG_ENV_MAP, DEFAULT_FEATURE_GATES, DEFAULT_POLICY, DEFAULT_THEME_POLICY, type SettingsPolicy } from './types';
-
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
+import { ensureConfigDir, getConfigPath, assertWritable } from './paths';
 
 function parseEnvValue(value: string, type: string): unknown {
   switch (type) {
@@ -127,6 +122,7 @@ class ConfigManager {
    * Update admin config overrides. Writes to disk.
    */
   async setAdminConfig(updates: Record<string, unknown>): Promise<void> {
+    assertWritable('update admin config');
     Object.assign(this.adminConfig, updates);
     await this.writeJsonFile('config.json', this.adminConfig);
   }
@@ -135,7 +131,26 @@ class ConfigManager {
    * Remove an admin override, reverting to env/default.
    */
   async removeAdminOverride(key: string): Promise<void> {
+    assertWritable('remove admin override');
     delete this.adminConfig[key];
+    await this.writeJsonFile('config.json', this.adminConfig);
+  }
+
+  /**
+   * Whether the setup wizard has completed. Used by middleware to gate the
+   * /setup routes and the rest of the app.
+   */
+  isSetupComplete(): boolean {
+    return this.adminConfig.setupComplete === true;
+  }
+
+  /**
+   * Mark setup wizard as complete. Called by the wizard's finish endpoint
+   * after all other config has been written. Refuses in read-only mode.
+   */
+  async markSetupComplete(): Promise<void> {
+    assertWritable('mark setup complete');
+    this.adminConfig.setupComplete = true;
     await this.writeJsonFile('config.json', this.adminConfig);
   }
 
@@ -150,6 +165,7 @@ class ConfigManager {
    * Update the settings policy. Writes to disk.
    */
   async setPolicy(policy: SettingsPolicy): Promise<void> {
+    assertWritable('update settings policy');
     this.policyCache = {
       ...DEFAULT_POLICY,
       ...policy,
@@ -167,7 +183,7 @@ class ConfigManager {
   }
 
   private async readJsonFile(filename: string): Promise<Record<string, unknown> | null> {
-    const filePath = path.join(getAdminDir(), filename);
+    const filePath = getConfigPath(filename);
     try {
       const raw = await readFile(filePath, 'utf-8');
       return JSON.parse(raw);
@@ -179,15 +195,21 @@ class ConfigManager {
   }
 
   private async writeJsonFile(filename: string, data: Record<string, unknown>): Promise<void> {
-    const dir = getAdminDir();
-    if (!existsSync(dir)) {
-      await mkdir(dir, { recursive: true });
-    }
-    const targetPath = path.join(dir, filename);
+    await ensureConfigDir();
+    const targetPath = getConfigPath(filename);
     const tmpPath = targetPath + '.tmp';
     await writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
     await rename(tmpPath, targetPath);
   }
 }
 
-export const configManager = new ConfigManager();
+// Stash the singleton on globalThis so HMR / multiple module-evaluation
+// boundaries (middleware vs route handlers in dev with turbopack) all share
+// the same in-memory state. Without this, marking setupComplete=true in a
+// route handler is invisible to the next middleware run, and the wizard
+// redirect after finish never fires.
+const SINGLETON_KEY = Symbol.for('bulwark.admin.configManager');
+type GlobalWithConfig = typeof globalThis & { [SINGLETON_KEY]?: ConfigManager };
+const g = globalThis as GlobalWithConfig;
+export const configManager: ConfigManager =
+  g[SINGLETON_KEY] ?? (g[SINGLETON_KEY] = new ConfigManager());

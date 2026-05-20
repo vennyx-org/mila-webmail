@@ -201,15 +201,27 @@ export function FlagCS(props: FlagProps) {
   );
 }
 
+/** Denmark – Red with a white Nordic cross */
+export function FlagDK(props: FlagProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 28" width={W} height={H} className={flagClass} {...props}>
+      <path fill="#C8102E" d="M0,0H37V28H0Z" />
+      <path stroke="#fff" strokeWidth="4" d="M0,14h37M14,0v28" />
+    </svg>
+  );
+}
+
 /** Map locale codes to flag components */
 export const flagComponents: Record<string, (props: FlagProps) => ReactElement> = {
+  cs: FlagCS,
+  da: FlagDK,
+  de: FlagDE,
   en: FlagGB,
+  es: FlagES,
   fr: FlagFR,
+  it: FlagIT,
   ja: FlagJP,
   ko: FlagKR,
-  es: FlagES,
-  it: FlagIT,
-  de: FlagDE,
   lv: FlagLV,
   nl: FlagNL,
   pl: FlagPL,
@@ -218,5 +230,4 @@ export const flagComponents: Record<string, (props: FlagProps) => ReactElement> 
   tr: FlagTR,
   uk: FlagUA,
   zh: FlagCN,
-  cs: FlagCS,
 };

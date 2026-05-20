@@ -93,10 +93,14 @@ interface EmailStore {
   // JMAP operations
   fetchMailboxes: (client: IJMAPClient) => Promise<void>;
   fetchEmails: (client: IJMAPClient, mailboxId?: string) => Promise<void>;
+  // Eager post-login bootstrap: fires mailboxes/quota/emails so the round-trips
+  // overlap with Next's soft-nav + home-page hydration. Safe to call multiple
+  // times; later calls are no-ops while a prior one is in flight.
+  prefetchInitialData: (client: IJMAPClient) => Promise<void>;
   loadMoreEmails: (client: IJMAPClient) => Promise<void>;
   fetchEmailContent: (client: IJMAPClient, emailId: string) => Promise<Email | null>;
   fetchQuota: (client: IJMAPClient) => Promise<void>;
-  sendEmail: (client: IJMAPClient, to: string[], subject: string, body: string, cc?: string[], bcc?: string[], identityId?: string, fromEmail?: string, draftId?: string, fromName?: string, htmlBody?: string, attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>, inReplyTo?: string[], references?: string[], delayedUntil?: string) => Promise<SendEmailResult>;
+  sendEmail: (client: IJMAPClient, to: string[], subject: string, body: string, cc?: string[], bcc?: string[], identityId?: string, fromEmail?: string, draftId?: string, fromName?: string, htmlBody?: string, attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>, inReplyTo?: string[], references?: string[], delayedUntil?: string, envelopeMailFrom?: string) => Promise<SendEmailResult>;
   sendRawEmail: (client: IJMAPClient, rawMimeBlob: Blob, identityId: string, delayedUntil?: string) => Promise<SendEmailResult>;
   deleteEmail: (client: IJMAPClient, emailId: string, forceDelete?: boolean) => Promise<void>;
   markAsRead: (client: IJMAPClient, emailId: string, read: boolean) => Promise<void>;
@@ -424,6 +428,33 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
+  prefetchInitialData: async (client) => {
+    // Coalesce overlapping callers (e.g. login() and a slow home-page useEffect
+    // racing for the same fetch). The promise is stashed on the client so we
+    // don't need a separate keyed map and stale entries can't outlive the client.
+    const target = client as IJMAPClient & { __prefetchPromise?: Promise<void> };
+    if (target.__prefetchPromise) return target.__prefetchPromise;
+    target.__prefetchPromise = (async () => {
+      try {
+        await Promise.all([
+          get().fetchMailboxes(client),
+          get().fetchQuota(client),
+        ]);
+        const { selectedMailbox } = get();
+        if (selectedMailbox) {
+          await get().fetchEmails(client, selectedMailbox);
+        } else {
+          await get().fetchEmails(client);
+        }
+        // Tag counts can finish whenever; don't block the prefetch on them.
+        void get().fetchTagCounts(client);
+      } finally {
+        delete target.__prefetchPromise;
+      }
+    })();
+    return target.__prefetchPromise;
+  },
+
   fetchEmails: async (client, mailboxId) => {
     set({ isLoading: true, error: null }); // Keep previous emails visible during transition
     try {
@@ -621,10 +652,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
-  sendEmail: async (client, to, subject, body, cc, bcc, identityId, fromEmail, draftId, fromName, htmlBody, attachments, inReplyTo, references, delayedUntil) => {
+  sendEmail: async (client, to, subject, body, cc, bcc, identityId, fromEmail, draftId, fromName, htmlBody, attachments, inReplyTo, references, delayedUntil, envelopeMailFrom) => {
     set({ isLoading: true, error: null });
     try {
-      const result = await client.sendEmail(to, subject, body, cc, bcc, identityId, fromEmail, draftId, fromName, htmlBody, attachments, inReplyTo, references, delayedUntil);
+      const result = await client.sendEmail(to, subject, body, cc, bcc, identityId, fromEmail, draftId, fromName, htmlBody, attachments, inReplyTo, references, delayedUntil, envelopeMailFrom);
       // Refresh handled by UI layer for immediate feedback
       set({
         isLoading: false,

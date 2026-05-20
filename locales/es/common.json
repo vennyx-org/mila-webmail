@@ -135,6 +135,40 @@
     "shared": "Compartido",
     "scheduled": "Programados"
   },
+  "protocol_handlers": {
+    "title": "Aplicaciones predeterminadas",
+    "description": "Elige si los enlaces de correo y calendario se abren en Bulwark. Técnicamente, Bulwark se registra como controlador de protocolo para enlaces mailto: y webcal:.",
+    "unsupported": "Este navegador o esta conexión no admite el registro manual de controladores de protocolo. Es posible que aún puedas usar la PWA instalada desde la configuración del navegador o del sistema.",
+    "mailto_label": "Enlaces de correo",
+    "mailto_description": "Abre enlaces mailto: en Bulwark con el redactor rellenado previamente.",
+    "protocol_open_mode_label": "Al abrir enlaces de protocolo",
+    "protocol_open_mode_description": "Elige si Bulwark abre los enlaces mailto: y webcal: en una nueva pestaña o reutiliza una sesión abierta. La opción de sesión activa necesita permiso de notificaciones para que puedas hacer clic en una notificación de respaldo y traer Bulwark al frente si el navegador bloquea el foco.",
+    "protocol_open_mode_active_session": "Abrir en la sesión activa si es posible",
+    "protocol_open_mode_new_tab": "Abrir siempre una nueva pestaña",
+    "focus_notification_title": "Abrir Bulwark",
+    "focus_notification_body": "El enlace se abrió en Bulwark. Haz clic para traer la ventana al frente.",
+    "webcal_label": "Enlaces de calendario",
+    "webcal_description": "Abre enlaces webcal: en Bulwark con un diálogo de suscripción al calendario rellenado previamente.",
+    "register_mailto": "Registrar aplicación de correo",
+    "register_webcal": "Registrar aplicación de calendario",
+    "mailto_registered": "Registro del controlador de correo solicitado",
+    "webcal_registered": "Registro del controlador de calendario solicitado",
+    "registration_failed": "No se pudo registrar el controlador de protocolo",
+    "opening_mailto": "Abriendo redactor...",
+    "opening_webcal": "Abriendo calendario...",
+    "browser_note": "Tu navegador o sistema operativo puede pedirte confirmación y puede requerir que Bulwark esté instalado antes de poder seleccionarlo como aplicación predeterminada.",
+    "select_account_title": "Elegir cuenta",
+    "select_mailto_account": "Elige qué cuenta debe abrir este enlace de correo.",
+    "select_webcal_account": "Elige qué cuenta debe abrir este enlace de calendario.",
+    "select_account_note": "Esta selección solo se aplica a este enlace de protocolo.",
+    "detail_to": "Para",
+    "detail_subject": "Asunto",
+    "detail_no_subject": "Sin asunto",
+    "detail_calendar": "Calendario",
+    "detail_source": "Fuente",
+    "active_account": "Activa",
+    "switching_account": "Cambiando de cuenta..."
+  },
   "sidebar_apps": {
     "modal_title": "Aplicaciones de la barra lateral",
     "add_new": "Añadir aplicación",
@@ -225,6 +259,8 @@
     "compose": "Redactar",
     "compose_hint": "Redactar nuevo mensaje",
     "no_subject": "(Sin Asunto)",
+    "no_body_content": "(Sin contenido disponible)",
+    "no_preview_available": "Vista previa no disponible",
     "loading_email": "Cargando correo...",
     "loading": "Cargando...",
     "reply": "Responder",
@@ -548,6 +584,15 @@
       "to": "Para: {recipients}"
     },
     "remove_sub_address": "Eliminar sub-dirección",
+    "from_override": {
+      "toggle_off": "Anular",
+      "toggle_on": "Cancelar anulación",
+      "toggle_tooltip": "Edita libremente el nombre y la dirección del remitente. El correo aún se envía a través de tu identidad - solo cambia el encabezado De visible.",
+      "name_label": "Nombre del remitente",
+      "name_placeholder": "Nombre",
+      "email_label": "Dirección de correo del remitente",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Plantilla",
     "save_as_template": "Guardar como plantilla",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Cifrado",
       "files": "Archivos",
       "contacts": "Contactos",
+      "protocol_handlers": "Aplicaciones predeterminadas",
       "sidebar_apps": "Apps de barra lateral",
       "notifications": "Notificaciones",
       "layout": "Diseño",
@@ -973,7 +1019,9 @@
         "split": "Panel dividido",
         "split_description": "Mantener la lista de mensajes y el panel de lectura visibles uno al lado del otro.",
         "focus": "Lista enfocada",
-        "focus_description": "Mostrar una línea por mensaje y abrir el correo a ancho completo manteniendo visible la barra lateral de carpetas."
+        "focus_description": "Mostrar una línea por mensaje y abrir el correo a ancho completo manteniendo visible la barra lateral de carpetas.",
+        "horizontal": "Panel de lectura abajo",
+        "horizontal_description": "Muestra la lista de mensajes arriba y abre el mensaje seleccionado en un panel de lectura debajo."
       },
       "disable_threading": {
         "label": "Desactivar agrupación de conversaciones",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Seleccionar dirección de respuesta automáticamente",
         "description": "Al responder, cambia automáticamente la dirección del remitente a la identidad que recibió el mensaje original"
+      },
+      "signature_position": {
+        "label": "Posición de la firma",
+        "description": "Dónde insertar tu firma en respuestas y reenvíos. Encima del texto citado se lee de forma natural como cierre de la respuesta; debajo mantiene el mensaje original contiguo.",
+        "above_quote": "Antes del texto citado",
+        "below_quote": "Después del texto citado"
+      },
+      "signature_separator": {
+        "label": "Delimitador de firma",
+        "description": "Anteponer a la firma la línea delimitadora estándar \"-- \" (RFC 3676). Desactiva si prefieres pasar directamente del mensaje a la firma."
       },
       "sub_address_delimiter": {
         "label": "Delimitador de sub-dirección",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nueva subcarpeta...",
     "new_folder": "Nueva carpeta...",
     "rename": "Renombrar...",
+    "import_email": "Importar .eml...",
     "empty_folder": "Vaciar carpeta",
     "empty_folder_generic": "Vaciar carpeta",
     "delete_folder": "Eliminar carpeta",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archivo@correo.com",
       "text_signature_label": "Firma de Texto",
       "html_signature_label": "Firma HTML",
+      "signature_byte_counter": "{bytes} / {max} bytes",
+      "signature_byte_limit_reached": "Límite del servidor alcanzado",
       "save": "Guardar Identidad",
       "cancel": "Cancelar",
       "creating": "Creando...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "El archivo supera el límite de 10 MB",
       "invalid_format": "Formato de archivo de calendario no válido"
     },
+    "webcal_action": {
+      "title": "Abrir enlace de calendario",
+      "description": "¿Cómo quieres usar \"{name}\"?",
+      "import_title": "Importar una vez",
+      "import_description": "Obtén los eventos ahora y cópialos en uno de tus calendarios.",
+      "subscribe_title": "Suscribirse",
+      "subscribe_description": "Mantén este calendario sincronizado automáticamente como un calendario separado.",
+      "cancel": "Cancelar"
+    },
     "management": {
       "title": "Gestión de calendarios",
       "description": "Crea, renombra y personaliza tus calendarios. Haz clic derecho en un calendario en la barra lateral para cambiar su color rápidamente.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Tour introductorio",
     "restart_desc": "Repetir el recorrido guiado por la interfaz",
     "restart_button": "Reiniciar tour",
+    "show_on_new_devices_title": "Mostrar en dispositivos nuevos",
+    "show_on_new_devices_desc": "Vuelve a mostrar el banner de bienvenida y el tour la primera vez que inicies sesión en un dispositivo nuevo, incluso si ya los completaste en otro lugar",
     "sidebar_title": "Tus buzones",
     "sidebar_desc": "Esta es tu barra lateral de carpetas. Haz clic en cualquier buzón para ver sus correos. Puedes crear carpetas, arrastrar correos entre ellas y ver los contadores de no leídos.",
     "compose_title": "Redactar un correo",

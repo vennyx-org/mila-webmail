@@ -19,9 +19,9 @@ import {
  * Returns current consent + endpoint + next/last send + a live preview
  * of exactly what the next heartbeat would contain.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAdminAuth();
+    const auth = await requireAdminAuth(request);
     if ('error' in auth) return auth.error;
 
     const { consent, source, state } = await effectiveConsent();
@@ -61,7 +61,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdminAuth();
+    const auth = await requireAdminAuth(request);
     if ('error' in auth) return auth.error;
     const ip = getClientIP(request);
 

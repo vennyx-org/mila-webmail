@@ -30,6 +30,7 @@ export type Density = 'extra-compact' | 'compact' | 'regular' | 'comfortable';
 export type ListDensity = Density;
 export type DeleteAction = 'trash' | 'permanent';
 export type ReplyMode = 'reply' | 'replyAll';
+export type SignaturePosition = 'above_quote' | 'below_quote';
 export type DateFormat = 'regional' | 'iso' | 'custom';
 export type TimeFormat = '12h' | '24h';
 export type FirstDayOfWeek = 0 | 1; // 0 = Sunday, 1 = Monday
@@ -38,9 +39,10 @@ export type MailAttachmentAction = 'preview' | 'download';
 export type AttachmentPosition = 'beside-sender' | 'below-header';
 export type ToolbarPosition = 'top' | 'below-subject';
 export type ArchiveMode = 'single' | 'year' | 'month';
-export type MailLayout = 'split' | 'focus';
+export type MailLayout = 'split' | 'focus' | 'horizontal';
 export type CalendarHoverPreview = 'off' | 'instant' | 'delay-500ms' | 'delay-1s' | 'delay-2s';
 export type SendDelaySeconds = 0 | 10 | 30 | 60;
+export type ProtocolOpenMode = 'active-session' | 'new-tab';
 
 export type HoverAction = 'delete' | 'star' | 'markRead' | 'archive' | 'tag' | 'spam';
 export type HoverActionsMode = 'inline' | 'floating';
@@ -145,6 +147,8 @@ interface SettingsState {
   plainTextMode: boolean; // Send plain text only (no rich text editor)
   subAddressDelimiter: string; // Character separating user from tag (e.g. "user+tag@")
   sendDelaySeconds: SendDelaySeconds;
+  signaturePosition: SignaturePosition; // Position of the signature relative to quoted text in replies/forwards
+  signatureSeparatorEnabled: boolean; // Prefix the signature with the RFC 3676 "-- " delimiter
 
   // Privacy & Security
   sessionTimeout: number; // minutes (0 = never)
@@ -175,6 +179,9 @@ interface SettingsState {
   emailNotificationSound: boolean;
   notificationSoundChoice: NotificationSoundChoice;
 
+  // Protocol Handlers
+  protocolOpenMode: ProtocolOpenMode;
+
   // Calendar Notifications
   calendarNotificationsEnabled: boolean;
   calendarNotificationSound: boolean;
@@ -185,6 +192,7 @@ interface SettingsState {
   showToolbarLabels: boolean;
   hideAccountSwitcher: boolean;
   showRailAccountList: boolean;
+  proInterface: boolean;
 
   // Unified Mailbox
   enableUnifiedMailbox: boolean;
@@ -219,6 +227,11 @@ interface SettingsState {
   // Sidebar Apps
   sidebarApps: SidebarApp[];
   keepAppsLoaded: boolean;
+
+  // Onboarding
+  onboardingCompleted: boolean; // Welcome banner dismissed
+  tourCompleted: boolean; // Interactive tour completed
+  showOnboardingOnNewDevices: boolean; // When true, onboarding shows again on each new device
 
   // Advanced
   debugMode: boolean;
@@ -298,6 +311,8 @@ const DEFAULT_SETTINGS = {
   plainTextMode: false,
   subAddressDelimiter: DEFAULT_SUB_ADDRESS_DELIMITER,
   sendDelaySeconds: 0 as SendDelaySeconds,
+  signaturePosition: 'below_quote' as SignaturePosition,
+  signatureSeparatorEnabled: true,
 
   // Privacy & Security
   sessionTimeout: 0, // Never
@@ -328,6 +343,9 @@ const DEFAULT_SETTINGS = {
   emailNotificationSound: true,
   notificationSoundChoice: 'default' as NotificationSoundChoice,
 
+  // Protocol Handlers
+  protocolOpenMode: 'new-tab' as ProtocolOpenMode,
+
   // Calendar Notifications
   calendarNotificationsEnabled: true,
   calendarNotificationSound: true,
@@ -338,6 +356,7 @@ const DEFAULT_SETTINGS = {
   showToolbarLabels: true,
   hideAccountSwitcher: false,
   showRailAccountList: false,
+  proInterface: false,
 
   // Unified Mailbox
   enableUnifiedMailbox: false,
@@ -394,6 +413,11 @@ const DEFAULT_SETTINGS = {
   // Sidebar Apps
   sidebarApps: [] as SidebarApp[],
   keepAppsLoaded: false,
+
+  // Onboarding
+  onboardingCompleted: false,
+  tourCompleted: false,
+  showOnboardingOnNewDevices: false,
 
   // Advanced
   debugMode: false,
@@ -470,10 +494,14 @@ export const useSettingsStore = create<SettingsState>()(
           plainTextMode: state.plainTextMode,
           subAddressDelimiter: state.subAddressDelimiter,
           sendDelaySeconds: state.sendDelaySeconds,
+          sendDelaySeconds: state.sendDelaySeconds,
+          signaturePosition: state.signaturePosition,
+          signatureSeparatorEnabled: state.signatureSeparatorEnabled,
           sessionTimeout: state.sessionTimeout,
           emailNotificationsEnabled: state.emailNotificationsEnabled,
           emailNotificationSound: state.emailNotificationSound,
           notificationSoundChoice: state.notificationSoundChoice,
+          protocolOpenMode: state.protocolOpenMode,
           calendarNotificationsEnabled: state.calendarNotificationsEnabled,
           calendarNotificationSound: state.calendarNotificationSound,
           calendarInvitationParsingEnabled: state.calendarInvitationParsingEnabled,
@@ -489,6 +517,7 @@ export const useSettingsStore = create<SettingsState>()(
           toolbarPosition: state.toolbarPosition,
           hideAccountSwitcher: state.hideAccountSwitcher,
           showRailAccountList: state.showRailAccountList,
+          proInterface: state.proInterface,
           enableUnifiedMailbox: state.enableUnifiedMailbox,
           senderFavicons: state.senderFavicons,
           showAvatarsInJunk: state.showAvatarsInJunk,
@@ -501,6 +530,9 @@ export const useSettingsStore = create<SettingsState>()(
           attachmentImagePreviewsEnabled: state.attachmentImagePreviewsEnabled,
           sidebarApps: state.sidebarApps,
           keepAppsLoaded: state.keepAppsLoaded,
+          onboardingCompleted: state.onboardingCompleted,
+          tourCompleted: state.tourCompleted,
+          showOnboardingOnNewDevices: state.showOnboardingOnNewDevices,
           debugMode: state.debugMode,
           debugCategories: state.debugCategories,
           settingsSyncDisabled: state.settingsSyncDisabled,
@@ -518,6 +550,10 @@ export const useSettingsStore = create<SettingsState>()(
           // Validate settings
           if (typeof settings !== 'object' || settings === null) {
             return false;
+          }
+
+          if (typeof settings.protocolOpenMode !== 'string' && typeof settings.protocolMailtoOpenMode === 'string') {
+            settings.protocolOpenMode = settings.protocolMailtoOpenMode;
           }
 
           // Apply settings
@@ -698,7 +734,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'settings-storage',
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 2 && state.listDensity) {
@@ -708,6 +744,10 @@ export const useSettingsStore = create<SettingsState>()(
         if (![0, 10, 30, 60].includes(state.sendDelaySeconds as number)) {
           state.sendDelaySeconds = 0;
         }
+        if (version < 3 && typeof state.protocolOpenMode !== 'string' && typeof state.protocolMailtoOpenMode === 'string') {
+          state.protocolOpenMode = state.protocolMailtoOpenMode;
+        }
+        delete state.protocolMailtoOpenMode;
         return state as unknown as SettingsState;
       },
       onRehydrateStorage: () => {
@@ -811,6 +851,13 @@ if (typeof window !== 'undefined') {
     });
     if (res.status === 404) {
       syncWarn('Settings sync endpoint returned 404, disabling sync');
+      syncEnabled = false;
+    } else if (res.status === 403) {
+      // Identity mismatch — current session cookies don't match the
+      // username/serverUrl we're syncing for (common in dev mock mode where
+      // no stalwart-context cookie is written, or when rememberMe is off).
+      // Retrying won't help for this session; disable to stop the noise.
+      syncWarn('Settings sync rejected (identity mismatch), disabling sync');
       syncEnabled = false;
     } else if (res.status >= 500 && retries > 0) {
       const body = await res.json().catch(() => ({}));

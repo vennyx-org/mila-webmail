@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Email, ThreadGroup } from "@/lib/jmap/types";
-import { EMAIL_SANITIZE_CONFIG, collapseBlockedImageContainers, plainTextToSafeHtml } from "@/lib/email-sanitization";
+import { EMAIL_SANITIZE_CONFIG, collapseBlockedImageContainers, plainTextToSafeHtml, sanitizePlainTextRenderedHtml } from "@/lib/email-sanitization";
 import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
 import { transformInlineStyles, transformColorForDarkMode, transformBgColorForDarkMode } from "@/lib/color-transform";
 import { useThemeStore } from "@/stores/theme-store";
@@ -331,7 +331,7 @@ function EmailCard({
         htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
         // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
         // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
-        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody —
+        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody -
         // in that case there is no real plain-text alternative, so always render the HTML.
         const textPartId = email.textBody?.[0]?.partId;
         const htmlPartId = email.htmlBody[0].partId;
@@ -440,6 +440,50 @@ function EmailCard({
     return { html: "", isHtml: false };
   }, [email, allowExternal, resolvedTheme, emailAlwaysLightMode, cidBlobUrls]);
 
+  // Render the sanitized HTML body inside a sandboxed iframe so a malicious
+  // (or accidentally-bypassed) email cannot inject styles/scripts/forms into
+  // the host page. CSP <meta> is defense-in-depth in case the sanitizer ever
+  // emits a <script> tag through a parser quirk.
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const emailIframeSrcDoc = useMemo(() => {
+    if (!emailContent.isHtml || !emailContent.html) return '';
+    const csp = "default-src 'none'; img-src data: blob: http: https:; style-src 'unsafe-inline'; font-src data: http: https:; media-src data: blob: http: https:; base-uri 'none'; form-action 'none'; frame-src 'none'";
+    return `<!DOCTYPE html><html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<style>
+  html, body { overflow: hidden; }
+  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
+  img { max-width: 100% !important; height: auto !important; }
+  a { color: #1a73e8; }
+  table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
+  td, th { word-break: break-word; padding: 0.5rem; }
+  pre { white-space: pre-wrap; word-wrap: break-word; }
+</style></head><body>${emailContent.html}</body></html>`;
+  }, [emailContent.isHtml, emailContent.html]);
+
+  const handleIframeLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc?.body) return;
+      const resize = () => {
+        iframe.style.height = doc.documentElement.scrollHeight + 'px';
+      };
+      resize();
+      const ro = new ResizeObserver(resize);
+      ro.observe(doc.body);
+      doc.querySelectorAll('a').forEach((a) => {
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+      });
+    } catch {
+      // contentDocument may be inaccessible under stricter sandboxes; ignore.
+    }
+  }, []);
+
   return (
     <div className={cn(
       "rounded-lg border border-border overflow-hidden transition-all duration-200",
@@ -483,7 +527,7 @@ function EmailCard({
           </div>
           {!isExpanded && density !== 'extra-compact' && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              {email.preview || "No preview available"}
+              {email.preview || t('email_viewer.no_preview_available')}
             </p>
           )}
         </div>
@@ -534,18 +578,31 @@ function EmailCard({
 
           {/* Email Body */}
           <div style={{ padding: 'var(--density-card-p)' }}>
-            <div
-              className={cn(
-                "prose prose-sm max-w-none",
-                !emailAlwaysLightMode && "dark:prose-invert",
-                "prose-p:my-2 prose-headings:my-3",
-                "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
-                "[&_table]:border-collapse [&_td]:p-2 [&_th]:p-2",
-                "[&_img]:max-w-full [&_img]:h-auto"
-              )}
-              style={!emailContent.isHtml ? { whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace', fontSize: '13px' } : undefined}
-              dangerouslySetInnerHTML={{ __html: emailContent.html }}
-            />
+            {emailContent.isHtml ? (
+              <iframe
+                ref={iframeRef}
+                srcDoc={emailIframeSrcDoc}
+                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                title="Email content"
+                className="w-full border-0 block"
+                scrolling="no"
+                style={{ minHeight: '60px' }}
+                onLoad={handleIframeLoad}
+              />
+            ) : (
+              <div
+                className={cn(
+                  "prose prose-sm max-w-none",
+                  !emailAlwaysLightMode && "dark:prose-invert",
+                  "prose-p:my-2 prose-headings:my-3",
+                  "prose-a:text-primary prose-a:no-underline hover:prose-a:underline",
+                  "[&_table]:border-collapse [&_td]:p-2 [&_th]:p-2",
+                  "[&_img]:max-w-full [&_img]:h-auto"
+                )}
+                style={{ whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace', fontSize: '13px' }}
+                dangerouslySetInnerHTML={{ __html: sanitizePlainTextRenderedHtml(emailContent.html) }}
+              />
+            )}
           </div>
 
           {/* Attachments */}

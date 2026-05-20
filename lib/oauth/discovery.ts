@@ -6,6 +6,17 @@ export interface OAuthMetadata {
   end_session_endpoint?: string;
 }
 
+// Validates that a discovered endpoint URL is safe to follow. Server-side
+// callers must pass this to gate against SSRF (typically isPublicHttpUrl from
+// @/lib/security/url-guard, which uses node:dns and cannot be bundled for the
+// browser). Client callers omit it: the browser handles outbound networking
+// and an SSRF check isn't meaningful there.
+export type EndpointValidator = (url: string) => Promise<boolean>;
+
+export interface DiscoverOAuthOptions {
+  validateEndpoint?: EndpointValidator;
+}
+
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 64;
 const metadataCache = new Map<string, { metadata: OAuthMetadata; expiresAt: number }>();
@@ -22,7 +33,29 @@ function rememberMetadata(serverUrl: string, metadata: OAuthMetadata): void {
   metadataCache.set(serverUrl, { metadata, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-export async function discoverOAuth(serverUrl: string): Promise<OAuthMetadata | null> {
+// Endpoints come from an attacker-controllable JSON document when callers pass
+// a user-supplied serverUrl (e.g. /api/auth/totp-token-exchange under
+// allowCustomJmapEndpoint). Without a validator, a malicious metadata document
+// could point token_endpoint at 169.254.169.254 or 127.0.0.1:* and turn the
+// downstream fetch() into an SSRF with response-body reflection. Server-side
+// callers must pass `validateEndpoint`.
+async function endpointsArePublic(
+  endpoints: Array<string | undefined>,
+  validate: EndpointValidator | undefined,
+): Promise<boolean> {
+  if (!validate) return true;
+  for (const endpoint of endpoints) {
+    if (endpoint === undefined) continue;
+    if (typeof endpoint !== 'string') return false;
+    if (!(await validate(endpoint))) return false;
+  }
+  return true;
+}
+
+export async function discoverOAuth(
+  serverUrl: string,
+  options?: DiscoverOAuthOptions,
+): Promise<OAuthMetadata | null> {
   const cached = metadataCache.get(serverUrl);
   if (cached && cached.expiresAt > Date.now()) return cached.metadata;
   if (cached) metadataCache.delete(serverUrl);
@@ -44,6 +77,16 @@ export async function discoverOAuth(serverUrl: string): Promise<OAuthMetadata | 
 
       const data = await response.json();
       if (data.authorization_endpoint && data.token_endpoint) {
+        const allPublic = await endpointsArePublic([
+          data.authorization_endpoint,
+          data.token_endpoint,
+          data.revocation_endpoint,
+          data.end_session_endpoint,
+        ], options?.validateEndpoint);
+        if (!allPublic) {
+          errors.push(`${url} returned non-public or invalid endpoint URL`);
+          continue;
+        }
         const metadata: OAuthMetadata = {
           issuer: data.issuer,
           authorization_endpoint: data.authorization_endpoint,

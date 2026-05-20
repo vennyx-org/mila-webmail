@@ -135,6 +135,40 @@
     "shared": "Compartilhado",
     "scheduled": "Agendados"
   },
+  "protocol_handlers": {
+    "title": "Aplicativos padrão",
+    "description": "Escolha se links de e-mail e calendário devem abrir no Bulwark. Tecnicamente, o Bulwark se registra como manipulador de protocolo para links mailto: e webcal:.",
+    "unsupported": "Este navegador ou esta conexão não oferece suporte ao registro manual de manipuladores de protocolo. Talvez você ainda consiga usar o PWA instalado pelas configurações do navegador ou do sistema.",
+    "mailto_label": "Links de e-mail",
+    "mailto_description": "Abre links mailto: no Bulwark com o editor preenchido previamente.",
+    "protocol_open_mode_label": "Ao abrir links de protocolo",
+    "protocol_open_mode_description": "Escolha se o Bulwark abre links mailto: e webcal: em uma nova guia ou reutiliza uma sessão aberta. A opção de sessão ativa precisa da permissão de notificações para que você possa clicar em uma notificação alternativa e trazer o Bulwark para a frente se o navegador bloquear o foco.",
+    "protocol_open_mode_active_session": "Abrir na sessão ativa se possível",
+    "protocol_open_mode_new_tab": "Sempre abrir uma nova guia",
+    "focus_notification_title": "Abrir Bulwark",
+    "focus_notification_body": "O link foi aberto no Bulwark. Clique para trazer a janela para a frente.",
+    "webcal_label": "Links de calendário",
+    "webcal_description": "Abre links webcal: no Bulwark com uma janela de assinatura de calendário preenchida previamente.",
+    "register_mailto": "Registrar aplicativo de e-mail",
+    "register_webcal": "Registrar aplicativo de calendário",
+    "mailto_registered": "Registro do manipulador de e-mail solicitado",
+    "webcal_registered": "Registro do manipulador de calendário solicitado",
+    "registration_failed": "Falha ao registrar manipulador de protocolo",
+    "opening_mailto": "Abrindo editor...",
+    "opening_webcal": "Abrindo calendário...",
+    "browser_note": "Seu navegador ou sistema operacional pode pedir confirmação e pode exigir que o Bulwark esteja instalado antes de poder ser selecionado como aplicativo padrão.",
+    "select_account_title": "Escolher conta",
+    "select_mailto_account": "Escolha qual conta deve abrir este link de e-mail.",
+    "select_webcal_account": "Escolha qual conta deve abrir este link de calendário.",
+    "select_account_note": "Esta escolha se aplica apenas a este link de protocolo.",
+    "detail_to": "Para",
+    "detail_subject": "Assunto",
+    "detail_no_subject": "Sem assunto",
+    "detail_calendar": "Calendário",
+    "detail_source": "Fonte",
+    "active_account": "Ativa",
+    "switching_account": "Alternando conta..."
+  },
   "sidebar_apps": {
     "modal_title": "Apps da barra lateral",
     "add_new": "Adicionar app",
@@ -225,6 +259,8 @@
     "compose": "Redigir",
     "compose_hint": "Redigir nova mensagem",
     "no_subject": "(Sem Assunto)",
+    "no_body_content": "(Sem conteúdo disponível)",
+    "no_preview_available": "Pré-visualização não disponível",
     "loading_email": "Carregando e-mail...",
     "loading": "Carregando...",
     "reply": "Responder",
@@ -548,6 +584,15 @@
       "to": "Para: {recipients}"
     },
     "remove_sub_address": "Remover sub-endereço",
+    "from_override": {
+      "toggle_off": "Substituir",
+      "toggle_on": "Cancelar substituição",
+      "toggle_tooltip": "Edite livremente o nome e o endereço do remetente. O email ainda é enviado através da sua identidade - apenas o cabeçalho De visível muda.",
+      "name_label": "Nome do remetente",
+      "name_placeholder": "Nome",
+      "email_label": "Endereço de email do remetente",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Modelo",
     "save_as_template": "Salvar como modelo",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Criptografia",
       "files": "Arquivos",
       "contacts": "Contatos",
+      "protocol_handlers": "Aplicativos padrão",
       "sidebar_apps": "Apps da barra lateral",
       "notifications": "Notificações",
       "layout": "Layout",
@@ -973,7 +1019,9 @@
         "split": "Painel dividido",
         "split_description": "Manter a lista de mensagens e o painel de leitura visíveis lado a lado.",
         "focus": "Lista focada",
-        "focus_description": "Mostrar uma linha por mensagem e abrir o e-mail em largura total mantendo a barra lateral de pastas visível."
+        "focus_description": "Mostrar uma linha por mensagem e abrir o e-mail em largura total mantendo a barra lateral de pastas visível.",
+        "horizontal": "Painel de leitura em baixo",
+        "horizontal_description": "Mostre a lista de mensagens em cima e abra a mensagem selecionada num painel de leitura abaixo."
       },
       "disable_threading": {
         "label": "Desativar agrupamento de conversas",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Selecionar automaticamente o endereço de resposta",
         "description": "Ao responder, muda automaticamente o endereço do remetente para a identidade que recebeu a mensagem original"
+      },
+      "signature_position": {
+        "label": "Posição da assinatura",
+        "description": "Onde inserir a sua assinatura em respostas e encaminhamentos. Acima do texto citado lê-se naturalmente como fecho da resposta; abaixo mantém a mensagem original contígua.",
+        "above_quote": "Antes do texto citado",
+        "below_quote": "Depois do texto citado"
+      },
+      "signature_separator": {
+        "label": "Delimitador de assinatura",
+        "description": "Anteceder a assinatura com a linha delimitadora padrão \"-- \" (RFC 3676). Desative se preferir passar direto da mensagem para a assinatura."
       },
       "sub_address_delimiter": {
         "label": "Delimitador de sub-endereço",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nova subpasta...",
     "new_folder": "Nova pasta...",
     "rename": "Renomear...",
+    "import_email": "Importar .eml...",
     "empty_folder": "Esvaziar pasta",
     "empty_folder_generic": "Esvaziar pasta",
     "delete_folder": "Excluir pasta",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "arquivo@email.com",
       "text_signature_label": "Assinatura de Texto",
       "html_signature_label": "Assinatura HTML",
+      "signature_byte_counter": "{bytes} / {max} bytes",
+      "signature_byte_limit_reached": "Limite do servidor atingido",
       "save": "Salvar Identidade",
       "cancel": "Cancelar",
       "creating": "Criando...",
@@ -2466,6 +2527,15 @@
       "file_too_large": "Arquivo excede o limite de 10 MB",
       "invalid_format": "Formato de arquivo de calendário inválido"
     },
+    "webcal_action": {
+      "title": "Abrir link de calendário",
+      "description": "Como você gostaria de usar \"{name}\"?",
+      "import_title": "Importar uma vez",
+      "import_description": "Busque os eventos agora e copie-os para um dos seus calendários.",
+      "subscribe_title": "Assinar",
+      "subscribe_description": "Mantenha este calendário sincronizado automaticamente como um calendário separado.",
+      "cancel": "Cancelar"
+    },
     "management": {
       "title": "Gerenciamento de calendários",
       "description": "Crie, renomeie e personalize seus calendários. Clique com o botão direito em um calendário na barra lateral para alterar rapidamente sua cor.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Tour introdutório",
     "restart_desc": "Rever o tour guiado da interface",
     "restart_button": "Reiniciar tour",
+    "show_on_new_devices_title": "Mostrar em novos dispositivos",
+    "show_on_new_devices_desc": "Reproduzir o banner de boas-vindas e o tour no primeiro login num novo dispositivo, mesmo que já os tenhas concluído noutro lado",
     "sidebar_title": "Suas caixas de correio",
     "sidebar_desc": "Esta é a barra lateral de pastas. Clique em qualquer caixa para ver seus e-mails. Você pode criar pastas, arrastar e-mails entre elas e ver contadores de não lidos.",
     "compose_title": "Escrever um e-mail",

@@ -1,28 +1,23 @@
-import { appendFile, stat, rename, mkdir } from 'node:fs/promises';
+import { appendFile, stat, rename, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import path from 'node:path';
 import { logger } from '@/lib/logger';
+import { ensureStateDir, getStatePath } from './paths';
 import type { AuditEntry } from './types';
 
 const MAX_LOG_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_ROTATIONS = 3;
-
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
+const AUDIT_LOG_FILE = 'audit.log';
 
 function getAuditLogPath(): string {
-  return path.join(getAdminDir(), 'audit.log');
+  return getStatePath(AUDIT_LOG_FILE);
 }
 
 /**
- * Append an audit entry to the admin audit log.
+ * Append an audit entry to the admin audit log. Stored under the state dir
+ * so it remains writable when the config dir is mounted read-only.
  */
 export async function auditLog(action: string, detail: Record<string, unknown>, ip: string): Promise<void> {
-  const dir = getAdminDir();
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
-  }
+  await ensureStateDir();
 
   const entry: AuditEntry = {
     ts: new Date().toISOString(),
@@ -64,7 +59,6 @@ async function rotateIfNeeded(logPath: string): Promise<void> {
 export async function readAuditLog(page: number = 1, limit: number = 50, actionFilter?: string): Promise<{ entries: AuditEntry[]; total: number }> {
   const logPath = getAuditLogPath();
   try {
-    const { readFile } = await import('node:fs/promises');
     const content = await readFile(logPath, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);
 
@@ -77,7 +71,6 @@ export async function readAuditLog(page: number = 1, limit: number = 50, actionF
     }
 
     const total = entries.length;
-    // Return newest first
     entries.reverse();
     const start = (page - 1) * limit;
     return { entries: entries.slice(start, start + limit), total };

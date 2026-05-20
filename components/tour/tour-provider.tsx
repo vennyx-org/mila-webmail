@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "@/i18n/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useWebDAVStore } from "@/stores/webdav-store";
+import { useSettingsStore } from "@/stores/settings-store";
 import { getTourSteps, type TourStep } from "./tour-steps";
 import { TourOverlay } from "./tour-overlay";
 
@@ -38,6 +39,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const { isDemoMode } = useAuthStore();
   const { supportsCalendar } = useCalendarStore();
   const { supportsWebDAV } = useWebDAVStore();
+  const tourCompleted = useSettingsStore((s) => s.tourCompleted);
+  const showOnboardingOnNewDevices = useSettingsStore((s) => s.showOnboardingOnNewDevices);
+  const updateSetting = useSettingsStore((s) => s.updateSetting);
 
   const [isActive, setIsActive] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -46,10 +50,29 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const steps = getTourSteps({ isDemoMode, supportsCalendar, supportsWebDAV: supportsWebDAV !== false });
 
   useEffect(() => {
+    // One-time migration: if the legacy per-device flag is set but the synced
+    // setting isn't yet, mirror it into synced state.
     try {
-      setHasCompletedTour(localStorage.getItem(TOUR_COMPLETED_KEY) === "true");
+      const legacy = localStorage.getItem(TOUR_COMPLETED_KEY) === "true";
+      if (legacy && !tourCompleted) {
+        updateSetting("tourCompleted", true);
+      }
     } catch { /* */ }
-  }, []);
+  }, [tourCompleted, updateSetting]);
+
+  useEffect(() => {
+    if (!tourCompleted) {
+      setHasCompletedTour(false);
+      return;
+    }
+    if (showOnboardingOnNewDevices) {
+      try {
+        setHasCompletedTour(localStorage.getItem(TOUR_COMPLETED_KEY) === "true");
+        return;
+      } catch { /* */ }
+    }
+    setHasCompletedTour(true);
+  }, [tourCompleted, showOnboardingOnNewDevices]);
 
   const startTour = useCallback(() => {
     let resumeStep = 0;
@@ -85,11 +108,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const completeTour = useCallback(() => {
     setIsActive(false);
     setHasCompletedTour(true);
+    updateSetting("tourCompleted", true);
     try {
       localStorage.setItem(TOUR_COMPLETED_KEY, "true");
       localStorage.removeItem(TOUR_CURRENT_STEP_KEY);
     } catch { /* */ }
-  }, []);
+  }, [updateSetting]);
 
   const nextStep = useCallback(() => {
     if (currentStep >= steps.length - 1) {
@@ -131,11 +155,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const resetTourCompletion = useCallback(() => {
     setHasCompletedTour(false);
+    updateSetting("tourCompleted", false);
     try {
       localStorage.removeItem(TOUR_COMPLETED_KEY);
       localStorage.removeItem(TOUR_CURRENT_STEP_KEY);
     } catch { /* */ }
-  }, []);
+  }, [updateSetting]);
 
   const value: TourContextValue = {
     isActive,

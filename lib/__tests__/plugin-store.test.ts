@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SlotRegistration, InstalledPlugin } from '@/lib/plugin-types';
+import type { InstalledPlugin } from '@/lib/plugin-types';
 
 // We test the raw store by directly invoking Zustand
 // Mock the external dependencies the store imports
@@ -28,10 +28,6 @@ vi.mock('@/lib/plugin-loader', () => ({
   setupAutoDisable: vi.fn(),
 }));
 
-vi.mock('@/lib/plugin-api', () => ({
-  setSlotRegistrationBridge: vi.fn(),
-}));
-
 vi.mock('@/lib/plugin-hooks', () => ({
   removeAllPluginHooks: vi.fn(),
 }));
@@ -42,21 +38,6 @@ import { usePluginStore } from '@/stores/plugin-store';
 function resetStore() {
   usePluginStore.setState({
     plugins: [],
-    slots: {
-      'toolbar-actions': [],
-      'email-banner': [],
-      'email-footer': [],
-      'composer-toolbar': [],
-      'composer-sidebar': [],
-      'composer-sidebar-right': [],
-      'sidebar-widget': [],
-      'email-detail-sidebar': [],
-      'settings-section': [],
-      'context-menu-email': [],
-      'navigation-rail-bottom': [],
-      'calendar-event-actions': [],
-      'admin-plugin-page': [],
-    },
     initialized: false,
   });
 }
@@ -84,31 +65,6 @@ beforeEach(() => {
 });
 
 describe('usePluginStore', () => {
-  describe('registerSlot / dispose', () => {
-    it('adds registration to slot and removes on dispose', () => {
-      const { registerSlot } = usePluginStore.getState();
-      const reg: SlotRegistration = {
-        pluginId: 'p1',
-        component: () => null,
-        order: 100,
-      };
-      const disposable = registerSlot('toolbar-actions', reg);
-      expect(usePluginStore.getState().slots['toolbar-actions']).toHaveLength(1);
-      disposable.dispose();
-      expect(usePluginStore.getState().slots['toolbar-actions']).toHaveLength(0);
-    });
-
-    it('sorts registrations by order', () => {
-      const { registerSlot } = usePluginStore.getState();
-      registerSlot('email-banner', { pluginId: 'p1', component: () => null, order: 200 });
-      registerSlot('email-banner', { pluginId: 'p2', component: () => null, order: 50 });
-      registerSlot('email-banner', { pluginId: 'p3', component: () => null, order: 100 });
-
-      const regs = usePluginStore.getState().slots['email-banner'];
-      expect(regs.map(r => r.pluginId)).toEqual(['p2', 'p3', 'p1']);
-    });
-  });
-
   describe('setPluginStatus', () => {
     it('updates status for existing plugin', () => {
       usePluginStore.setState({ plugins: [mockPlugin()] });

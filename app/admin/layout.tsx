@@ -27,11 +27,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConfig } from '@/hooks/use-config';
+import { usePolicyStore } from '@/stores/policy-store';
 import { useThemeStore } from '@/stores/theme-store';
 import { getActiveAccountSlotHeaders } from '@/lib/auth/active-account-slot';
 
 import { useUpdateStore, selectHasUpdate } from '@/stores/update-store';
-import { apiFetch } from '@/lib/browser-navigation';
+import { apiFetch, getPathPrefix } from '@/lib/browser-navigation';
 
 // Single-page tab navigation: clicks update a Zustand store. The URL stays
 // at /admin so React doesn't fire a route transition on every tab switch -
@@ -87,6 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isStalwartAdmin, setIsStalwartAdmin] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { appLogoLightUrl, appLogoDarkUrl, loginLogoLightUrl, loginLogoDarkUrl } = useConfig();
+  const filesEnabled = usePolicyStore((s) => s.isFeatureEnabled('filesEnabled'));
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const logoUrl = resolvedTheme === 'dark'
     ? (appLogoDarkUrl || appLogoLightUrl || loginLogoDarkUrl)
@@ -176,6 +178,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
+
+  // /admin lives outside the [locale] tree, so links back to the webmail
+  // apps are bare <a> tags (hard navigation). Next.js only auto-applies
+  // basePath to <Link>/router APIs - for these we prepend it manually so
+  // NEXT_PUBLIC_BASE_PATH=/webmail deployments don't redirect to "/".
+  const prefix = getPathPrefix();
 
   const navContent = (
     <>
@@ -274,39 +282,41 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-7 h-7 mb-2" />
         )}
         <a
-          href="/"
+          href={`${prefix}/`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Mail"
         >
           <Mail className="w-[18px] h-[18px]" />
         </a>
         <a
-          href="/calendar"
+          href={`${prefix}/calendar`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Calendar"
         >
           <Calendar className="w-[18px] h-[18px]" />
         </a>
         <a
-          href="/contacts"
+          href={`${prefix}/contacts`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Contacts"
         >
           <BookUser className="w-[18px] h-[18px]" />
         </a>
-        <a
-          href="/files"
-          className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-          title="Files"
-        >
-          <HardDrive className="w-[18px] h-[18px]" />
-        </a>
+        {filesEnabled && (
+          <a
+            href={`${prefix}/files`}
+            className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+            title="Files"
+          >
+            <HardDrive className="w-[18px] h-[18px]" />
+          </a>
+        )}
         <div className="mt-auto flex flex-col items-center gap-2">
           <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 text-primary" title="Admin">
             <Shield className="w-[18px] h-[18px]" />
           </div>
           <a
-            href="/settings"
+            href={`${prefix}/settings`}
             className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
             title="Settings"
           >
@@ -411,7 +421,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         aria-label="Main navigation"
       >
         <a
-          href="/"
+          href={`${prefix}/`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Mail"
         >
@@ -419,7 +429,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Mail</span>
         </a>
         <a
-          href="/calendar"
+          href={`${prefix}/calendar`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Calendar"
         >
@@ -427,21 +437,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Calendar</span>
         </a>
         <a
-          href="/contacts"
+          href={`${prefix}/contacts`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Contacts"
         >
           <BookUser className="w-5 h-5" />
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Contacts</span>
         </a>
-        <a
-          href="/files"
-          className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
-          title="Files"
-        >
-          <HardDrive className="w-5 h-5" />
-          <span className="text-[10px] font-medium leading-tight truncate max-w-full">Files</span>
-        </a>
+        {filesEnabled && (
+          <a
+            href={`${prefix}/files`}
+            className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
+            title="Files"
+          >
+            <HardDrive className="w-5 h-5" />
+            <span className="text-[10px] font-medium leading-tight truncate max-w-full">Files</span>
+          </a>
+        )}
         <div
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] text-primary"
           title="Admin"
@@ -454,7 +466,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Admin</span>
         </div>
         <a
-          href="/settings"
+          href={`${prefix}/settings`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Settings"
         >

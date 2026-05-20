@@ -1,5 +1,16 @@
 import type { ContactCard, AddressBook } from '@/lib/jmap/types';
 
+// randomuser.me serves stable portrait URLs at
+//   https://randomuser.me/api/portraits/{men|women}/{0..99}.jpg
+// See https://randomuser.me/documentation#howto - we use these directly
+// rather than hitting the JSON API so the demo works offline.
+const portrait = (gender: 'men' | 'women', n: number): string =>
+  `https://randomuser.me/api/portraits/${gender}/${n}.jpg`;
+
+const photo = (gender: 'men' | 'women', n: number) => ({
+  photo1: { kind: 'photo' as const, uri: portrait(gender, n), mediaType: 'image/jpeg' },
+});
+
 export function createDemoAddressBooks(): AddressBook[] {
   return [
     {
@@ -34,6 +45,7 @@ export function createDemoContacts(): ContactCard[] {
       organizations: { o1: { name: 'Acme Corp', units: [{ name: 'Engineering' }] } },
       titles: { t1: { name: 'Senior Engineer', kind: 'title' } },
       anniversaries: { a1: { kind: 'birth', date: { year: 1990, month: 3, day: 15 } } },
+      media: photo('women', 44),
     },
     {
       id: 'demo-contact-2',
@@ -50,6 +62,7 @@ export function createDemoContacts(): ContactCard[] {
       },
       organizations: { o1: { name: 'Acme Corp', units: [{ name: 'Backend Team' }] } },
       titles: { t1: { name: 'Staff Engineer', kind: 'title' } },
+      media: photo('men', 32),
     },
     {
       id: 'demo-contact-3',
@@ -60,6 +73,7 @@ export function createDemoContacts(): ContactCard[] {
       phones: { p1: { number: '+1-555-0104', features: { voice: true } } },
       organizations: { o1: { name: 'DesignCo' } },
       titles: { t1: { name: 'UX Designer', kind: 'title' } },
+      media: photo('women', 68),
     },
     {
       id: 'demo-contact-4',
@@ -69,6 +83,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'carlos.rivera@example.com', pref: 1 } },
       phones: { p1: { number: '+1-555-0105', features: { cell: true } } },
       notes: { n1: { note: 'Met at the DevConf 2024 conference' } },
+      media: photo('men', 15),
     },
     {
       id: 'demo-contact-5',
@@ -89,6 +104,7 @@ export function createDemoContacts(): ContactCard[] {
         },
       },
       anniversaries: { a1: { kind: 'birth', date: { month: 7, day: 22 } } },
+      media: photo('women', 22),
     },
     {
       id: 'demo-contact-6',
@@ -97,6 +113,7 @@ export function createDemoContacts(): ContactCard[] {
       name: { components: [{ kind: 'given', value: 'David' }, { kind: 'surname', value: 'Park' }] },
       emails: { e1: { address: 'david.park@example.com', pref: 1 } },
       phones: { p1: { number: '+82-10-1234-5678', features: { cell: true } } },
+      media: photo('men', 67),
     },
     {
       id: 'demo-contact-7',
@@ -123,6 +140,58 @@ export function createDemoContacts(): ContactCard[] {
       kind: 'individual',
       name: { components: [{ kind: 'given', value: 'Lisa' }, { kind: 'surname', value: 'Tanaka' }] },
       emails: { e1: { address: 'lisa.tanaka@example.com', pref: 1 } },
+      media: photo('women', 85),
+    },
+    {
+      id: 'demo-contact-16',
+      addressBookIds: { 'demo-addressbook-personal': true },
+      kind: 'individual',
+      name: { components: [{ kind: 'given', value: 'Sofia' }, { kind: 'surname', value: 'Russo' }] },
+      emails: { e1: { address: 'sofia.russo@example.com', contexts: { private: true }, pref: 1 } },
+      phones: { p1: { number: '+39-340-555-0111', features: { cell: true }, contexts: { private: true } } },
+      notes: { n1: { note: 'Mom' } },
+      anniversaries: { a1: { kind: 'birth', date: { year: 1962, month: 5, day: 9 } } },
+      media: photo('women', 3),
+    },
+    {
+      id: 'demo-contact-17',
+      addressBookIds: { 'demo-addressbook-personal': true },
+      kind: 'individual',
+      name: { components: [{ kind: 'given', value: 'Anna' }, { kind: 'surname', value: 'Kowalski' }] },
+      emails: { e1: { address: 'anna.kowalski@example.com', contexts: { private: true }, pref: 1 } },
+      phones: { p1: { number: '+48-602-555-0144', features: { cell: true } } },
+      notes: { n1: { note: 'Sister - lives in Kraków' } },
+      anniversaries: { a1: { kind: 'birth', date: { month: 11, day: 4 } } },
+      media: photo('women', 47),
+    },
+    {
+      id: 'demo-contact-18',
+      addressBookIds: { 'demo-addressbook-personal': true },
+      kind: 'individual',
+      name: { components: [{ kind: 'given', value: 'Marcus' }, { kind: 'surname', value: 'Hughes' }] },
+      emails: { e1: { address: 'marcus.hughes@example.com', pref: 1 } },
+      notes: { n1: { note: 'College friend - book club organiser' } },
+      media: photo('men', 96),
+    },
+    {
+      id: 'demo-contact-19',
+      addressBookIds: { 'demo-addressbook-personal': true },
+      kind: 'individual',
+      name: { components: [{ kind: 'given', value: 'Olivia' }, { kind: 'surname', value: 'Bennett' }] },
+      emails: { e1: { address: 'olivia.bennett@example.com', contexts: { work: true }, pref: 1 } },
+      organizations: { o1: { name: 'Northwind Studio' } },
+      titles: { t1: { name: 'Product Designer', kind: 'title' } },
+      media: photo('women', 91),
+    },
+    {
+      id: 'demo-contact-20',
+      addressBookIds: { 'demo-addressbook-personal': true },
+      kind: 'individual',
+      name: { components: [{ kind: 'given', value: 'Daniel' }, { kind: 'surname', value: 'Cooper' }] },
+      emails: { e1: { address: 'daniel.cooper@example.com', pref: 1 } },
+      organizations: { o1: { name: 'Freelance' } },
+      titles: { t1: { name: 'Illustrator', kind: 'title' } },
+      media: photo('men', 76),
     },
 
     // ── Work address book ──────────────────────────────────────
@@ -135,6 +204,7 @@ export function createDemoContacts(): ContactCard[] {
       phones: { p1: { number: '+1-555-0301', features: { voice: true }, contexts: { work: true } } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'Product' }] } },
       titles: { t1: { name: 'Product Manager', kind: 'title' } },
+      media: photo('men', 41),
     },
     {
       id: 'demo-contact-10',
@@ -144,6 +214,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'rachel.green@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'Marketing' }] } },
       titles: { t1: { name: 'Marketing Lead', kind: 'title' } },
+      media: photo('women', 12),
     },
     {
       id: 'demo-contact-11',
@@ -153,6 +224,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'james.miller@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'Engineering' }] } },
       titles: { t1: { name: 'CTO', kind: 'title' } },
+      media: photo('men', 52),
     },
     {
       id: 'demo-contact-12',
@@ -162,6 +234,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'priya.sharma@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'QA' }] } },
       titles: { t1: { name: 'QA Engineer', kind: 'title' } },
+      media: photo('women', 77),
     },
     {
       id: 'demo-contact-13',
@@ -171,6 +244,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'ahmed.hassan@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'DevOps' }] } },
       titles: { t1: { name: 'DevOps Engineer', kind: 'title' } },
+      media: photo('men', 89),
     },
     {
       id: 'demo-contact-14',
@@ -180,6 +254,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'maria.lopez@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'HR' }] } },
       titles: { t1: { name: 'HR Business Partner', kind: 'title' } },
+      media: photo('women', 55),
     },
     {
       id: 'demo-contact-15',
@@ -189,6 +264,7 @@ export function createDemoContacts(): ContactCard[] {
       emails: { e1: { address: 'wei.zhang@company.example', contexts: { work: true }, pref: 1 } },
       organizations: { o1: { name: 'Company Inc', units: [{ name: 'Data Science' }] } },
       titles: { t1: { name: 'Data Scientist', kind: 'title' } },
+      media: photo('men', 8),
     },
   ];
 }

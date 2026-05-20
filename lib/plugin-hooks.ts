@@ -222,6 +222,12 @@ export const emailHooks = {
   onBeforeReply: new HookBus(),
   onBeforeReplyAll: new HookBus(),
   onBeforeForward: new HookBus(),
+  // Transform hook - lets plugins replace the quote header block ("On X,
+  // Y wrote:" / "---------- Forwarded message ----------") used when opening
+  // a reply or forward. Initial value: QuoteHeader (host default), second
+  // argument: QuoteHeaderContext. Handlers return a QuoteHeader (or
+  // undefined to pass through). Fires once per composer open.
+  onBuildQuoteHeader: new HookBus(),
   // Intercept hook fired before a file is added to the composer as an
   // attachment. Handler receives AttachmentInfo (size/type/name only - the
   // raw file is not exposed). Return false to refuse the upload.

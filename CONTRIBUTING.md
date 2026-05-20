@@ -10,14 +10,17 @@
 
 # Contributing to Bulwark Webmail
 
-Thank you for your interest in contributing to Bulwark Webmail! This document provides guidelines and information for contributors.
+We're writing the webmail we wanted in 2026 and didn't find. Modern protocol, modern tooling, modern UI. Not a SaaS. Not a startup. Not for sale.
 
-## Join our Community
-**New to the project or looking for a place to start?** You don't need to be an expert to contribute! Whether you need help setting up your environment, want to report a bug, or are interested in helping with translations, our Discord is the best place to connect.
+If that resonates with you, we'd love your help. This guide covers how to get the project running, the conventions we follow, and how to land your first change.
 
-* **Get Support:** Get real-time help with development hurdles.
-* **Contribute:** Share ideas, suggest features, or help us improve documentation.
-* **Collaborate:** Meet the team and other contributors working to make Bulwark better.
+## Join the Community
+
+You don't need to be an expert to contribute. Whether you're setting up your dev environment for the first time, filing a bug, or translating a string, the Discord is the fastest way to get unstuck and meet the people working on this.
+
+- **Get support** - real-time help with development hurdles
+- **Share ideas** - feature suggestions, design feedback, doc improvements
+- **Collaborate** - meet the team and other contributors
 
 [**Join the Bulwark Discord Server**](https://discord.gg/tYCujymGrT)
 
@@ -94,37 +97,31 @@ These checks run automatically on commit via Husky pre-commit hooks.
 
 ## Internationalization (i18n)
 
-This project uses **next-intl** for internationalization. Please follow these guidelines:
+This project uses **next-intl**. English (`/locales/en/common.json`) is the source of truth; we ship 15 additional locales (cs, de, es, fr, it, ja, ko, lv, nl, pl, pt, ru, tr, uk, zh).
 
-### Key Rules
+### Rules
 
-1. **Never hardcode user-facing text** - Always use translations:
+1. **Never hardcode user-facing text** - always use translations:
 
    ```tsx
    const t = useTranslations("namespace");
    return <div>{t("key")}</div>;
    ```
 
-2. **Translation file locations**:
-   - English: `/locales/en/common.json`
-   - French: `/locales/fr/common.json`
+2. **Add new keys to `en/common.json` first.** Other locales can follow in the same PR or a follow-up - missing keys fall back to English.
 
 3. **Namespace organization**:
-   - `login.*` - Login page strings
-   - `sidebar.*` - Sidebar navigation
-   - `email_list.*` - Email list component
-   - `email_viewer.*` - Email viewer component
-   - `email_composer.*` - Email composer
-   - `common.*` - Shared strings
-   - `notifications.*` - Toast/alert messages
-   - `settings.*` - Settings page
+   - `login.*` - login page
+   - `sidebar.*` - sidebar navigation
+   - `email_list.*` - email list
+   - `email_viewer.*` - email viewer
+   - `email_composer.*` - composer
+   - `settings.*` - settings page
+   - `notifications.*` - toasts and alerts
+   - `common.*` - shared strings
 
-4. **Adding new strings**:
-   - Add to **both** English and French translation files
-   - Use descriptive, hierarchical keys
-   - Keep translations consistent in tone
+4. **Locale-aware navigation**:
 
-5. **Locale-aware navigation**:
    ```tsx
    router.push(`/${params.locale}/settings`);
    ```
@@ -203,16 +200,11 @@ webmail/
 
 ## Security
 
-- **Never commit sensitive data** (API keys, passwords, etc.)
+- **Never commit secrets** - API keys, passwords, tokens, `.env*` files
 - **Sanitize user input** and email content
-- **Block external content** by default for privacy
-- Report security vulnerabilities privately (e.g. bulwark@rbm.systems)
+- **Block external content** by default - privacy is the point
+- **Report vulnerabilities privately** to bulwark@rbm.systems, not via public issues
 
 ## Questions?
 
-If you have questions about contributing, feel free to:
-
-- Open an issue for discussion
-- Check existing issues and pull requests
-
-Thank you for helping improve Bulwark Webmail!
+Open an issue, search existing ones, or ask in Discord. Thanks for helping build the webmail we all wished existed.

@@ -11,6 +11,10 @@ const SIDEBAR_DEFAULT = 256;
 const EMAIL_LIST_MIN = 240;
 const EMAIL_LIST_MAX = 600;
 const EMAIL_LIST_DEFAULT = 384;
+// Email list height (in pixels) for horizontal "Reading Pane at Bottom" layout
+const EMAIL_LIST_HEIGHT_MIN = 160;
+const EMAIL_LIST_HEIGHT_MAX = 800;
+const EMAIL_LIST_HEIGHT_DEFAULT = 320;
 
 interface UIState {
   // Mobile view state
@@ -28,6 +32,7 @@ interface UIState {
   // Resizable column widths (desktop only)
   sidebarWidth: number;
   emailListWidth: number;
+  emailListHeight: number;
 
   // Sidebar collapsed state (desktop)
   sidebarCollapsed: boolean;
@@ -40,8 +45,10 @@ interface UIState {
   setDeviceType: (isMobile: boolean, isTablet: boolean, isDesktop: boolean) => void;
   setSidebarWidth: (width: number) => void;
   setEmailListWidth: (width: number) => void;
+  setEmailListHeight: (height: number) => void;
   resetSidebarWidth: () => void;
   resetEmailListWidth: () => void;
+  resetEmailListHeight: () => void;
   persistColumnWidths: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
@@ -64,6 +71,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   isDesktop: true,
   sidebarWidth: SIDEBAR_DEFAULT,
   emailListWidth: EMAIL_LIST_DEFAULT,
+  emailListHeight: EMAIL_LIST_HEIGHT_DEFAULT,
   sidebarCollapsed: false,
 
   // Actions
@@ -84,26 +92,37 @@ export const useUIStore = create<UIState>((set, get) => ({
   setEmailListWidth: (width) =>
     set({ emailListWidth: Math.min(EMAIL_LIST_MAX, Math.max(EMAIL_LIST_MIN, width)) }),
 
+  setEmailListHeight: (height) =>
+    set({ emailListHeight: Math.min(EMAIL_LIST_HEIGHT_MAX, Math.max(EMAIL_LIST_HEIGHT_MIN, height)) }),
+
   resetSidebarWidth: () => {
     set({ sidebarWidth: SIDEBAR_DEFAULT });
-    const { emailListWidth } = get();
+    const { emailListWidth, emailListHeight } = get();
     try {
-      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth: SIDEBAR_DEFAULT, emailListWidth }));
+      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth: SIDEBAR_DEFAULT, emailListWidth, emailListHeight }));
     } catch { /* localStorage may be unavailable */ }
   },
 
   resetEmailListWidth: () => {
     set({ emailListWidth: EMAIL_LIST_DEFAULT });
-    const { sidebarWidth } = get();
+    const { sidebarWidth, emailListHeight } = get();
     try {
-      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth, emailListWidth: EMAIL_LIST_DEFAULT }));
+      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth, emailListWidth: EMAIL_LIST_DEFAULT, emailListHeight }));
+    } catch { /* localStorage may be unavailable */ }
+  },
+
+  resetEmailListHeight: () => {
+    set({ emailListHeight: EMAIL_LIST_HEIGHT_DEFAULT });
+    const { sidebarWidth, emailListWidth } = get();
+    try {
+      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth, emailListWidth, emailListHeight: EMAIL_LIST_HEIGHT_DEFAULT }));
     } catch { /* localStorage may be unavailable */ }
   },
 
   persistColumnWidths: () => {
-    const { sidebarWidth, emailListWidth } = get();
+    const { sidebarWidth, emailListWidth, emailListHeight } = get();
     try {
-      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth, emailListWidth }));
+      localStorage.setItem("column-widths", JSON.stringify({ sidebarWidth, emailListWidth, emailListHeight }));
     } catch { /* localStorage may be unavailable */ }
   },
 

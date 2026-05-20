@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { formatDate } from "@/lib/utils";
 import { Email } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ interface ThreadEmailItemProps {
   selected?: boolean;
   isLast?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
   onContextMenu?: (e: React.MouseEvent, email: Email) => void;
 }
 
@@ -25,8 +27,10 @@ export function ThreadEmailItem({
   selected,
   isLast = false,
   onClick,
+  onDoubleClick,
   onContextMenu,
 }: ThreadEmailItemProps) {
+  const t = useTranslations('email_viewer');
   const isUnread = !email.keywords?.$seen;
   const isStarred = email.keywords?.$flagged;
   const isAnswered = email.keywords?.$answered;
@@ -94,6 +98,12 @@ export function ThreadEmailItem({
         isPressed && "bg-muted scale-[0.98] ring-2 ring-primary/30"
       )}
       onClick={handleClick}
+      onDoubleClick={(e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+        if (!onDoubleClick) return;
+        e.preventDefault();
+        onDoubleClick();
+      }}
       onContextMenu={handleContextMenu}
       style={{ paddingBlock: 'var(--density-item-py)' }}
     >
@@ -177,7 +187,7 @@ export function ThreadEmailItem({
                 ? "text-muted-foreground"
                 : "text-muted-foreground/70"
             )}>
-              {email.preview || "No preview"}
+              {email.preview || t('no_preview_available')}
             </span>
 
             {/* Date */}

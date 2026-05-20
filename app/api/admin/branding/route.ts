@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminAuth, getClientIP } from '@/lib/admin/session';
 import { auditLog } from '@/lib/admin/audit';
 import { configManager } from '@/lib/admin/config-manager';
+import { getConfigDir } from '@/lib/admin/paths';
 import { logger } from '@/lib/logger';
 import { writeFile, unlink, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-const BRANDING_DIR = path.join(process.cwd(), 'data', 'admin', 'branding');
+function getBrandingDir(): string {
+  return path.join(getConfigDir(), 'branding');
+}
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_MIME_TYPES = new Set([
   'image/svg+xml',
@@ -41,7 +44,7 @@ function sanitizeFilename(name: string): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -79,11 +82,11 @@ export async function POST(request: NextRequest) {
     };
     const ext = extMap[file.type] || '.png';
     const safeName = sanitizeFilename(`${slot}${ext}`);
-    const filePath = path.join(BRANDING_DIR, safeName);
+    const filePath = path.join(getBrandingDir(), safeName);
 
     // Ensure branding directory exists
-    if (!existsSync(BRANDING_DIR)) {
-      await mkdir(BRANDING_DIR, { recursive: true });
+    if (!existsSync(getBrandingDir())) {
+      await mkdir(getBrandingDir(), { recursive: true });
     }
 
     // Write file to disk
@@ -111,7 +114,7 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -125,7 +128,7 @@ export async function DELETE(request: NextRequest) {
     const possibleExts = ['.svg', '.png', '.jpg', '.webp', '.ico'];
     let removed = false;
     for (const ext of possibleExts) {
-      const filePath = path.join(BRANDING_DIR, `${slot}${ext}`);
+      const filePath = path.join(getBrandingDir(), `${slot}${ext}`);
       if (existsSync(filePath)) {
         await unlink(filePath);
         removed = true;

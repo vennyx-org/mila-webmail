@@ -40,6 +40,31 @@ export function validateProxyAuthHeader(authHeader: string): void {
   }
 }
 
+/**
+ * For a `Basic` Authorization header, assert that the user portion of the
+ * credentials matches `claimedUsername`. Prevents callers of routes that
+ * accept independent `username` + `authHeader` fields from binding a cookie
+ * to one identity while authenticating as another. No-op for Bearer.
+ */
+export function assertBasicAuthMatchesUsername(authHeader: string, claimedUsername: string): void {
+  const match = /^Basic\s+(\S+)$/i.exec(authHeader);
+  if (!match) return;
+  let decoded: string;
+  try {
+    decoded = Buffer.from(match[1], 'base64').toString('utf8');
+  } catch {
+    throw new JmapAuthVerificationError('Invalid Authorization header', 400);
+  }
+  const colon = decoded.indexOf(':');
+  if (colon < 0) {
+    throw new JmapAuthVerificationError('Invalid Authorization header', 400);
+  }
+  const credUser = decoded.slice(0, colon);
+  if (credUser !== claimedUsername) {
+    throw new JmapAuthVerificationError('Username does not match credentials', 400);
+  }
+}
+
 export async function verifyJmapAuth(
   serverUrl: string,
   authHeader: string,

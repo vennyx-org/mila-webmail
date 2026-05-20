@@ -135,6 +135,40 @@
     "shared": "Gedeeld",
     "scheduled": "Gepland"
   },
+  "protocol_handlers": {
+    "title": "Standaardapps",
+    "description": "Kies of e-mail- en kalenderlinks in Bulwark worden geopend. Technisch registreert Bulwark zich als protocolhandler voor mailto:- en webcal:-links.",
+    "unsupported": "Deze browser of verbinding ondersteunt geen handmatige registratie van protocolhandlers. Mogelijk kun je de geïnstalleerde PWA nog gebruiken via de browser- of systeeminstellingen.",
+    "mailto_label": "E-maillinks",
+    "mailto_description": "Opent mailto:-links in Bulwark met een vooraf ingevulde opsteller.",
+    "protocol_open_mode_label": "Bij het openen van protocollinks",
+    "protocol_open_mode_description": "Kies of Bulwark mailto:- en webcal:-links in een nieuw tabblad opent of een geopende sessie hergebruikt. Voor de optie actieve sessie is toestemming voor meldingen nodig, zodat je op een fallbackmelding kunt klikken om Bulwark naar voren te halen als de browser focus blokkeert.",
+    "protocol_open_mode_active_session": "Indien mogelijk openen in actieve sessie",
+    "protocol_open_mode_new_tab": "Altijd een nieuw tabblad openen",
+    "focus_notification_title": "Bulwark openen",
+    "focus_notification_body": "De link is geopend in Bulwark. Klik om het venster naar voren te halen.",
+    "webcal_label": "Kalenderlinks",
+    "webcal_description": "Opent webcal:-links in Bulwark met een vooraf ingevuld dialoogvenster voor kalenderabonnementen.",
+    "register_mailto": "E-mailapp registreren",
+    "register_webcal": "Kalenderapp registreren",
+    "mailto_registered": "Registratie van e-mailhandler aangevraagd",
+    "webcal_registered": "Registratie van kalenderhandler aangevraagd",
+    "registration_failed": "Registratie van protocolhandler mislukt",
+    "opening_mailto": "Opsteller wordt geopend...",
+    "opening_webcal": "Kalender wordt geopend...",
+    "browser_note": "Je browser of besturingssysteem kan om bevestiging vragen en kan vereisen dat Bulwark is geïnstalleerd voordat het als standaardapp kan worden geselecteerd.",
+    "select_account_title": "Account kiezen",
+    "select_mailto_account": "Kies welk account deze e-maillink moet openen.",
+    "select_webcal_account": "Kies welk account deze kalenderlink moet openen.",
+    "select_account_note": "Deze keuze geldt alleen voor deze protocol-link.",
+    "detail_to": "Aan",
+    "detail_subject": "Onderwerp",
+    "detail_no_subject": "Geen onderwerp",
+    "detail_calendar": "Agenda",
+    "detail_source": "Bron",
+    "active_account": "Actief",
+    "switching_account": "Account wisselen..."
+  },
   "sidebar_apps": {
     "modal_title": "Zijbalk-apps",
     "add_new": "App toevoegen",
@@ -225,6 +259,8 @@
     "compose": "Opstellen",
     "compose_hint": "Nieuw bericht opstellen",
     "no_subject": "(Geen onderwerp)",
+    "no_body_content": "(Geen inhoud beschikbaar)",
+    "no_preview_available": "Geen voorbeeld beschikbaar",
     "loading_email": "E-mail laden...",
     "loading": "Laden...",
     "reply": "Beantwoorden",
@@ -548,6 +584,15 @@
       "to": "Aan: {recipients}"
     },
     "remove_sub_address": "Sub-adres verwijderen",
+    "from_override": {
+      "toggle_off": "Overschrijven",
+      "toggle_on": "Overschrijven annuleren",
+      "toggle_tooltip": "Bewerk de naam en het adres van de afzender vrij. E-mail wordt nog steeds via je identiteit verzonden - alleen de zichtbare Van-koptekst verandert.",
+      "name_label": "Afzendernaam",
+      "name_placeholder": "Naam",
+      "email_label": "E-mailadres afzender",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Sjabloon",
     "save_as_template": "Opslaan als sjabloon",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Versleuteling",
       "files": "Bestanden",
       "contacts": "Contacten",
+      "protocol_handlers": "Standaardapps",
       "sidebar_apps": "Zijbalk-apps",
       "notifications": "Meldingen",
       "layout": "Indeling",
@@ -973,7 +1019,9 @@
         "split": "Gesplitst venster",
         "split_description": "Houd de berichtenlijst en het leesvenster naast elkaar zichtbaar.",
         "focus": "Gefocuste lijst",
-        "focus_description": "Toon één regel per bericht en open e-mail op volledige breedte terwijl de mappenzijbalk zichtbaar blijft."
+        "focus_description": "Toon één regel per bericht en open e-mail op volledige breedte terwijl de mappenzijbalk zichtbaar blijft.",
+        "horizontal": "Leesvenster onderaan",
+        "horizontal_description": "Toon de berichtenlijst bovenaan en open het geselecteerde bericht in een leesvenster eronder."
       },
       "disable_threading": {
         "label": "Conversatiegroepering uitschakelen",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Antwoordadres automatisch selecteren",
         "description": "Schakel bij het beantwoorden automatisch het Van-adres om naar de identiteit die het oorspronkelijke bericht ontving"
+      },
+      "signature_position": {
+        "label": "Positie van handtekening",
+        "description": "Waar je handtekening in antwoorden en doorgestuurde berichten moet worden ingevoegd. Boven de geciteerde tekst leest natuurlijk als afsluiting van het antwoord; eronder houdt het originele bericht aaneengesloten.",
+        "above_quote": "Voor geciteerde tekst",
+        "below_quote": "Na geciteerde tekst"
+      },
+      "signature_separator": {
+        "label": "Handtekening-scheider",
+        "description": "De handtekening voorafgaan met de standaard scheidingsregel \"-- \" (RFC 3676). Zet uit als je liever direct van het bericht in de handtekening overgaat."
       },
       "sub_address_delimiter": {
         "label": "Sub-adres scheidingsteken",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nieuwe submap...",
     "new_folder": "Nieuwe map...",
     "rename": "Hernoemen...",
+    "import_email": ".eml importeren...",
     "empty_folder": "Map leegmaken",
     "empty_folder_generic": "Map leegmaken",
     "delete_folder": "Map verwijderen",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archief@email.nl",
       "text_signature_label": "Teksthandtekening",
       "html_signature_label": "HTML-handtekening",
+      "signature_byte_counter": "{bytes} / {max} bytes",
+      "signature_byte_limit_reached": "Serverlimiet bereikt",
       "save": "Identiteit opslaan",
       "cancel": "Annuleren",
       "creating": "Aanmaken...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "Bestand overschrijdt de limiet van 10 MB",
       "invalid_format": "Ongeldig agendabestandsformaat"
     },
+    "webcal_action": {
+      "title": "Agendalink openen",
+      "description": "Hoe wilt u \"{name}\" gebruiken?",
+      "import_title": "Eenmalig importeren",
+      "import_description": "Haal de afspraken nu op en kopieer ze naar een van uw agenda's.",
+      "subscribe_title": "Abonneren",
+      "subscribe_description": "Houd deze agenda automatisch gesynchroniseerd als aparte agenda.",
+      "cancel": "Annuleren"
+    },
     "management": {
       "title": "Agendabeheer",
       "description": "Maak, hernoem en pas uw agenda's aan. Klik met de rechtermuisknop op een agenda in de zijbalk om snel de kleur te wijzigen.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Introductietour",
     "restart_desc": "Bekijk de rondleiding door de interface opnieuw",
     "restart_button": "Tour herstarten",
+    "show_on_new_devices_title": "Tonen op nieuwe apparaten",
+    "show_on_new_devices_desc": "Herhaal de welkomstbanner en de rondleiding wanneer je voor het eerst inlogt op een nieuw apparaat, zelfs als je ze elders al hebt voltooid",
     "sidebar_title": "Uw mailboxen",
     "sidebar_desc": "Dit is uw mappenbalk. Klik op een mailbox om de e-mails te bekijken. U kunt mappen maken, e-mails tussen mappen slepen en ongelezen aantallen zien.",
     "compose_title": "E-mail schrijven",

@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10));

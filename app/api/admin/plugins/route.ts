@@ -12,6 +12,7 @@ import { listDevPlugins } from '@/lib/admin/plugin-dev';
 import {
   sanitizeFrameOrigins,
   sanitizeHttpOrigins,
+  sanitizeApiPostPaths,
   invalidateFrameOriginsCache,
 } from '@/lib/admin/csp-frame-origins';
 
@@ -31,9 +32,9 @@ const SUSPICIOUS_JS_PATTERNS = [
 /**
  * GET /api/admin/plugins - List all admin-managed plugins
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const [registry, devEntries] = await Promise.all([
@@ -63,7 +64,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -172,6 +173,7 @@ export async function POST(request: NextRequest) {
 
     const declaredFrameOrigins = sanitizeFrameOrigins(manifest.frameOrigins);
     const declaredHttpOrigins = sanitizeHttpOrigins(manifest.httpOrigins);
+    const declaredApiPostPaths = sanitizeApiPostPaths(manifest.apiPostPaths);
 
     const now = new Date().toISOString();
     const plugin: ServerPlugin = {
@@ -196,13 +198,16 @@ export async function POST(request: NextRequest) {
       ...(declaredHttpOrigins.length > 0
         ? { httpOrigins: declaredHttpOrigins }
         : {}),
+      ...(declaredApiPostPaths.length > 0
+        ? { apiPostPaths: declaredApiPostPaths }
+        : {}),
       installedAt: now,
       updatedAt: now,
     };
 
     await savePlugin(plugin, code);
     invalidateFrameOriginsCache();
-    await auditLog('plugin.install', { id: plugin.id, name: plugin.name, version: plugin.version, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins }, ip);
+    await auditLog('plugin.install', { id: plugin.id, name: plugin.name, version: plugin.version, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins, apiPostPaths: declaredApiPostPaths }, ip);
 
     return NextResponse.json({ plugin });
   } catch (error) {
@@ -217,7 +222,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -259,7 +264,7 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);

@@ -52,11 +52,14 @@ export function NotificationSettings() {
 
   useEffect(() => {
     if (!supported) return;
+    if (!client) return;
+    const accountId = client.getAccountId();
+    if (!accountId) return;
     void (async () => {
-      const enabled = await isWebPushEnabled();
-      if (enabled) setPushStatus({ kind: 'enabled' });
+      const enabled = await isWebPushEnabled(accountId);
+      setPushStatus(enabled ? { kind: 'enabled' } : { kind: 'idle' });
     })();
-  }, [supported]);
+  }, [supported, client]);
 
   const trimmedRelay = relayUrl.trim().replace(/\/+$/, '');
   const isValidRelay = /^https?:\/\/.+/i.test(trimmedRelay);

@@ -43,6 +43,8 @@ export async function GET() {
       dev: p.dev,
       // Surface so clients can enforce api.http.fetch origin allowlists.
       httpOrigins: p.httpOrigins,
+      // Surface so clients can enforce api.http.post path allowlists.
+      apiPostPaths: p.apiPostPaths,
       // Per-user settings schema, captured from the manifest at upload/load
       // time so the client can render the settings UI without re-parsing.
       settingsSchema: p.settingsSchema,

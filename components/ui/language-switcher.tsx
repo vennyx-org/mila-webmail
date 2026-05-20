@@ -9,20 +9,21 @@ import { flagComponents } from './flag-icons';
 
 const languages = [
   { value: 'cs', label: 'Česky' },
-  { value: 'en', label: 'English' },
-  { value: 'fr', label: 'Français' },
-  { value: 'ja', label: '日本語' },
-  { value: 'ko', label: '한국어' },
-  { value: 'es', label: 'Español' },
-  { value: 'it', label: 'Italiano' },
+  { value: 'da', label: 'Dansk' },
   { value: 'de', label: 'Deutsch' },
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Español' },
+  { value: 'fr', label: 'Français' },
+  { value: 'it', label: 'Italiano' },
   { value: 'lv', label: 'Latviešu' },
   { value: 'nl', label: 'Nederlands' },
   { value: 'pl', label: 'Polski' },
   { value: 'pt', label: 'Português' },
-  { value: 'ru', label: 'Русский' },
   { value: 'tr', label: 'Türkçe' },
+  { value: 'ru', label: 'Русский' },
   { value: 'uk', label: 'Українська' },
+  { value: 'ko', label: '한국어' },
+  { value: 'ja', label: '日本語' },
   { value: 'zh', label: '简体中文' },
 ];
 

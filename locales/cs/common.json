@@ -135,6 +135,40 @@
     "add_app": "Aplikace",
     "scheduled": "Naplánováno"
   },
+  "protocol_handlers": {
+    "title": "Výchozí aplikace",
+    "description": "Zvolte, zda se mají e-mailové a kalendářové odkazy otevírat v Bulwarku. Technicky se Bulwark registruje jako obslužná aplikace protokolu pro odkazy mailto: a webcal:.",
+    "unsupported": "Tento prohlížeč nebo toto připojení nepodporuje ruční registraci obslužné aplikace protokolu. Nainstalovanou PWA můžete případně použít přes nastavení prohlížeče nebo systému.",
+    "mailto_label": "E-mailové odkazy",
+    "mailto_description": "Otevře odkazy mailto: v Bulwarku s předvyplněným editorem zprávy.",
+    "protocol_open_mode_label": "Při otevírání odkazů protokolů",
+    "protocol_open_mode_description": "Zvolte, zda má Bulwark otevírat odkazy mailto: a webcal: v nové kartě, nebo znovu použít otevřenou relaci. Volba aktivní relace vyžaduje oprávnění k oznámením, abyste mohli kliknout na záložní oznámení a přenést Bulwark do popředí, pokud prohlížeč blokuje fokus.",
+    "protocol_open_mode_active_session": "Otevřít v aktivní relaci, pokud je to možné",
+    "protocol_open_mode_new_tab": "Vždy otevřít novou kartu",
+    "focus_notification_title": "Otevřít Bulwark",
+    "focus_notification_body": "Odkaz byl otevřen v Bulwarku. Kliknutím přenesete okno do popředí.",
+    "webcal_label": "Kalendářové odkazy",
+    "webcal_description": "Otevře odkazy webcal: v Bulwarku s předvyplněným dialogem pro odběr kalendáře.",
+    "register_mailto": "Registrovat e-mailovou aplikaci",
+    "register_webcal": "Registrovat kalendářovou aplikaci",
+    "mailto_registered": "Registrace obsluhy e-mailových odkazů byla vyžádána",
+    "webcal_registered": "Registrace obsluhy kalendářových odkazů byla vyžádána",
+    "registration_failed": "Registrace obslužné aplikace protokolu selhala",
+    "opening_mailto": "Otevírá se editor...",
+    "opening_webcal": "Otevírá se kalendář...",
+    "browser_note": "Prohlížeč nebo operační systém vás může požádat o potvrzení a může vyžadovat, aby byl Bulwark nainstalovaný, než jej půjde vybrat jako výchozí aplikaci.",
+    "select_account_title": "Vybrat účet",
+    "select_mailto_account": "Vyberte účet, ve kterém se má tento e-mailový odkaz otevřít.",
+    "select_webcal_account": "Vyberte účet, ve kterém se má tento kalendářový odkaz otevřít.",
+    "select_account_note": "Tato volba platí jen pro tento odkaz protokolu.",
+    "detail_to": "Komu",
+    "detail_subject": "Předmět",
+    "detail_no_subject": "Bez předmětu",
+    "detail_calendar": "Kalendář",
+    "detail_source": "Zdroj",
+    "active_account": "Aktivní",
+    "switching_account": "Přepínání účtu..."
+  },
   "sidebar_apps": {
     "modal_title": "Aplikace postranního panelu",
     "add_new": "Přidat aplikaci",
@@ -225,6 +259,8 @@
     "compose": "Napsat",
     "compose_hint": "Napsat novou zprávu",
     "no_subject": "(Bez předmětu)",
+    "no_body_content": "(Žádný obsah těla)",
+    "no_preview_available": "Náhled není k dispozici",
     "loading_email": "Načítání zprávy...",
     "loading": "Načítání...",
     "reply": "Odpovědět",
@@ -548,6 +584,15 @@
       "to": "Komu: {recipients}"
     },
     "remove_sub_address": "Odebrat subadresu",
+    "from_override": {
+      "toggle_off": "Přepsat",
+      "toggle_on": "Zrušit přepsání",
+      "toggle_tooltip": "Volně upravujte jméno a adresu odesílatele. Pošta se stále odesílá přes vaši identitu - mění se pouze viditelné záhlaví Od.",
+      "name_label": "Jméno odesílatele",
+      "name_placeholder": "Jméno",
+      "email_label": "E-mailová adresa odesílatele",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Šablona",
     "save_as_template": "Uložit jako šablonu",
     "validation": {
@@ -756,6 +801,7 @@
       "files": "Soubory",
       "contacts": "Kontakty",
       "encryption": "Šifrování",
+      "protocol_handlers": "Výchozí aplikace",
       "sidebar_apps": "Aplikace postranního panelu",
       "notifications": "Oznámení",
       "layout": "Vzhled",
@@ -973,7 +1019,9 @@
         "split": "Rozdělené zobrazení",
         "split_description": "Seznam zpráv a panel pro čtení zůstávají viditelné vedle sebe.",
         "focus": "Soustředěný seznam",
-        "focus_description": "Zobrazit jeden řádek na zprávu a otevřít poštu na plnou šířku s viditelným panelem složek."
+        "focus_description": "Zobrazit jeden řádek na zprávu a otevřít poštu na plnou šířku s viditelným panelem složek.",
+        "horizontal": "Čtecí panel dole",
+        "horizontal_description": "Zobrazit seznam zpráv nahoře a otevřít vybranou zprávu ve čtecím panelu pod ním."
       },
       "show_preview": {
         "label": "Zobrazit náhledový text",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "Automaticky vybírat adresu pro odpověď",
         "description": "Při odpovídání automaticky přepnout adresu odesílatele na identitu, která původně obdržela zprávu"
+      },
+      "signature_position": {
+        "label": "Pozice podpisu",
+        "description": "Kam vložit podpis v odpovědích a přeposláních. Nad citovaným textem působí přirozeně jako zakončení odpovědi; pod ním zachovává původní zprávu vcelku.",
+        "above_quote": "Před citovaným textem",
+        "below_quote": "Za citovaným textem"
+      },
+      "signature_separator": {
+        "label": "Oddělovač podpisu",
+        "description": "Před podpis přidat standardní oddělovací řádek \"-- \" (RFC 3676). Vypněte, pokud chcete plynule přejít z textu zprávy do podpisu."
       },
       "sub_address_delimiter": {
         "label": "Oddělovač sub-adresy",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nová podsložka...",
     "new_folder": "Nová složka...",
     "rename": "Přejmenovat...",
+    "import_email": "Importovat .eml...",
     "empty_folder": "Vyprázdnit složku",
     "empty_folder_generic": "Vyprázdnit složku",
     "delete_folder": "Smazat složku",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archiv@email.com",
       "text_signature_label": "Textový podpis",
       "html_signature_label": "HTML podpis",
+      "signature_byte_counter": "{bytes} / {max} bajtů",
+      "signature_byte_limit_reached": "Dosažen limit serveru",
       "save": "Uložit identitu",
       "cancel": "Zrušit",
       "creating": "Vytváření...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "Soubor překračuje limit 10 MB",
       "invalid_format": "Neplatný formát souboru kalendáře"
     },
+    "webcal_action": {
+      "title": "Otevřít odkaz kalendáře",
+      "description": "Jak chcete použít \"{name}\"?",
+      "import_title": "Jednorázově importovat",
+      "import_description": "Načíst události nyní a zkopírovat je do jednoho z vašich kalendářů.",
+      "subscribe_title": "Odebírat",
+      "subscribe_description": "Automaticky synchronizovat tento kalendář jako samostatný kalendář.",
+      "cancel": "Zrušit"
+    },
     "management": {
       "title": "Správa kalendáře",
       "description": "Vytvářejte, přejmenovávejte a přizpůsobujte si své kalendáře. Klikněte pravým tlačítkem na kalendář v postranním panelu pro rychlou změnu jeho barvy.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Úvodní průvodce",
     "restart_desc": "Přehrát průvodce rozhraním krok za krokem",
     "restart_button": "Spustit průvodce znovu",
+    "show_on_new_devices_title": "Zobrazit na nových zařízeních",
+    "show_on_new_devices_desc": "Přehrát uvítací banner a průvodce při prvním přihlášení na novém zařízení, i když jste je již dokončili jinde",
     "sidebar_title": "Vaše poštovní schránky",
     "sidebar_desc": "Toto je postranní panel se složkami. Kliknutím na libovolnou schránku zobrazíte její zprávy. Můžete vytvářet složky, přetahovat zprávy mezi nimi a okamžitě vidět počet nepřečtených e-mailů.",
     "compose_title": "Napsat zprávu",

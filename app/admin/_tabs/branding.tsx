@@ -5,8 +5,9 @@ import { Save, Loader2, RotateCcw, ImageIcon, Upload, Trash2 } from 'lucide-reac
 import { apiFetch } from '@/lib/browser-navigation';
 
 interface ConfigEntry {
-  value: unknown;
+  value?: unknown;
   source: 'admin' | 'env' | 'default';
+  hasValue?: boolean;
 }
 
 const IMAGE_FIELDS = [

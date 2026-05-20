@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { getEnabledPluginFrameOrigins } from "./lib/admin/csp-frame-origins";
+import { configManager } from "./lib/admin/config-manager";
+import { detectSetupState } from "./lib/setup/state";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -11,29 +13,92 @@ const intlMiddleware = createIntlMiddleware(routing);
 // requests for API routes, Next internals and static assets.
 const PROXY_SKIP_PATTERN = /^\/(?:api|_next)(?:\/|$)|\.[^/]+$/;
 
+function isSetupPath(pathname: string): boolean {
+  return (
+    pathname === "/setup" ||
+    pathname.startsWith("/setup/") ||
+    pathname.startsWith("/api/setup")
+  );
+}
+
 export async function proxy(request: NextRequest) {
-  if (PROXY_SKIP_PATTERN.test(request.nextUrl.pathname)) {
+  // Resolve setup state before deciding what to skip. The first call after
+  // boot triggers the config load; subsequent calls are in-memory.
+  await configManager.ensureLoaded();
+  const setupState = detectSetupState();
+  const pathname = request.nextUrl.pathname;
+
+  if (setupState === "bootstrap") {
+    // Wizard active. Redirect HTML pages to /setup; let asset/internal
+    // requests through so the wizard UI can render. Block non-setup APIs
+    // with a 503 so cached SPA code doesn't silently call them.
+    const allowed =
+      isSetupPath(pathname) ||
+      pathname === "/api/health" ||
+      pathname.startsWith("/_next/") ||
+      pathname.startsWith("/branding/") ||
+      // Public read endpoint - serves wizard-uploaded branding assets so
+      // image previews work during the wizard. No auth on the GET route.
+      pathname.startsWith("/api/admin/branding/") ||
+      /\.[^/]+$/.test(pathname);
+
+    if (!allowed) {
+      if (pathname.startsWith("/api/")) {
+        return new NextResponse(
+          JSON.stringify({ error: "setup_required", message: "Initial setup has not completed." }),
+          { status: 503, headers: { "content-type": "application/json" } },
+        );
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/setup";
+      url.search = request.nextUrl.search;
+      return NextResponse.redirect(url);
+    }
+  } else if (isSetupPath(pathname)) {
+    // Configured / env-managed: wizard is no longer reachable.
+    //  - HTML /setup pages → redirect to admin login so users who reload
+    //    the URL after setup don't see a dead "Not Found" page.
+    //  - /api/setup/* → 404 (no reason to expose these endpoints).
+    if (pathname.startsWith("/api/setup")) {
+      return new NextResponse("Not Found", { status: 404 });
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/login";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (PROXY_SKIP_PATTERN.test(pathname)) {
     return NextResponse.next();
   }
 
   const nonce = crypto.randomUUID();
   const isDev = process.env.NODE_ENV === "development";
+  // The plugin-sandbox iframe document needs `'unsafe-eval'` to run plugin
+  // bundles via `new Function`. It is null-origin (sandbox="allow-scripts"),
+  // so the relaxation is scoped strictly to that document and never reaches
+  // the main app, plus it must be embeddable from `'self'`.
+  const isSandboxPath = pathname === "/plugin-sandbox" || pathname.startsWith("/plugin-sandbox/");
 
-  const scriptSrc = isDev
-    ? `'self' 'nonce-${nonce}' 'unsafe-eval' blob:`
-    : `'self' 'nonce-${nonce}' blob:`;
+  const scriptSrc = isSandboxPath
+    ? `'self' 'nonce-${nonce}' 'unsafe-eval'`
+    : isDev
+    ? `'self' 'nonce-${nonce}' 'unsafe-eval'`
+    : `'self' 'nonce-${nonce}'`;
 
   const connectSrc = isDev ? `'self' http: https: ws: wss:` : `'self' https:`;
 
-  const frameAncestors = process.env.ALLOWED_FRAME_ANCESTORS?.trim() || "'none'";
+  const frameAncestors = isSandboxPath
+    ? `'self'`
+    : process.env.ALLOWED_FRAME_ANCESTORS?.trim() || "'none'";
 
   // Plugins may declare iframe origins they need (e.g. for embedded video).
   // Each origin is validated at install time and re-validated here.
   const pluginFrameOrigins = await getEnabledPluginFrameOrigins();
   const frameSrc =
     pluginFrameOrigins.length > 0
-      ? `frame-src 'self' blob: ${pluginFrameOrigins.join(" ")}`
-      : `frame-src 'self' blob:`;
+      ? `frame-src 'self' ${pluginFrameOrigins.join(" ")}`
+      : `frame-src 'self'`;
 
   const csp = [
     `default-src 'self'`,
@@ -43,16 +108,17 @@ export async function proxy(request: NextRequest) {
     `font-src 'self'`,
     `connect-src ${connectSrc}`,
     frameSrc,
-    `object-src 'self' blob:`,
+    `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `frame-ancestors ${frameAncestors}`,
     `media-src 'self' blob:`,
   ].join("; ");
 
-  // Skip intl middleware for /admin routes - they have their own layout
-  const pathname = request.nextUrl.pathname;
+  // Skip intl middleware for routes outside the localized app tree.
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isProtocolRoute = pathname === '/protocol' || pathname.startsWith('/protocol/');
+  const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
 
   // When localePrefix is 'always', paths that already have a locale prefix
   // (e.g. /en/settings) should not be re-processed by the intl middleware -
@@ -63,7 +129,7 @@ export async function proxy(request: NextRequest) {
   );
 
   let intlResponse: ReturnType<typeof intlMiddleware> | null = null;
-  if (!isAdminRoute && !hasLocalePrefix) {
+  if (!isAdminRoute && !isProtocolRoute && !isSetupRoute && !hasLocalePrefix) {
     try {
       intlResponse = intlMiddleware(request);
     } catch (error) {

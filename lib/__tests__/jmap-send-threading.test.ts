@@ -155,6 +155,25 @@ describe('JMAPClient.sendEmail threading headers', () => {
     expect(draft.references).toBeUndefined();
   });
 
+  it('omits cc/bcc when arrays are empty so the server does not emit a bare Cc: header', async () => {
+    const client = createClient();
+    const captured = mockSendEmailFlow();
+
+    await client.sendEmail(
+      ['recipient@example.com'],
+      'No copies',
+      'body',
+      [], [], 'identity-1', 'user@example.com',
+    );
+
+    const setCall = captured[2].methodCalls[0];
+    const create = setCall[1].create as Record<string, Record<string, unknown>>;
+    const draft = Object.values(create)[0];
+
+    expect(draft.cc).toBeUndefined();
+    expect(draft.bcc).toBeUndefined();
+  });
+
   it('drops empty / whitespace-only ids rather than sending blank entries', async () => {
     const client = createClient();
     const captured = mockSendEmailFlow();

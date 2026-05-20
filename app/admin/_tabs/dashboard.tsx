@@ -26,7 +26,7 @@ export function DashboardTab() {
   const [status, setStatus] = useState<AdminStatus | null>(null);
   const [recentActivity, setRecentActivity] = useState<AuditEntry[]>([]);
   const [config, setConfig] = useState<ConfigData | null>(null);
-  const [, setConfigSources] = useState<Record<string, { value: unknown; source: string }> | null>(null);
+  const [, setConfigSources] = useState<Record<string, { value?: unknown; source: string; hasValue?: boolean }> | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [pluginCount, setPluginCount] = useState(0);
   const [themeCount, setThemeCount] = useState(0);
@@ -96,7 +96,9 @@ export function DashboardTab() {
       const sources = await adminConfigRes.json();
       setConfigSources(sources);
       const sessionSecret = sources?.sessionSecret;
-      if (!sessionSecret?.value || sessionSecret.value === 'your-secret-key-here') {
+      // Server redacts the raw value for sensitive keys; rely on hasValue,
+      // which is false when unset or matching a known placeholder default.
+      if (!sessionSecret?.hasValue) {
         w.push('SESSION_SECRET is not set or using a default value. Sessions are insecure.');
       }
       const adminPassword = sources?.adminPassword;
@@ -118,18 +120,6 @@ export function DashboardTab() {
           <p className="text-sm text-warning">{msg}</p>
         </div>
       ))}
-
-      {status && !status.lastLogin && (
-        <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-4">
-          <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-warning">First login detected</p>
-            <p className="text-sm text-warning/80 mt-0.5">
-              Remember to remove ADMIN_PASSWORD from your .env file now that the hash is stored securely.
-            </p>
-          </div>
-        </div>
-      )}
 
       <SettingsSection title="Server" description="Application and connection details">
         <SettingItem label="Application">

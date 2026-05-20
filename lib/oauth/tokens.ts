@@ -1,6 +1,20 @@
+import { configManager } from '@/lib/admin/config-manager';
+
 const DEFAULT_SCOPES = 'openid email profile';
-const EXTRA_SCOPES = process.env.OAUTH_EXTRA_SCOPES || '';
-export const OAUTH_SCOPES = process.env.OAUTH_SCOPES || (EXTRA_SCOPES ? `${DEFAULT_SCOPES} ${EXTRA_SCOPES}`.trim() : DEFAULT_SCOPES);
+
+/**
+ * Resolve the OAuth scopes to request at authorize time.
+ *
+ * Reads admin override / OAUTH_SCOPES / OAUTH_EXTRA_SCOPES at call time so
+ * runtime env vars (and admin dashboard changes) take effect without a rebuild.
+ * Server-only: callers in the browser must read `oauthScopes` from /api/config.
+ */
+export function getOauthScopes(): string {
+  const explicit = configManager.get<string>('oauthScopes', '');
+  if (explicit) return explicit;
+  const extra = configManager.get<string>('oauthExtraScopes', '');
+  return extra ? `${DEFAULT_SCOPES} ${extra}`.trim() : DEFAULT_SCOPES;
+}
 export const REFRESH_TOKEN_COOKIE = 'jmap_rt';
 export const REFRESH_TOKEN_SERVER_COOKIE = 'jmap_rts';
 

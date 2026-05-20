@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
 import type { ServerPlugin } from './plugin-registry';
-import { sanitizeFrameOrigins, sanitizeHttpOrigins } from './csp-frame-origins';
+import { sanitizeFrameOrigins, sanitizeHttpOrigins, sanitizeApiPostPaths } from './csp-frame-origins';
 
 /**
  * Dev-mode plugin loading.
@@ -77,6 +77,32 @@ function resolveBundlePath(pluginDir: string, entrypoint: string): ResolvedBundl
   return null;
 }
 
+async function bundleEntrypoint(bundlePath: string): Promise<string> {
+  const esbuild = await import('esbuild');
+  const result = await esbuild.build({
+    entryPoints: [bundlePath],
+    bundle: true,
+    // CJS format matches the sandbox runtime's evaluator
+    // (`new Function('module', 'exports', 'require', 'React', ...)`).
+    format: 'cjs',
+    platform: 'neutral',
+    write: false,
+    logLevel: 'silent',
+    sourcemap: 'inline',
+    target: ['es2020'],
+    // The runtime's `require` shim resolves these at evaluation time:
+    //   react / react-dom / react-dom/client / react/jsx-runtime → host copies
+    //   @plugin-host → the per-plugin `api` object
+    external: [
+      'react', 'react-dom', 'react-dom/client', 'react/jsx-runtime',
+      '@plugin-host',
+    ],
+  });
+  const out = result.outputFiles?.[0]?.text;
+  if (!out) throw new Error('esbuild produced no output');
+  return out;
+}
+
 /**
  * Load and bundle a dev plugin's code. For `src/` sources this runs esbuild
  * on every call so saves are reflected immediately. Errors are surfaced as
@@ -88,22 +114,7 @@ export async function readDevBundle(entry: DevPluginEntry): Promise<string> {
     return readFile(entry.bundlePath, 'utf-8');
   }
   try {
-    const esbuild = await import('esbuild');
-    const result = await esbuild.build({
-      entryPoints: [entry.bundlePath],
-      bundle: true,
-      format: 'esm',
-      write: false,
-      logLevel: 'silent',
-      sourcemap: 'inline',
-      target: ['es2020'],
-      // React/ReactDOM are exposed on globalThis.__PLUGIN_EXTERNALS__ by the
-      // host, so we mark them external - the bundle won't try to ship them.
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
-    });
-    const out = result.outputFiles?.[0]?.text;
-    if (!out) throw new Error('esbuild produced no output');
-    return out;
+    return await bundleEntrypoint(entry.bundlePath);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.warn(`[plugin-dev] esbuild failed for ${entry.plugin.id}`, { error: message });
@@ -142,15 +153,18 @@ async function loadDevPlugin(pluginDir: string): Promise<DevPluginEntry | null> 
     return null;
   }
 
-  // Hash from the on-disk source so any edit propagates. For src/ sources
-  // we hash the source - close enough for dev-time change detection (we
-  // don't need to re-hash transitive imports).
+  // Hash from the exact bytes the bundle endpoint will serve so the client's
+  // verifyBundle check passes. For src/ sources that means running esbuild
+  // here too — slightly more work per manifest list, but unavoidable since
+  // the source hash wouldn't match the served bundle.
   let bundleHash: string;
   try {
-    const code = await readFile(resolved.bundlePath);
-    bundleHash = createHash('sha256').update(code).digest('hex').slice(0, 16);
+    const bytes = resolved.needsBundle
+      ? await bundleEntrypoint(resolved.bundlePath)
+      : await readFile(resolved.bundlePath);
+    bundleHash = createHash('sha256').update(bytes).digest('hex');
   } catch (err) {
-    logger.warn(`[plugin-dev] failed to read ${resolved.bundlePath} for ${id}`, {
+    logger.warn(`[plugin-dev] failed to hash bundle at ${resolved.bundlePath} for ${id}`, {
       error: err instanceof Error ? err.message : String(err),
     });
     return null;
@@ -170,6 +184,7 @@ async function loadDevPlugin(pluginDir: string): Promise<DevPluginEntry | null> 
 
   const frameOrigins = sanitizeFrameOrigins(manifest.frameOrigins);
   const httpOrigins = sanitizeHttpOrigins(manifest.httpOrigins);
+  const apiPostPaths = sanitizeApiPostPaths(manifest.apiPostPaths);
 
   const plugin: ServerPlugin = {
     id,
@@ -190,6 +205,7 @@ async function loadDevPlugin(pluginDir: string): Promise<DevPluginEntry | null> 
       : {}),
     ...(frameOrigins.length > 0 ? { frameOrigins } : {}),
     ...(httpOrigins.length > 0 ? { httpOrigins } : {}),
+    ...(apiPostPaths.length > 0 ? { apiPostPaths } : {}),
     installedAt,
     updatedAt: new Date().toISOString(),
     bundleHash,

@@ -6,6 +6,7 @@ import { X, Lightbulb, Settings, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import { useTour } from "@/components/tour/tour-provider";
+import { useSettingsStore } from "@/stores/settings-store";
 
 const ONBOARDING_KEY = "onboarding_completed";
 
@@ -13,23 +14,47 @@ export function WelcomeBanner() {
   const t = useTranslations("welcome");
   const router = useRouter();
   const { startTour } = useTour();
+  const onboardingCompleted = useSettingsStore((s) => s.onboardingCompleted);
+  const showOnboardingOnNewDevices = useSettingsStore((s) => s.showOnboardingOnNewDevices);
+  const updateSetting = useSettingsStore((s) => s.updateSetting);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // One-time migration: if the legacy per-device flag is set but the synced
+    // setting isn't yet, mirror it into synced state so the user isn't shown
+    // the banner again on this device after the upgrade.
     try {
-      if (!localStorage.getItem(ONBOARDING_KEY)) {
-        setVisible(true);
+      const legacy = localStorage.getItem(ONBOARDING_KEY) === "true";
+      if (legacy && !onboardingCompleted) {
+        updateSetting("onboardingCompleted", true);
       }
     } catch { /* localStorage unavailable */ }
-  }, []);
+  }, [onboardingCompleted, updateSetting]);
+
+  useEffect(() => {
+    if (!onboardingCompleted) {
+      setVisible(true);
+      return;
+    }
+    if (showOnboardingOnNewDevices) {
+      try {
+        if (localStorage.getItem(ONBOARDING_KEY) !== "true") {
+          setVisible(true);
+          return;
+        }
+      } catch { /* localStorage unavailable */ }
+    }
+    setVisible(false);
+  }, [onboardingCompleted, showOnboardingOnNewDevices]);
 
   const dismiss = useCallback(() => {
     setDismissed(true);
+    updateSetting("onboardingCompleted", true);
     try {
       localStorage.setItem(ONBOARDING_KEY, "true");
     } catch { /* localStorage unavailable */ }
-  }, []);
+  }, [updateSetting]);
 
   useEffect(() => {
     if (!visible) return;

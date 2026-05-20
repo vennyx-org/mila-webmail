@@ -1,9 +1,14 @@
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { readFile, writeFile, rename } from 'node:fs/promises';
 import { logger } from '@/lib/logger';
-import type { AdminData } from './types';
+import {
+  ensureConfigDir,
+  ensureStateDir,
+  getConfigPath,
+  getStatePath,
+  assertWritable,
+} from './paths';
+import type { AdminConfigData, AdminStateData } from './types';
 
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_COST = 16384; // 2^14
@@ -11,13 +16,8 @@ const SCRYPT_BLOCK_SIZE = 8;
 const SCRYPT_PARALLELIZATION = 1;
 const SALT_LENGTH = 32;
 
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
-
-function getAdminJsonPath(): string {
-  return path.join(getAdminDir(), 'admin.json');
-}
+const ADMIN_CONFIG_FILE = 'admin.json';
+const ADMIN_STATE_FILE = 'admin-state.json';
 
 function hashPassword(password: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -33,10 +33,8 @@ function hashPassword(password: string): Promise<string> {
 
 function verifyPassword(password: string, stored: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    // Support both scrypt format and bcrypt-prefixed values
     if (stored.startsWith('$scrypt$')) {
       const parts = stored.split('$');
-      // $scrypt$N=...,r=...,p=...$salt$hash
       if (parts.length !== 5) return resolve(false);
       const paramStr = parts[2];
       const salt = Buffer.from(parts[3], 'base64');
@@ -53,7 +51,6 @@ function verifyPassword(password: string, stored: string): Promise<boolean> {
         resolve(timingSafeEqual(derivedKey, storedHash));
       });
     } else {
-      // Unknown format
       resolve(false);
     }
   });
@@ -63,50 +60,84 @@ function isHashed(value: string): boolean {
   return value.startsWith('$scrypt$') || value.startsWith('$2a$') || value.startsWith('$2b$');
 }
 
-async function readAdminData(): Promise<AdminData | null> {
-  const filePath = getAdminJsonPath();
+// ─── Disk I/O ───────────────────────────────────────────────────────────────
+
+async function readJson<T>(filePath: string): Promise<T | null> {
   try {
     const raw = await readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as AdminData;
+    return JSON.parse(raw) as T;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    logger.warn('Failed to read admin.json', { error: error instanceof Error ? error.message : 'Unknown error' });
+    logger.warn('Failed to read admin file', {
+      filePath,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
     return null;
   }
 }
 
-async function writeAdminData(data: AdminData): Promise<void> {
-  const dir = getAdminDir();
-  if (!existsSync(dir)) {
-    await mkdir(dir, { recursive: true });
-  }
-  const targetPath = getAdminJsonPath();
-  const tmpPath = targetPath + '.tmp';
-  await writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
-  await rename(tmpPath, targetPath);
+async function readConfigData(): Promise<AdminConfigData | null> {
+  return readJson<AdminConfigData>(getConfigPath(ADMIN_CONFIG_FILE));
 }
 
-let cachedAdminData: AdminData | null = null;
+async function readStateData(): Promise<AdminStateData | null> {
+  return readJson<AdminStateData>(getStatePath(ADMIN_STATE_FILE));
+}
+
+async function writeConfigData(data: AdminConfigData): Promise<void> {
+  assertWritable('save admin password');
+  await ensureConfigDir();
+  const target = getConfigPath(ADMIN_CONFIG_FILE);
+  const tmp = target + '.tmp';
+  await writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  await rename(tmp, target);
+}
+
+async function writeStateData(data: AdminStateData): Promise<void> {
+  await ensureStateDir();
+  const target = getStatePath(ADMIN_STATE_FILE);
+  const tmp = target + '.tmp';
+  await writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+  await rename(tmp, target);
+}
+
+// ─── Cache & init ───────────────────────────────────────────────────────────
+
+let cachedConfig: AdminConfigData | null = null;
+let cachedState: AdminStateData | null = null;
 let initialized = false;
+
+function freshState(): AdminStateData {
+  const now = new Date().toISOString();
+  return { createdAt: now, lastLogin: null, passwordChangedAt: now };
+}
 
 /**
  * Initialize admin password on startup.
- * If ADMIN_PASSWORD is cleartext, hash it and write to admin.json.
- * Returns true if admin is enabled.
+ * - If admin.json exists, use it (state file may or may not exist; created on first need).
+ * - Otherwise, if ADMIN_PASSWORD env var is set, hash and persist it.
+ * - Otherwise, admin dashboard stays disabled.
  */
 export async function initAdminPassword(): Promise<boolean> {
-  if (initialized) return cachedAdminData !== null;
+  if (initialized) return cachedConfig !== null;
 
-  // Check persistent file first
-  const existing = await readAdminData();
-  if (existing) {
-    cachedAdminData = existing;
+  const existingConfig = await readConfigData();
+  if (existingConfig) {
+    cachedConfig = existingConfig;
+    cachedState = (await readStateData()) ?? freshState();
+    if (!(await readStateData())) {
+      // No state file yet (fresh install or migration); create it.
+      try {
+        await writeStateData(cachedState);
+      } catch {
+        /* state dir may not be writable yet during early boot probes */
+      }
+    }
     initialized = true;
     logger.info('Admin dashboard enabled (password loaded from admin.json)');
     return true;
   }
 
-  // Check env var
   const envPassword = process.env.ADMIN_PASSWORD;
   if (!envPassword) {
     initialized = true;
@@ -114,33 +145,17 @@ export async function initAdminPassword(): Promise<boolean> {
     return false;
   }
 
-  if (isHashed(envPassword)) {
-    // Already hashed in env - save to file
-    const data: AdminData = {
-      passwordHash: envPassword,
-      createdAt: new Date().toISOString(),
-      lastLogin: null,
-      passwordChangedAt: new Date().toISOString(),
-    };
-    await writeAdminData(data);
-    cachedAdminData = data;
-    initialized = true;
-    logger.info('Admin password hash saved to admin.json from environment variable');
-    return true;
-  }
-
-  // Cleartext - hash it
-  const hash = await hashPassword(envPassword);
-  const data: AdminData = {
-    passwordHash: hash,
-    createdAt: new Date().toISOString(),
-    lastLogin: null,
-    passwordChangedAt: new Date().toISOString(),
-  };
-  await writeAdminData(data);
-  cachedAdminData = data;
+  const hash = isHashed(envPassword) ? envPassword : await hashPassword(envPassword);
+  cachedConfig = { passwordHash: hash };
+  cachedState = freshState();
+  await writeConfigData(cachedConfig);
+  await writeStateData(cachedState);
   initialized = true;
-  logger.warn('Admin password hashed and saved to admin.json. You may now remove ADMIN_PASSWORD from .env');
+  if (isHashed(envPassword)) {
+    logger.info('Admin password hash saved to admin.json from environment variable');
+  } else {
+    logger.warn('Admin password hashed and saved to admin.json. You may now remove ADMIN_PASSWORD from .env');
+  }
   return true;
 }
 
@@ -148,11 +163,9 @@ export async function initAdminPassword(): Promise<boolean> {
  * Verify a password against the stored admin hash.
  */
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-  if (!cachedAdminData) {
-    cachedAdminData = await readAdminData();
-  }
-  if (!cachedAdminData) return false;
-  return verifyPassword(password, cachedAdminData.passwordHash);
+  if (!cachedConfig) cachedConfig = await readConfigData();
+  if (!cachedConfig) return false;
+  return verifyPassword(password, cachedConfig.passwordHash);
 }
 
 /**
@@ -163,14 +176,40 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
   if (!valid) return false;
 
   const hash = await hashPassword(newPassword);
-  if (!cachedAdminData) return false;
+  cachedConfig = { passwordHash: hash };
+  await writeConfigData(cachedConfig);
 
-  cachedAdminData = {
-    ...cachedAdminData,
-    passwordHash: hash,
+  cachedState = {
+    ...(cachedState ?? freshState()),
     passwordChangedAt: new Date().toISOString(),
   };
-  await writeAdminData(cachedAdminData);
+  await writeStateData(cachedState);
+  return true;
+}
+
+/**
+ * Set the admin password without verifying a current one. Used by the setup
+ * wizard during initial bootstrap.
+ *
+ * Refuses to overwrite an existing password unless `allowOverwrite` is true.
+ * The wizard's finish route passes `allowOverwrite: true` so a half-completed
+ * setup (admin.json left behind by an ADMIN_PASSWORD env var or an aborted
+ * earlier wizard run, while setupComplete is still false) can be recovered
+ * by simply running the wizard again. Safe because the finish route is
+ * already gated by the one-time setup token.
+ */
+export async function setInitialAdminPassword(
+  newPassword: string,
+  options: { allowOverwrite?: boolean } = {},
+): Promise<boolean> {
+  const existing = await readConfigData();
+  if (existing && !options.allowOverwrite) return false;
+  const hash = await hashPassword(newPassword);
+  cachedConfig = { passwordHash: hash };
+  cachedState = freshState();
+  await writeConfigData(cachedConfig);
+  await writeStateData(cachedState);
+  initialized = true;
   return true;
 }
 
@@ -178,29 +217,31 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
  * Update the last login timestamp.
  */
 export async function updateLastLogin(): Promise<void> {
-  if (!cachedAdminData) return;
-  cachedAdminData = {
-    ...cachedAdminData,
+  if (!cachedConfig) return;
+  cachedState = {
+    ...(cachedState ?? freshState()),
     lastLogin: new Date().toISOString(),
   };
-  await writeAdminData(cachedAdminData);
+  try {
+    await writeStateData(cachedState);
+  } catch (error) {
+    logger.warn('Failed to update admin last-login state', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 }
 
 /**
  * Check if admin dashboard is enabled (has a password configured).
  */
 export function isAdminEnabled(): boolean {
-  return cachedAdminData !== null;
+  return cachedConfig !== null;
 }
 
 /**
  * Get admin metadata (without the hash).
  */
-export function getAdminMeta(): { createdAt: string; lastLogin: string | null; passwordChangedAt: string } | null {
-  if (!cachedAdminData) return null;
-  return {
-    createdAt: cachedAdminData.createdAt,
-    lastLogin: cachedAdminData.lastLogin,
-    passwordChangedAt: cachedAdminData.passwordChangedAt,
-  };
+export function getAdminMeta(): AdminStateData | null {
+  if (!cachedConfig) return null;
+  return cachedState ?? freshState();
 }

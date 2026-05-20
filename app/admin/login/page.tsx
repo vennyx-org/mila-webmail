@@ -47,13 +47,13 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-            {logoUrl ? (
-              <img src={logoUrl} alt="" className="w-8 h-8 object-contain" />
-            ) : (
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-12 object-contain mb-4" />
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
               <Shield className="w-6 h-6 text-primary" />
-            )}
-          </div>
+            </div>
+          )}
           <h1 className="text-xl font-semibold text-foreground">Admin Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Enter your admin password to continue</p>
         </div>

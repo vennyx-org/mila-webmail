@@ -45,6 +45,7 @@ export default [
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "no-unused-vars": "off",
+      "no-undef": "off",
     },
     settings: {
       react: {
@@ -77,6 +78,7 @@ export default [
       "*.config.mjs",
       "e2e/**",
       "local-data/**/*.mjs",
+      "benchmark/**",
     ],
   },
 ];

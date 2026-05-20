@@ -20,6 +20,7 @@ import {
   Folder,
   FolderOpen,
   User,
+  Users,
   Palmtree,
   Settings,
   X,
@@ -28,7 +29,10 @@ import {
   FlaskConical,
   PlayCircle,
   Loader2,
+  AlertTriangle,
+  NotebookPen,
   CalendarClock,
+  BellOff,
 } from "lucide-react";
 import { cn, buildMailboxTree, MailboxNode } from "@/lib/utils";
 import { Mailbox } from "@/lib/jmap/types";
@@ -67,6 +71,7 @@ interface SidebarProps {
   onCreateFolder?: () => void;
   onRenameFolder?: (mailboxId: string) => void;
   onDeleteFolder?: (mailboxId: string) => void;
+  onImportEmail?: (mailboxId: string) => void;
   onRefreshMailboxes?: () => void;
   scheduledTotal?: number;
   className?: string;
@@ -89,6 +94,11 @@ const getIconForMailbox = (role?: string, name?: string, hasChildren?: boolean, 
   if (role === "trash" || lowerName.includes("trash") || lowerName.includes("deleted")) return Trash2;
   if (role === "junk" || role === "spam" || lowerName.includes("junk") || lowerName.includes("spam")) return Ban;
   if (role === "archive" || lowerName.includes("archive")) return Archive;
+  if (role === "shared" || lowerName.includes("shared")) return Users;
+  if (role === "important" || lowerName.includes("important")) return AlertTriangle;
+  if (role === "memos" || lowerName.includes("memo")) return NotebookPen;
+  if (role === "scheduled" || lowerName.includes("scheduled")) return CalendarClock;
+  if (role === "snoozed" || lowerName.includes("snoozed")) return BellOff;
   if (lowerName.includes("star") || lowerName.includes("flag")) return Star;
 
   if (hasChildren) {
@@ -105,6 +115,11 @@ const ROLE_ICON_COLOR: Record<string, string> = {
   trash: "text-muted-foreground",
   junk: "text-red-600/80 dark:text-red-400/80",
   archive: "text-amber-600/80 dark:text-amber-400/80",
+  shared: "text-cyan-600/80 dark:text-cyan-400/80",
+  important: "text-orange-600/80 dark:text-orange-400/80",
+  memos: "text-yellow-600/80 dark:text-yellow-400/80",
+  scheduled: "text-sky-600/80 dark:text-sky-400/80",
+  snoozed: "text-slate-500/80 dark:text-slate-400/80",
 };
 
 function resolveRoleKey(role?: string, name?: string): string | undefined {
@@ -115,6 +130,11 @@ function resolveRoleKey(role?: string, name?: string): string | undefined {
   if (role === "trash" || lowerName.includes("trash") || lowerName.includes("deleted")) return "trash";
   if (role === "junk" || role === "spam" || lowerName.includes("junk") || lowerName.includes("spam")) return "junk";
   if (role === "archive" || lowerName.includes("archive")) return "archive";
+  if (role === "shared" || lowerName.includes("shared")) return "shared";
+  if (role === "important" || lowerName.includes("important")) return "important";
+  if (role === "memos" || lowerName.includes("memo")) return "memos";
+  if (role === "scheduled" || lowerName.includes("scheduled")) return "scheduled";
+  if (role === "snoozed" || lowerName.includes("snoozed")) return "snoozed";
   return undefined;
 }
 
@@ -638,6 +658,7 @@ export function Sidebar({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onImportEmail,
   onRefreshMailboxes,
   scheduledTotal = 0,
   className,
@@ -1051,6 +1072,7 @@ export function Sidebar({
         onCreateFolder={onCreateFolder}
         onRenameFolder={onRenameFolder}
         onDeleteFolder={onDeleteFolder}
+        onImportEmail={onImportEmail}
         onRefresh={onRefreshMailboxes}
       />
     </div>

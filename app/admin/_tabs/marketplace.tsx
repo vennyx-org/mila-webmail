@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, Download, Check, Loader2, Store, Puzzle, SwatchBook, Star, Eye } from 'lucide-react';
+import { Search, Download, Check, Loader2, Store, Puzzle, SwatchBook, Star, Eye, AlertTriangle } from 'lucide-react';
 import { apiFetch } from '@/lib/browser-navigation';
+import { isVersionSatisfied } from '@/lib/version-compare';
+
+const CURRENT_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0';
 
 interface Extension {
   slug: string;
@@ -94,6 +97,13 @@ export function MarketplaceTab() {
   }, [searchInput]);
 
   async function handleInstall(ext: Extension) {
+    if (ext.minAppVersion && !isVersionSatisfied(CURRENT_APP_VERSION, ext.minAppVersion)) {
+      setMessage({
+        type: 'error',
+        text: `"${ext.name}" requires app v${ext.minAppVersion}+. You are running v${CURRENT_APP_VERSION}.`,
+      });
+      return;
+    }
     setInstalling(ext.slug);
     setMessage(null);
 
@@ -258,6 +268,8 @@ function ExtensionCard({
 }) {
   const isPlugin = extension.type === 'plugin';
   const previewHref = `/admin/marketplace/${encodeURIComponent(extension.slug)}`;
+  const versionMismatch = !!extension.minAppVersion
+    && !isVersionSatisfied(CURRENT_APP_VERSION, extension.minAppVersion);
 
   return (
     <div className="group relative border border-border rounded-lg overflow-hidden hover:border-ring/30 transition-colors">
@@ -346,11 +358,19 @@ function ExtensionCard({
         </div>
       </Link>
 
-      <div className="px-4 pb-4 -mt-1">
+      <div className="px-4 pb-4 -mt-1 flex items-center gap-2 flex-wrap">
         {extension.installed ? (
           <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 text-xs font-medium">
             <Check className="w-3 h-3" />
             Installed
+          </span>
+        ) : versionMismatch ? (
+          <span
+            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300 text-xs font-medium"
+            title={`Requires app v${extension.minAppVersion}+. You are running v${CURRENT_APP_VERSION}.`}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            Requires v{extension.minAppVersion}+
           </span>
         ) : (
           <button

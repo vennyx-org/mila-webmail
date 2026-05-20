@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
@@ -15,15 +15,18 @@ import { ContactsSidebar, type ContactCategory } from "@/components/contacts/con
 import { ContactImportDialog } from "@/components/contacts/contact-import-dialog";
 import { RenameDialog } from "@/components/files/rename-dialog";
 import { exportContacts } from "@/components/contacts/contact-export";
+import { AppTopBannerSlot } from "@/components/plugins/app-top-banner-slot";
 import { useContactStore, getContactDisplayName } from "@/stores/contact-store";
 import { useAuthStore, redirectToLogin } from "@/stores/auth-store";
 import { useEmailStore } from "@/stores/email-store";
+import { usePolicyStore } from "@/stores/policy-store";
 import { toast } from "@/stores/toast-store";
 import { cn, generateUUID } from "@/lib/utils";
 import { NavigationRail } from "@/components/layout/navigation-rail";
 import { SidebarAppsModal } from "@/components/layout/sidebar-apps-modal";
 import { InlineAppView } from "@/components/layout/inline-app-view";
 import { useSidebarApps } from "@/hooks/use-sidebar-apps";
+import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useRefreshGesture } from "@/hooks/use-refresh-gesture";
@@ -42,6 +45,7 @@ type View =
 
 export default function ContactsPage() {
   const t = useTranslations("contacts");
+  const contactsEnabled = usePolicyStore((s) => s.isFeatureEnabled('contactsEnabled'));
   const { client, isAuthenticated, logout, checkAuth, isLoading: authLoading } = useAuthStore();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
   const [initialCheckDone, setInitialCheckDone] = useState(() => useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().client);
@@ -93,6 +97,7 @@ export default function ContactsPage() {
   const hasFetched = useRef(false);
   const { dialogProps: confirmDialogProps, confirm: confirmDialog } = useConfirmDialog();
   const isMobile = useIsMobile();
+  const isEmbedded = useIsEmbedded();
 
   // Panel resize state - sidebar (categories)
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -640,6 +645,18 @@ export default function ContactsPage() {
     }
   };
 
+  if (!contactsEnabled) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-background p-6">
+        <div className="max-w-lg text-center space-y-3">
+          <AlertTriangle className="w-10 h-10 text-yellow-500 mx-auto" />
+          <p className="text-sm font-medium">Contacts feature is disabled by your administrator</p>
+          <p className="text-xs text-muted-foreground">Please contact your administrator if you need access.</p>
+        </div>
+      </div>
+    );
+  }
+
   const showListPanel = !isMobile || view === "list";
   const showRightPanel = !isMobile || view !== "list";
 
@@ -649,9 +666,11 @@ export default function ContactsPage() {
   };
 
   return (
-    <div className={cn("flex h-dvh bg-background overflow-hidden", isMobile && "flex-col")}>
-      {/* Navigation Rail - desktop only */}
-      {!isMobile && (
+    <div className={cn("flex flex-col bg-background overflow-hidden pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+      <AppTopBannerSlot />
+      <div className={cn("flex flex-1 min-h-0 overflow-hidden", isMobile && "flex-col")}>
+      {/* Navigation Rail - desktop only (hidden when embedded in Pro shell) */}
+      {!isMobile && !isEmbedded && (
         <div className="w-14 bg-secondary flex flex-col flex-shrink-0" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.3)' }}>
           <NavigationRail
             collapsed
@@ -801,7 +820,7 @@ export default function ContactsPage() {
           )}
         </div>
 
-        {isMobile && (
+        {isMobile && !isEmbedded && (
           <NavigationRail
             orientation="horizontal"
             onManageApps={handleManageApps}
@@ -882,6 +901,7 @@ export default function ContactsPage() {
           />
         );
       })()}
+      </div>
     </div>
   );
 }

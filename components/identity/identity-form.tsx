@@ -8,13 +8,38 @@ import type { Identity, EmailAddress } from '@/lib/jmap/types';
 import { sanitizeSignatureHtml } from '@/lib/email-sanitization';
 import { getEmailValidationError, validateEmailList } from '@/lib/validation';
 
+// JMAP Identity/set caps signature fields at 2047 UTF-8 bytes per RFC 8621 §6.1.
+const SIGNATURE_MAX_BYTES = 2047;
+const utf8Encoder = new TextEncoder();
+
+function utf8ByteLength(s: string): number {
+  return utf8Encoder.encode(s).length;
+}
+
+function truncateToUtf8Bytes(s: string, maxBytes: number): string {
+  if (utf8ByteLength(s) <= maxBytes) return s;
+  let lo = 0;
+  let hi = s.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >>> 1;
+    if (utf8ByteLength(s.slice(0, mid)) <= maxBytes) lo = mid;
+    else hi = mid - 1;
+  }
+  // Don't split a surrogate pair: if we landed right after a high surrogate, back off one code unit.
+  if (lo > 0) {
+    const prev = s.charCodeAt(lo - 1);
+    if (prev >= 0xD800 && prev <= 0xDBFF) lo -= 1;
+  }
+  return s.slice(0, lo);
+}
+
 interface IdentityFormData {
   name: string;
   email: string;
-  replyTo?: EmailAddress[];
-  bcc?: EmailAddress[];
-  textSignature?: string;
-  htmlSignature?: string;
+  replyTo?: EmailAddress[] | null;
+  bcc?: EmailAddress[] | null;
+  textSignature?: string | null;
+  htmlSignature?: string | null;
 }
 
 interface IdentityFormProps {
@@ -96,14 +121,16 @@ export function IdentityForm({ identity, onSave, onCancel }: IdentityFormProps) 
     setIsSubmitting(true);
 
     try {
-      // Sanitize HTML signature before sending to server
+      // JMAP needs explicit null to clear a field; undefined would be dropped
+      // from the JSON payload and leave the server-side value untouched.
+      const trimmedText = formData.textSignature?.trim() ?? '';
+      const trimmedHtml = formData.htmlSignature?.trim() ?? '';
       const sanitizedData: IdentityFormData = {
         ...formData,
-        replyTo: parseEmailList(replyToInput),
-        bcc: parseEmailList(bccInput),
-        htmlSignature: formData.htmlSignature
-          ? sanitizeSignatureHtml(formData.htmlSignature)
-          : undefined,
+        textSignature: trimmedText ? formData.textSignature : null,
+        htmlSignature: trimmedHtml ? sanitizeSignatureHtml(formData.htmlSignature!) : null,
+        replyTo: parseEmailList(replyToInput) ?? null,
+        bcc: parseEmailList(bccInput) ?? null,
       };
 
       await onSave(sanitizedData);
@@ -246,14 +273,15 @@ export function IdentityForm({ identity, onSave, onCancel }: IdentityFormProps) 
         </label>
         <textarea
           id="identity-text-sig"
-          maxLength={2000}
-          value={formData.textSignature}
-          onChange={(e) => setFormData({ ...formData, textSignature: e.target.value })}
+          value={formData.textSignature ?? ''}
+          onChange={(e) => setFormData({ ...formData, textSignature: truncateToUtf8Bytes(e.target.value, SIGNATURE_MAX_BYTES) })}
           rows={3}
           disabled={isSubmitting}
           aria-label={t('text_signature_label')}
+          aria-describedby="identity-text-sig-counter"
           className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground transition-all duration-200 placeholder:text-muted-foreground hover:border-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
+        <SignatureByteCounter id="identity-text-sig-counter" value={formData.textSignature || ''} />
       </div>
 
       {/* HTML Signature */}
@@ -263,14 +291,15 @@ export function IdentityForm({ identity, onSave, onCancel }: IdentityFormProps) 
         </label>
         <textarea
           id="identity-html-sig"
-          maxLength={5000}
-          value={formData.htmlSignature}
-          onChange={(e) => setFormData({ ...formData, htmlSignature: e.target.value })}
+          value={formData.htmlSignature ?? ''}
+          onChange={(e) => setFormData({ ...formData, htmlSignature: truncateToUtf8Bytes(e.target.value, SIGNATURE_MAX_BYTES) })}
           rows={5}
           disabled={isSubmitting}
           aria-label={t('html_signature_label')}
+          aria-describedby="identity-html-sig-counter"
           className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground font-mono transition-all duration-200 placeholder:text-muted-foreground hover:border-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
+        <SignatureByteCounter id="identity-html-sig-counter" value={formData.htmlSignature || ''} />
         {formData.htmlSignature && (
           <div className="mt-2 p-2 border rounded bg-muted">
             <div className="text-xs text-muted-foreground mb-1">{tDisplay('preview')}</div>
@@ -302,5 +331,28 @@ export function IdentityForm({ identity, onSave, onCancel }: IdentityFormProps) 
         </Button>
       </div>
     </form>
+  );
+}
+
+function SignatureByteCounter({ id, value }: { id: string; value: string }) {
+  const t = useTranslations('identities.form');
+  const bytes = utf8ByteLength(value);
+  const atLimit = bytes >= SIGNATURE_MAX_BYTES;
+  const nearLimit = !atLimit && bytes >= Math.floor(SIGNATURE_MAX_BYTES * 0.9);
+  const tone = atLimit
+    ? 'text-destructive'
+    : nearLimit
+      ? 'text-amber-600 dark:text-amber-400'
+      : 'text-muted-foreground';
+  return (
+    <p
+      id={id}
+      className={`text-xs mt-1 tabular-nums ${tone}`}
+      role="status"
+      aria-live="polite"
+    >
+      {t('signature_byte_counter', { bytes, max: SIGNATURE_MAX_BYTES })}
+      {atLimit && <span className="ml-1">{t('signature_byte_limit_reached')}</span>}
+    </p>
   );
 }

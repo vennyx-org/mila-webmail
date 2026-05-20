@@ -12,9 +12,12 @@ export const EMAIL_SANITIZE_CONFIG = {
   ALLOW_DATA_ATTR: false,
   FORCE_BODY: true,
   // Allow blob: URIs so authenticated inline images (CID) are not stripped.
-  // data: is restricted to image/* MIME types to prevent SVG script injection.
+  // data: is restricted to a fixed set of raster image types. SVG (image/svg+xml)
+  // is excluded because DOMPurify cannot inspect bytes inside a data: URI, so an
+  // SVG payload can carry <script>/<foreignObject> that the surrounding sanitizer
+  // never sees. The `(?=[;,])` anchor prevents prefix matches like image/png-evil.
   // eslint-disable-next-line no-useless-escape
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|blob):|data:image\/|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|blob):|data:image\/(?:png|jpe?g|gif|webp|bmp|avif|x-icon|vnd\.microsoft\.icon)(?=[;,])|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   FORBID_TAGS: [
     'script', 'iframe', 'object', 'embed', 'form',
     'input', 'button', 'meta', 'link', 'base',
@@ -58,24 +61,83 @@ export function sanitizeEmailHtmlForIframe(html: string): string {
 
 /**
  * Sanitize HTML signature with stricter rules
- * Only allows basic formatting, no external resources
+ * Allows basic formatting plus <img> for company logos, plus table-based
+ * layouts (the de-facto standard for email signatures).
  */
 export const SIGNATURE_SANITIZE_CONFIG = {
-  ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'span', 'div'],
-  ALLOWED_ATTR: ['href', 'style', 'class'],
+  ALLOWED_TAGS: [
+    'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'span', 'div', 'img',
+    'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
+  ],
+  ALLOWED_ATTR: [
+    'href', 'style', 'class', 'src', 'alt', 'width', 'height', 'title',
+    'cellpadding', 'cellspacing', 'border', 'valign', 'align', 'bgcolor',
+    'colspan', 'rowspan',
+  ],
   ALLOW_DATA_ATTR: false,
-  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'img', 'video', 'audio'],
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'video', 'audio'],
   FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
 };
 
 /**
- * Sanitize HTML signature for storage and display
+ * Sanitize HTML signature for storage and display.
+ * img src is restricted to https: or base64-embedded raster data: URIs
+ * (png/jpeg/gif/webp). SVG is excluded because DOMPurify cannot inspect
+ * bytes inside a data: URI. Images with a disallowed src are removed
+ * entirely so they don't render as broken-image icons.
  * @param html - User-provided HTML signature
  * @returns Sanitized signature (no scripts, no external resources)
  */
 export function sanitizeSignatureHtml(html: string): string {
   if (!html?.trim()) return '';
-  return DOMPurify.sanitize(html, SIGNATURE_SANITIZE_CONFIG);
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName !== 'IMG') return;
+    const src = node.getAttribute('src');
+    if (!src || !/^(?:https:\/\/|data:image\/(?:png|jpe?g|gif|webp);base64,)/i.test(src)) {
+      node.remove();
+    }
+  });
+  try {
+    return DOMPurify.sanitize(html, SIGNATURE_SANITIZE_CONFIG);
+  } finally {
+    DOMPurify.removeAllHooks();
+  }
+}
+
+/**
+ * Sanitizer for translation strings that contain inline markup (e.g. a
+ * documentation link). The translation catalog is trusted today, but using
+ * dangerouslySetInnerHTML on a translation makes that trust permanent and
+ * implicit; this allowlist limits the blast radius if a translation ever
+ * becomes attacker-influenced (community PR, crowdsourced service).
+ */
+const I18N_SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ['a', 'b', 'strong', 'i', 'em', 'u', 'span', 'br', 'code'],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|\/|#)/i,
+};
+
+export function sanitizeI18nHtml(html: string): string {
+  return DOMPurify.sanitize(html, I18N_SANITIZE_CONFIG);
+}
+
+/**
+ * Sanitizer for the non-iframe branch of email rendering (plain-text bodies,
+ * S/MIME plain-text, TNEF text, no-body fallbacks). The producer
+ * (`plainTextToSafeHtml`) already escapes text and emits only safe <a> tags,
+ * so this is defense-in-depth: it ensures the render site is safe even if a
+ * future code path passes raw HTML in by mistake.
+ */
+const PLAIN_TEXT_RENDERED_CONFIG = {
+  ALLOWED_TAGS: ['a', 'br', 'p', 'div', 'span'],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+  ALLOW_DATA_ATTR: false,
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|tel:|cid:|#)/i,
+};
+
+export function sanitizePlainTextRenderedHtml(html: string): string {
+  return DOMPurify.sanitize(html, PLAIN_TEXT_RENDERED_CONFIG);
 }
 
 /**
@@ -108,7 +170,7 @@ const HTML_ESCAPES: Record<string, string> = {
   "'": '&#39;',
 };
 
-function escapeHtml(str: string): string {
+export function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 }
 

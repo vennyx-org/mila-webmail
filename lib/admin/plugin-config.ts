@@ -2,13 +2,10 @@ import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
-
-function getAdminDir(): string {
-  return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
-}
+import { getConfigDir, assertWritable } from './paths';
 
 function getPluginConfigDir(): string {
-  return path.join(getAdminDir(), 'plugin-config');
+  return path.join(getConfigDir(), 'plugin-config');
 }
 
 function configPath(pluginId: string): string {
@@ -41,6 +38,7 @@ export async function getPluginConfig(pluginId: string): Promise<Record<string, 
  * Set a single config key for a plugin.
  */
 export async function setPluginConfig(pluginId: string, key: string, value: unknown): Promise<void> {
+  assertWritable('update plugin config');
   const dir = getPluginConfigDir();
   await ensureDir(dir);
 
@@ -57,6 +55,7 @@ export async function setPluginConfig(pluginId: string, key: string, value: unkn
  * Delete a single config key for a plugin.
  */
 export async function deletePluginConfigKey(pluginId: string, key: string): Promise<void> {
+  assertWritable('delete plugin config key');
   const config = await getPluginConfig(pluginId);
   delete config[key];
 
@@ -77,5 +76,6 @@ export async function deletePluginConfigKey(pluginId: string, key: string): Prom
  * Delete all config for a plugin (used when uninstalling).
  */
 export async function deleteAllPluginConfig(pluginId: string): Promise<void> {
+  assertWritable('delete plugin config');
   try { await unlink(configPath(pluginId)); } catch { /* ok if missing */ }
 }

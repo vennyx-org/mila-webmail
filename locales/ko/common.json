@@ -135,6 +135,40 @@
     "shared": "공유됨",
     "scheduled": "예약됨"
   },
+  "protocol_handlers": {
+    "title": "기본 앱",
+    "description": "이메일 및 캘린더 링크를 Bulwark에서 열지 선택하세요. 기술적으로 Bulwark는 mailto: 및 webcal: 링크의 프로토콜 핸들러로 등록됩니다.",
+    "unsupported": "이 브라우저 또는 연결은 수동 프로토콜 핸들러 등록을 지원하지 않습니다. 설치된 PWA는 브라우저 또는 시스템 설정을 통해 사용할 수 있을 수 있습니다.",
+    "mailto_label": "이메일 링크",
+    "mailto_description": "mailto: 링크를 Bulwark의 미리 채워진 작성 창에서 엽니다.",
+    "protocol_open_mode_label": "프로토콜 링크를 열 때",
+    "protocol_open_mode_description": "Bulwark가 mailto: 및 webcal: 링크를 새 탭에서 열지, 열린 세션을 재사용할지 선택하세요. 활성 세션 옵션은 브라우저가 포커스를 차단할 때 Bulwark를 앞으로 가져오기 위한 대체 알림을 클릭할 수 있도록 알림 권한이 필요합니다.",
+    "protocol_open_mode_active_session": "가능하면 활성 세션에서 열기",
+    "protocol_open_mode_new_tab": "항상 새 탭 열기",
+    "focus_notification_title": "Bulwark 열기",
+    "focus_notification_body": "링크가 Bulwark에서 열렸습니다. 창을 앞으로 가져오려면 클릭하세요.",
+    "webcal_label": "캘린더 링크",
+    "webcal_description": "webcal: 링크를 Bulwark의 미리 채워진 캘린더 구독 대화상자에서 엽니다.",
+    "register_mailto": "이메일 앱 등록",
+    "register_webcal": "캘린더 앱 등록",
+    "mailto_registered": "이메일 핸들러 등록을 요청했습니다",
+    "webcal_registered": "캘린더 핸들러 등록을 요청했습니다",
+    "registration_failed": "프로토콜 핸들러 등록에 실패했습니다",
+    "opening_mailto": "작성 창을 여는 중...",
+    "opening_webcal": "캘린더를 여는 중...",
+    "browser_note": "브라우저 또는 운영 체제에서 확인을 요청할 수 있으며, 기본 앱으로 선택하기 전에 Bulwark 설치가 필요할 수 있습니다.",
+    "select_account_title": "계정 선택",
+    "select_mailto_account": "이 이메일 링크를 열 계정을 선택하세요.",
+    "select_webcal_account": "이 캘린더 링크를 열 계정을 선택하세요.",
+    "select_account_note": "이 선택은 이 프로토콜 링크에만 적용됩니다.",
+    "detail_to": "받는 사람",
+    "detail_subject": "제목",
+    "detail_no_subject": "제목 없음",
+    "detail_calendar": "캘린더",
+    "detail_source": "출처",
+    "active_account": "활성",
+    "switching_account": "계정 전환 중..."
+  },
   "sidebar_apps": {
     "modal_title": "사이드바 앱",
     "add_new": "앱 추가",
@@ -225,6 +259,8 @@
     "compose": "메일 쓰기",
     "compose_hint": "새 메시지 작성",
     "no_subject": "(제목 없음)",
+    "no_body_content": "(본문 내용 없음)",
+    "no_preview_available": "미리 보기를 사용할 수 없습니다",
     "loading_email": "메일을 불러오는 중...",
     "loading": "불러오는 중...",
     "reply": "답장",
@@ -548,6 +584,15 @@
       "to": "받는 사람: {recipients}"
     },
     "remove_sub_address": "서브 어드레스 삭제",
+    "from_override": {
+      "toggle_off": "재정의",
+      "toggle_on": "재정의 취소",
+      "toggle_tooltip": "보낸 사람 이름과 주소를 자유롭게 편집하세요. 메일은 여전히 사용자의 ID를 통해 전송되며 - 표시되는 보낸 사람 헤더만 변경됩니다.",
+      "name_label": "보낸 사람 이름",
+      "name_placeholder": "이름",
+      "email_label": "보낸 사람 이메일 주소",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "템플릿",
     "save_as_template": "템플릿으로 저장",
     "validation": {
@@ -756,6 +801,7 @@
       "files": "파일",
       "contacts": "연락처",
       "encryption": "암호화",
+      "protocol_handlers": "기본 앱",
       "sidebar_apps": "사이드바 앱",
       "notifications": "알림",
       "layout": "레이아웃",
@@ -973,7 +1019,9 @@
         "split": "화면 분할",
         "split_description": "메일 목록과 읽기 창을 나란히 보여줘요.",
         "focus": "집중형 목록",
-        "focus_description": "메일을 한 줄로 보여주고, 클릭하면 폴더 사이드바는 남겨둔 채 메일 내용을 넓게 보여줘요."
+        "focus_description": "메일을 한 줄로 보여주고, 클릭하면 폴더 사이드바는 남겨둔 채 메일 내용을 넓게 보여줘요.",
+        "horizontal": "읽기 창 하단 표시",
+        "horizontal_description": "메시지 목록을 상단에 표시하고 선택한 메시지를 하단 읽기 창에서 엽니다."
       },
       "show_preview": {
         "label": "미리보기 텍스트 표시",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "답장 시 보내는 사람 자동 선택",
         "description": "답장할 때 메일을 받았던 주소로 보내는 사람을 자동으로 변경해요"
+      },
+      "signature_position": {
+        "label": "서명 위치",
+        "description": "답장과 전달에서 서명을 삽입할 위치. 인용된 텍스트 위에 두면 답장의 마무리처럼 자연스럽게 읽히고, 아래에 두면 원본 메시지가 이어져 보입니다.",
+        "above_quote": "인용 텍스트 앞",
+        "below_quote": "인용 텍스트 뒤"
+      },
+      "signature_separator": {
+        "label": "서명 구분선",
+        "description": "서명 앞에 표준 구분선 \"-- \" (RFC 3676)을 추가합니다. 본문에서 바로 서명으로 이어지길 원하면 해제하세요."
       },
       "sub_address_delimiter": {
         "label": "서브 주소 구분자",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "새 하위 폴더...",
     "new_folder": "새 폴더...",
     "rename": "이름 바꾸기...",
+    "import_email": ".eml 가져오기...",
     "empty_folder": "폴더 비우기",
     "empty_folder_generic": "폴더 비우기",
     "delete_folder": "폴더 삭제",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archive@email.com",
       "text_signature_label": "텍스트 서명",
       "html_signature_label": "HTML 서명",
+      "signature_byte_counter": "{bytes} / {max} 바이트",
+      "signature_byte_limit_reached": "서버 한도 도달",
       "save": "저장",
       "cancel": "취소",
       "creating": "만드는 중...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "파일이 10MB 제한을 넘었어요",
       "invalid_format": "캘린더 파일 형식이 올바르지 않아요"
     },
+    "webcal_action": {
+      "title": "캘린더 링크 열기",
+      "description": "\"{name}\"을 어떻게 사용할까요?",
+      "import_title": "한 번 가져오기",
+      "import_description": "지금 일정을 가져와 내 캘린더 중 하나에 복사합니다.",
+      "subscribe_title": "구독",
+      "subscribe_description": "이 캘린더를 별도의 캘린더로 자동 동기화합니다.",
+      "cancel": "취소"
+    },
     "management": {
       "title": "캘린더 관리",
       "description": "캘린더를 만들고 이름을 바꾸거나 색상을 꾸며보세요. 사이드바에서 캘린더를 우클릭하면 색상을 빠르게 바꿀 수 있어요.",
@@ -2821,6 +2891,8 @@
     "restart_title": "소개 투어",
     "restart_desc": "인터페이스를 설명해 주는 투어를 다시 시작해요",
     "restart_button": "투어 다시 시작",
+    "show_on_new_devices_title": "새 기기에서 표시",
+    "show_on_new_devices_desc": "다른 곳에서 이미 완료했더라도 새 기기에 처음 로그인할 때 환영 배너와 투어를 다시 표시해요",
     "sidebar_title": "편지함",
     "sidebar_desc": "여기는 폴더 사이드바예요. 폴더를 클릭하면 그 안의 메일을 볼 수 있어요. 폴더를 만들거나, 메일을 드래그해서 옮길 수 있고 안 읽은 메일 개수도 한눈에 확인돼요.",
     "compose_title": "메일 쓰기",

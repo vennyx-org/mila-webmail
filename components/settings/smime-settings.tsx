@@ -31,7 +31,6 @@ export function SmimeSettings() {
     identityKeyBindings,
     defaultSignIdentity,
     defaultEncrypt,
-    rememberUnlockedKeys,
     autoImportSignerCerts,
     isLoading,
     error,
@@ -44,7 +43,6 @@ export function SmimeSettings() {
     lockKey,
     setSignDefault,
     setEncryptDefault,
-    setRememberUnlockedKeys,
     setAutoImportSignerCerts,
     isKeyUnlocked,
     setError,
@@ -462,16 +460,6 @@ export function SmimeSettings() {
           <ToggleSwitch
             checked={defaultEncrypt}
             onChange={setEncryptDefault}
-          />
-        </SettingItem>
-
-        <SettingItem
-          label={t("remember_unlocked")}
-          description={t("remember_unlocked_desc")}
-        >
-          <ToggleSwitch
-            checked={rememberUnlockedKeys}
-            onChange={setRememberUnlockedKeys}
           />
         </SettingItem>
 

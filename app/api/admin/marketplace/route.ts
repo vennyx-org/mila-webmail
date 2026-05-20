@@ -13,6 +13,7 @@ import {
 import {
   sanitizeFrameOrigins,
   sanitizeHttpOrigins,
+  sanitizeApiPostPaths,
   invalidateFrameOriginsCache,
 } from '@/lib/admin/csp-frame-origins';
 import JSZip from 'jszip';
@@ -27,7 +28,7 @@ const DIRECTORY_URL = process.env.EXTENSION_DIRECTORY_URL || 'https://extensions
  */
 export async function GET(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const { searchParams } = request.nextUrl;
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -163,6 +164,18 @@ export async function POST(request: NextRequest) {
 
     const now = new Date().toISOString();
 
+    // Resolve and strictly validate the id used as a filename. Marketplace
+    // bundles are authored by a third-party publisher; without this an id
+    // like "../../foo" causes savePlugin/saveTheme to write outside the
+    // plugins/themes dir via path.join.
+    const resolvedId = typeof manifest.id === 'string' && manifest.id ? manifest.id : slug;
+    if (typeof resolvedId !== 'string' || !/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(resolvedId)) {
+      return NextResponse.json(
+        { error: 'Invalid id: must be lowercase alphanumeric with hyphens, min 2 chars' },
+        { status: 400 },
+      );
+    }
+
     if (type === 'theme') {
       // Read theme.css
       const cssFile = zip.file(root + 'theme.css');
@@ -182,7 +195,7 @@ export async function POST(request: NextRequest) {
       }
 
       const theme: ServerTheme = {
-        id: (manifest.id as string) || slug,
+        id: resolvedId,
         name: (manifest.name as string) || slug,
         version: (manifest.version as string) || version,
         author: (manifest.author as string) || 'Unknown',
@@ -266,8 +279,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const declaredApiPostPaths = sanitizeApiPostPaths(manifest.apiPostPaths);
+      const droppedApiPostPaths = Array.isArray(manifest.apiPostPaths)
+        ? (manifest.apiPostPaths as unknown[]).filter(
+            (v) => typeof v !== 'string' || !declaredApiPostPaths.includes(v),
+          )
+        : [];
+      if (droppedApiPostPaths.length > 0) {
+        warnings.push(
+          `Ignored invalid apiPostPaths: ${droppedApiPostPaths.join(', ')}`,
+        );
+      }
+
       const plugin: ServerPlugin = {
-        id: (manifest.id as string) || slug,
+        id: resolvedId,
         name: (manifest.name as string) || slug,
         version: (manifest.version as string) || version,
         author: (manifest.author as string) || 'Unknown',
@@ -278,17 +303,26 @@ export async function POST(request: NextRequest) {
         enabled: true,
         installedAt: now,
         updatedAt: now,
+        ...(manifest.configSchema && typeof manifest.configSchema === 'object'
+          ? { configSchema: manifest.configSchema as ServerPlugin['configSchema'] }
+          : {}),
+        ...(manifest.settingsSchema && typeof manifest.settingsSchema === 'object'
+          ? { settingsSchema: manifest.settingsSchema as ServerPlugin['settingsSchema'] }
+          : {}),
         ...(declaredFrameOrigins.length > 0
           ? { frameOrigins: declaredFrameOrigins }
           : {}),
         ...(declaredHttpOrigins.length > 0
           ? { httpOrigins: declaredHttpOrigins }
           : {}),
+        ...(declaredApiPostPaths.length > 0
+          ? { apiPostPaths: declaredApiPostPaths }
+          : {}),
       };
 
       await savePlugin(plugin, code);
       invalidateFrameOriginsCache();
-      await auditLog('marketplace.install_plugin', { id: plugin.id, name: plugin.name, version: plugin.version, slug, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins }, ip);
+      await auditLog('marketplace.install_plugin', { id: plugin.id, name: plugin.name, version: plugin.version, slug, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins, apiPostPaths: declaredApiPostPaths }, ip);
 
       return NextResponse.json({ success: true, plugin, warnings });
     }

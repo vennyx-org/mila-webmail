@@ -54,7 +54,7 @@ async function tryTokenRequest(
 
 async function findTokenEndpoint(serverUrl: string): Promise<string | null> {
   // 1. Try OAuth discovery
-  const metadata = await discoverOAuth(serverUrl);
+  const metadata = await discoverOAuth(serverUrl, { validateEndpoint: isPublicHttpUrl });
   if (metadata?.token_endpoint) return metadata.token_endpoint;
 
   // 2. Try common Stalwart token endpoint paths directly

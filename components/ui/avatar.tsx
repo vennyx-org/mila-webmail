@@ -142,9 +142,13 @@ interface AvatarProps {
   className?: string;
   /** When true, suppress all image sources (favicons, plugin avatars, profile pics, contact photos) and render initials only. */
   disableImages?: boolean;
+  /** When true, do not fall through to the sender's domain favicon. Use for the user's own account avatar where the mail-provider logo is not meaningful. */
+  disableFavicon?: boolean;
+  /** Background color used when no image source resolves. Overrides the hash-based default. */
+  fallbackColor?: string;
 }
 
-export function Avatar({ name, email, contactPhotoUri, size = "md", className, disableImages = false }: AvatarProps) {
+export function Avatar({ name, email, contactPhotoUri, size = "md", className, disableImages = false, disableFavicon = false, fallbackColor }: AvatarProps) {
   const [imgError, setImgError] = useState(false);
   const [pluginAvatarUrl, setPluginAvatarUrl] = useState<string | null>(null);
   const [pluginAvatarFailed, setPluginAvatarFailed] = useState(false);
@@ -226,16 +230,15 @@ export function Avatar({ name, email, contactPhotoUri, size = "md", className, d
 
   const profilePic = email && domain ? getProfilePictureUrl(email, domain, devMode, name) : null;
   const showFavicon =
-    senderFavicons && faviconDomain && !PERSONAL_DOMAINS.has(faviconDomain) && !imgError && !domainFailed;
+    !disableFavicon && senderFavicons && faviconDomain && !PERSONAL_DOMAINS.has(faviconDomain) && !imgError && !domainFailed;
 
   // Priority: contact photo > plugin avatar (e.g. Gravatar) > custom avatar > profile picture > company favicon > initials
   const customAvatar = devMode && email ? CUSTOM_AVATARS[email.toLowerCase()] : null;
   const pluginAvatar = pluginAvatarFailed ? null : pluginAvatarUrl;
-  const imgSrc = disableImages
-    ? null
-    : !imgError && !domainFailed
-      ? resolvedContactPhoto || pluginAvatar || customAvatar || profilePic || (showFavicon ? `/api/favicon?domain=${encodeURIComponent(faviconDomain!)}` : null)
-      : (resolvedContactPhoto || pluginAvatar || customAvatar || profilePic || null);
+  const photoSrc = resolvedContactPhoto || pluginAvatar || customAvatar || profilePic || null;
+  const faviconSrc = !imgError && !domainFailed && showFavicon ? `/api/favicon?domain=${encodeURIComponent(faviconDomain!)}` : null;
+  const imgSrc = disableImages ? null : (photoSrc || faviconSrc);
+  const isFavicon = imgSrc !== null && imgSrc === faviconSrc;
 
   const handleImgError = useCallback(() => {
     // If the plugin avatar just failed, mark it and fall through to the next source
@@ -257,7 +260,7 @@ export function Avatar({ name, email, contactPhotoUri, size = "md", className, d
         sizeClasses[size],
         className
       )}
-      style={{ backgroundColor: imgSrc ? "#ffffff" : getBackgroundColor() }}
+      style={{ backgroundColor: imgSrc ? (isFavicon ? "#ffffff" : "transparent") : (fallbackColor ?? getBackgroundColor()) }}
       title={name || email}
     >
       {imgSrc ? (

@@ -13,9 +13,9 @@ import {
  * GET /api/admin/version
  * Returns the cached update status, last check times, and effective config.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAdminAuth();
+    const auth = await requireAdminAuth(request);
     if ('error' in auth) return auth.error;
 
     const state = await loadState();
@@ -47,7 +47,7 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdminAuth();
+    const auth = await requireAdminAuth(req);
     if ('error' in auth) return auth.error;
 
     const body = (await req.json().catch(() => null)) as { action?: string } | null;

@@ -16,6 +16,7 @@ import { NavigationRail } from "@/components/layout/navigation-rail";
 import { SidebarAppsModal } from "@/components/layout/sidebar-apps-modal";
 import { InlineAppView } from "@/components/layout/inline-app-view";
 import { useSidebarApps } from "@/hooks/use-sidebar-apps";
+import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { useRefreshGesture } from "@/hooks/use-refresh-gesture";
 import { usePolicyStore } from "@/stores/policy-store";
@@ -24,6 +25,7 @@ import { ImagePreviewModal } from "@/components/files/image-preview-modal";
 import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import { loadFilesSettings } from "@/components/files/files-settings-dialog";
 import type { FolderLayout } from "@/components/files/files-settings-dialog";
+import { AppTopBannerSlot } from "@/components/plugins/app-top-banner-slot";
 import { AlertTriangle } from "lucide-react";
 
 export default function FilesPage() {
@@ -83,6 +85,7 @@ export default function FilesPage() {
   } = useFileStore();
 
   const isMobile = useIsMobile();
+  const isEmbedded = useIsEmbedded();
   const [folderLayout, setFolderLayout] = useState<FolderLayout>(() => loadFilesSettings().folderLayout);
   const hasFetched = useRef(false);
 
@@ -374,8 +377,10 @@ export default function FilesPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-dvh bg-background overflow-hidden">
-      {!isMobile && (
+    <div className={cn("flex flex-col bg-background overflow-hidden pt-[env(safe-area-inset-top)]", isEmbedded ? "h-full" : "h-dvh")}>
+      <AppTopBannerSlot />
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+      {!isMobile && !isEmbedded && (
         <div className="w-14 bg-secondary flex flex-col flex-shrink-0" style={{ borderRight: '1px solid rgba(128, 128, 128, 0.3)' }}>
           <NavigationRail
             collapsed
@@ -481,7 +486,7 @@ export default function FilesPage() {
           </div>
         </div>
 
-        {isMobile && (
+        {isMobile && !isEmbedded && (
           <NavigationRail
             orientation="horizontal"
             onManageApps={handleManageApps}
@@ -514,6 +519,7 @@ export default function FilesPage() {
 
       <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
       <ConfirmDialog {...confirmDialogProps} />
+      </div>
     </div>
   );
 }

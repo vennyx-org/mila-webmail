@@ -84,7 +84,7 @@ function isValidOriginUrl(value: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAdminAuth();
+    const auth = await requireAdminAuth(request);
     if ('error' in auth) return auth.error;
 
     const ip = getClientIP(request);

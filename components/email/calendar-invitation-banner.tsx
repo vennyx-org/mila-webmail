@@ -388,41 +388,56 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
     setActionNotice(null);
     setActionError(null);
     try {
-      const events = await client.parseCalendarEvents(client.getCalendarsAccountId(), attachment.blobId);
-      if (events.length > 0) {
-        const parsed = events[0];
-        setParsedEvent(parsed);
-
-        // JMAP strips parameters from Content-Type (RFC 8621), so method=REQUEST
-        // is lost. Fetch raw ICS to extract METHOD as a reliable fallback.
-        try {
-          const blob = await client.fetchBlob(attachment.blobId, 'invite.ics', 'text/calendar');
-          const rawText = await blob.text();
-          const icsMethod = extractMethodFromRawIcs(rawText);
-          if (icsMethod !== 'unknown') {
-            setRawIcsMethod(icsMethod);
+      // JMAP strips parameters from Content-Type (RFC 8621), so method=REQUEST
+      // is lost. Fetch raw ICS to extract METHOD as a reliable fallback — in
+      // parallel with parsing to save a roundtrip.
+      const [events, rawText] = await Promise.all([
+        client.parseCalendarEvents(client.getCalendarsAccountId(), attachment.blobId),
+        (async () => {
+          try {
+            const blob = await client.fetchBlob(attachment.blobId, 'invite.ics', 'text/calendar');
+            return await blob.text();
+          } catch {
+            return null;
           }
-        } catch { /* ignore - fall back to heuristic detection */ }
+        })(),
+      ]);
 
-        if (parsed.uid && supportsCalendar) {
-          const storeHasIt = useCalendarStore.getState().events.some((e) => e.uid === parsed.uid);
-          if (!storeHasIt) {
-            try {
-              const serverEvents = await client.queryCalendarEvents({});
-              const matching = serverEvents.filter((e) => e.uid === parsed.uid);
-              if (matching.length > 0) {
-                useCalendarStore.setState((s) => {
-                  const existingIds = new Set(s.events.map((e) => e.id));
-                  const newEvents = matching.filter((e) => !existingIds.has(e.id));
-                  return newEvents.length > 0 ? { events: [...s.events, ...newEvents] } : s;
-                });
-              }
-            } catch { /* ignore lookup failure */ }
-          }
-        }
-        setState('parsed');
-      } else {
+      if (events.length === 0) {
         setState('error');
+        return;
+      }
+
+      const parsed = events[0];
+      setParsedEvent(parsed);
+
+      if (rawText) {
+        const icsMethod = extractMethodFromRawIcs(rawText);
+        if (icsMethod !== 'unknown') {
+          setRawIcsMethod(icsMethod);
+        }
+      }
+
+      setState('parsed');
+
+      // Hydrate the calendar store with the matching event in the background —
+      // only needed for the "already in calendar" pill, must not block the banner.
+      // Filter by UID server-side; the previous unfiltered query fetched up to
+      // 1000 events plus multiple /get batches just to find one match.
+      if (parsed.uid && supportsCalendar) {
+        const storeHasIt = useCalendarStore.getState().events.some((e) => e.uid === parsed.uid);
+        if (!storeHasIt) {
+          client.queryCalendarEvents({ uid: parsed.uid })
+            .then((matching) => {
+              if (matching.length === 0) return;
+              useCalendarStore.setState((s) => {
+                const existingIds = new Set(s.events.map((e) => e.id));
+                const newEvents = matching.filter((e) => !existingIds.has(e.id));
+                return newEvents.length > 0 ? { events: [...s.events, ...newEvents] } : s;
+              });
+            })
+            .catch(() => { /* ignore lookup failure */ });
+        }
       }
     } catch {
       setState('error');

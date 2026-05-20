@@ -19,11 +19,11 @@ const MAX_PREVIEW_SOURCE_LEN = 100_000;
  * Lets admins audit what they're about to install before pressing the button.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const { slug } = await params;

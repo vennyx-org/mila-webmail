@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
   // it from node_modules at runtime instead of trying to bundle it. Used by
   // PLUGIN_DEV_DIR's on-the-fly bundler.
   serverExternalPackages: ["esbuild"],
+  // Sibling repos checked out under ./repos/ are unrelated source trees that
+  // Turbopack's NFT can otherwise rope into the trace when dynamic fs calls
+  // confuse it. Keeps the build from ballooning memory tracing dead code.
+  outputFileTracingExcludes: {
+    "*": ["./repos/**/*"],
+  },
   turbopack: {
     root: import.meta.dirname,
   },

@@ -4,7 +4,12 @@ import { logger } from '@/lib/logger';
 import { encryptSession, decryptSession } from '@/lib/auth/crypto';
 import { SESSION_COOKIE_MAX_AGE, sessionCookieName } from '@/lib/auth/session-cookie';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
-import { JmapAuthVerificationError, verifyJmapAuth } from '@/lib/auth/verify-jmap-auth';
+import {
+  JmapAuthVerificationError,
+  normalizeJmapServerUrl,
+  validateProxyAuthHeader,
+  verifyJmapAuth,
+} from '@/lib/auth/verify-jmap-auth';
 import {
   clearStalwartAuthContextInStore,
   setStalwartAuthContextInStore,
@@ -15,10 +20,12 @@ import { recordLogin } from '@/lib/telemetry/login-tracker';
 import { parseJmapServers, resolveTrustedJmapUrl } from '@/lib/admin/jmap-servers';
 import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
-const COOKIE_OPTIONS = {
-  ...getCookieOptions(),
-  maxAge: SESSION_COOKIE_MAX_AGE,
-};
+function sessionCookieOptions() {
+  return {
+    ...getCookieOptions(),
+    maxAge: SESSION_COOKIE_MAX_AGE,
+  };
+}
 
 function getSlot(request: NextRequest): number {
   const raw = request.nextUrl.searchParams.get('slot');
@@ -74,10 +81,16 @@ export async function POST(request: NextRequest) {
     const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot < MAX_ACCOUNT_SLOTS ? bodySlot : getSlot(request);
     const cookieName = sessionCookieName(slot);
     const authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-    const normalizedServerUrl = await verifyJmapAuth(upstreamUrl, authHeader, { trusted: upstreamTrusted });
+    // Trusted (admin-configured) URLs skip the upstream re-fetch: the cookie
+    // we write here is only ever consumed for requests on behalf of this same
+    // user, so bogus credentials would just yield 401s downstream rather than
+    // privilege escalation. Untrusted custom endpoints still verify upstream.
+    const normalizedServerUrl = upstreamTrusted
+      ? (validateProxyAuthHeader(authHeader), normalizeJmapServerUrl(upstreamUrl))
+      : await verifyJmapAuth(upstreamUrl, authHeader, { trusted: false });
     const token = encryptSession(normalizedServerUrl, username, password);
     const cookieStore = await cookies();
-    cookieStore.set(cookieName, token, COOKIE_OPTIONS);
+    cookieStore.set(cookieName, token, sessionCookieOptions());
     setStalwartAuthContextInStore(cookieStore, slot, {
       serverUrl: normalizedServerUrl,
       username,

@@ -135,6 +135,40 @@
     "shared": "Condiviso",
     "scheduled": "Programmate"
   },
+  "protocol_handlers": {
+    "title": "App predefinite",
+    "description": "Scegli se i link e-mail e calendario devono aprirsi in Bulwark. Tecnicamente, Bulwark si registra come gestore di protocollo per i link mailto: e webcal:.",
+    "unsupported": "Questo browser o questa connessione non supporta la registrazione manuale dei gestori di protocollo. Potresti comunque poter usare la PWA installata tramite le impostazioni del browser o del sistema.",
+    "mailto_label": "Link e-mail",
+    "mailto_description": "Apre i link mailto: in Bulwark con il compositore precompilato.",
+    "protocol_open_mode_label": "All'apertura dei link di protocollo",
+    "protocol_open_mode_description": "Scegli se Bulwark deve aprire i link mailto: e webcal: in una nuova scheda o riutilizzare una sessione aperta. L'opzione sessione attiva richiede l'autorizzazione alle notifiche, così puoi fare clic su una notifica di fallback per portare Bulwark in primo piano se il browser blocca il focus.",
+    "protocol_open_mode_active_session": "Apri nella sessione attiva se possibile",
+    "protocol_open_mode_new_tab": "Apri sempre una nuova scheda",
+    "focus_notification_title": "Apri Bulwark",
+    "focus_notification_body": "Il link è stato aperto in Bulwark. Fai clic per portare la finestra in primo piano.",
+    "webcal_label": "Link calendario",
+    "webcal_description": "Apre i link webcal: in Bulwark con una finestra di dialogo di sottoscrizione al calendario precompilata.",
+    "register_mailto": "Registra app e-mail",
+    "register_webcal": "Registra app calendario",
+    "mailto_registered": "Registrazione del gestore e-mail richiesta",
+    "webcal_registered": "Registrazione del gestore calendario richiesta",
+    "registration_failed": "Registrazione del gestore di protocollo non riuscita",
+    "opening_mailto": "Apertura compositore...",
+    "opening_webcal": "Apertura calendario...",
+    "browser_note": "Il browser o il sistema operativo potrebbe chiederti di confermare e potrebbe richiedere che Bulwark sia installato prima di poterlo selezionare come app predefinita.",
+    "select_account_title": "Scegli account",
+    "select_mailto_account": "Scegli quale account deve aprire questo link e-mail.",
+    "select_webcal_account": "Scegli quale account deve aprire questo link calendario.",
+    "select_account_note": "Questa scelta si applica solo a questo link di protocollo.",
+    "detail_to": "A",
+    "detail_subject": "Oggetto",
+    "detail_no_subject": "Senza oggetto",
+    "detail_calendar": "Calendario",
+    "detail_source": "Fonte",
+    "active_account": "Attivo",
+    "switching_account": "Cambio account..."
+  },
   "sidebar_apps": {
     "modal_title": "App della barra laterale",
     "add_new": "Aggiungi app",
@@ -225,6 +259,8 @@
     "compose": "Componi",
     "compose_hint": "Componi nuovo messaggio",
     "no_subject": "(Nessun oggetto)",
+    "no_body_content": "(Nessun contenuto disponibile)",
+    "no_preview_available": "Anteprima non disponibile",
     "loading_email": "Caricamento messaggio...",
     "loading": "Caricamento...",
     "reply": "Rispondi",
@@ -548,6 +584,15 @@
       "to": "A: {recipients}"
     },
     "remove_sub_address": "Rimuovi sotto-indirizzo",
+    "from_override": {
+      "toggle_off": "Sovrascrivi",
+      "toggle_on": "Annulla sovrascrittura",
+      "toggle_tooltip": "Modifica liberamente nome e indirizzo del mittente. La posta viene comunque inviata tramite la tua identità - cambia solo l'intestazione Da visibile.",
+      "name_label": "Nome mittente",
+      "name_placeholder": "Nome",
+      "email_label": "Indirizzo email del mittente",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Modello",
     "save_as_template": "Salva come modello",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Cifratura",
       "files": "File",
       "contacts": "Contatti",
+      "protocol_handlers": "App predefinite",
       "sidebar_apps": "App nella barra laterale",
       "notifications": "Notifiche",
       "layout": "Layout",
@@ -973,7 +1019,9 @@
         "split": "Pannello diviso",
         "split_description": "Mantieni la lista dei messaggi e il pannello di lettura visibili affiancati.",
         "focus": "Lista focalizzata",
-        "focus_description": "Mostra una riga per messaggio e apri la posta a larghezza piena mantenendo visibile la barra laterale delle cartelle."
+        "focus_description": "Mostra una riga per messaggio e apri la posta a larghezza piena mantenendo visibile la barra laterale delle cartelle.",
+        "horizontal": "Riquadro di lettura in basso",
+        "horizontal_description": "Mostra l'elenco dei messaggi in alto e apri il messaggio selezionato in un riquadro di lettura sotto."
       },
       "disable_threading": {
         "label": "Disabilita raggruppamento conversazioni",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Seleziona automaticamente l'indirizzo di risposta",
         "description": "Quando rispondi, passa automaticamente l'indirizzo mittente all'identità che ha ricevuto il messaggio originale"
+      },
+      "signature_position": {
+        "label": "Posizione della firma",
+        "description": "Dove inserire la tua firma nelle risposte e negli inoltri. Sopra il testo citato si legge in modo naturale come chiusura della risposta; sotto mantiene il messaggio originale contiguo.",
+        "above_quote": "Prima del testo citato",
+        "below_quote": "Dopo il testo citato"
+      },
+      "signature_separator": {
+        "label": "Delimitatore firma",
+        "description": "Anteporre alla firma la riga di delimitazione standard \"-- \" (RFC 3676). Disattiva se preferisci passare direttamente dal messaggio alla firma."
       },
       "sub_address_delimiter": {
         "label": "Delimitatore sub-indirizzo",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nuova sottocartella...",
     "new_folder": "Nuova cartella...",
     "rename": "Rinomina...",
+    "import_email": "Importa .eml...",
     "empty_folder": "Svuota cartella",
     "empty_folder_generic": "Svuota cartella",
     "delete_folder": "Elimina cartella",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archivio@email.com",
       "text_signature_label": "Firma di testo",
       "html_signature_label": "Firma HTML",
+      "signature_byte_counter": "{bytes} / {max} byte",
+      "signature_byte_limit_reached": "Limite del server raggiunto",
       "save": "Salva identità",
       "cancel": "Annulla",
       "creating": "Creazione...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "Il file supera il limite di 10 MB",
       "invalid_format": "Formato del file calendario non valido"
     },
+    "webcal_action": {
+      "title": "Apri link calendario",
+      "description": "Come vuoi usare \"{name}\"?",
+      "import_title": "Importa una volta",
+      "import_description": "Recupera subito gli eventi e copiali in uno dei tuoi calendari.",
+      "subscribe_title": "Abbonati",
+      "subscribe_description": "Mantieni questo calendario sincronizzato automaticamente come calendario separato.",
+      "cancel": "Annulla"
+    },
     "management": {
       "title": "Gestione calendari",
       "description": "Crea, rinomina e personalizza i tuoi calendari. Fai clic destro su un calendario nella barra laterale per cambiarne rapidamente il colore.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Tour introduttivo",
     "restart_desc": "Rivedi la guida dell'interfaccia",
     "restart_button": "Riavvia il tour",
+    "show_on_new_devices_title": "Mostra sui nuovi dispositivi",
+    "show_on_new_devices_desc": "Rivedi il banner di benvenuto e il tour al primo accesso su un nuovo dispositivo, anche se li hai già completati altrove",
     "sidebar_title": "Le tue caselle di posta",
     "sidebar_desc": "Questa è la barra laterale delle cartelle. Clicca su una casella per vedere le email. Puoi creare cartelle, trascinare email tra loro e vedere i conteggi dei non letti.",
     "compose_title": "Scrivi un'email",

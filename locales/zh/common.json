@@ -135,6 +135,40 @@
     "shared": "共享",
     "scheduled": "已计划"
   },
+  "protocol_handlers": {
+    "title": "默认应用",
+    "description": "选择是否在 Bulwark 中打开电子邮件和日历链接。从技术上讲，Bulwark 会注册为 mailto: 和 webcal: 链接的协议处理程序。",
+    "unsupported": "此浏览器或连接不支持手动注册协议处理程序。你仍可尝试通过浏览器或系统设置使用已安装的 PWA。",
+    "mailto_label": "电子邮件链接",
+    "mailto_description": "在 Bulwark 中打开 mailto: 链接，并预先填好撰写窗口。",
+    "protocol_open_mode_label": "打开协议链接时",
+    "protocol_open_mode_description": "选择 Bulwark 是在新标签页中打开 mailto: 和 webcal: 链接，还是复用已打开的会话。活动会话选项需要通知权限，这样当浏览器阻止聚焦时，你可以点击备用通知将 Bulwark 窗口带到前台。",
+    "protocol_open_mode_active_session": "尽可能在活动会话中打开",
+    "protocol_open_mode_new_tab": "始终打开新标签页",
+    "focus_notification_title": "打开 Bulwark",
+    "focus_notification_body": "链接已在 Bulwark 中打开。点击可将窗口带到前台。",
+    "webcal_label": "日历链接",
+    "webcal_description": "在 Bulwark 中打开 webcal: 链接，并预先填好日历订阅对话框。",
+    "register_mailto": "注册电子邮件应用",
+    "register_webcal": "注册日历应用",
+    "mailto_registered": "已请求注册电子邮件处理程序",
+    "webcal_registered": "已请求注册日历处理程序",
+    "registration_failed": "协议处理程序注册失败",
+    "opening_mailto": "正在打开撰写窗口...",
+    "opening_webcal": "正在打开日历...",
+    "browser_note": "你的浏览器或操作系统可能会要求确认，并且可能需要先安装 Bulwark，才能将其选为默认应用。",
+    "select_account_title": "选择账户",
+    "select_mailto_account": "选择用于打开此电子邮件链接的账户。",
+    "select_webcal_account": "选择用于打开此日历链接的账户。",
+    "select_account_note": "此选择仅适用于此协议链接。",
+    "detail_to": "收件人",
+    "detail_subject": "主题",
+    "detail_no_subject": "无主题",
+    "detail_calendar": "日历",
+    "detail_source": "来源",
+    "active_account": "活动",
+    "switching_account": "正在切换账户..."
+  },
   "sidebar_apps": {
     "modal_title": "侧边栏应用",
     "add_new": "添加应用",
@@ -225,6 +259,8 @@
     "compose": "撰写邮件",
     "compose_hint": "撰写新邮件",
     "no_subject": "（无主题）",
+    "no_body_content": "（无正文内容）",
+    "no_preview_available": "无可用预览",
     "loading_email": "正在加载邮件...",
     "loading": "正在加载…",
     "reply": "回复",
@@ -548,6 +584,15 @@
       "to": "至：{recipients}"
     },
     "remove_sub_address": "删除子地址",
+    "from_override": {
+      "toggle_off": "覆盖",
+      "toggle_on": "取消覆盖",
+      "toggle_tooltip": "自由编辑发件人姓名和地址。邮件仍通过您的身份发送 - 仅可见的发件人标题发生变化。",
+      "name_label": "发件人姓名",
+      "name_placeholder": "姓名",
+      "email_label": "发件人电子邮件地址",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "模板",
     "save_as_template": "保存为模板",
     "validation": {
@@ -756,6 +801,7 @@
       "files": "文件",
       "contacts": "联系人",
       "encryption": "加密",
+      "protocol_handlers": "默认应用",
       "sidebar_apps": "侧边栏应用",
       "notifications": "通知",
       "layout": "布局",
@@ -973,7 +1019,9 @@
         "split": "分栏视图",
         "split_description": "左侧显示邮件列表，右侧显示阅读窗格。",
         "focus": "沉浸模式",
-        "focus_description": "每封邮件显示一行，打开邮件时使用全宽阅读视图，同时保留文件夹侧边栏。"
+        "focus_description": "每封邮件显示一行，打开邮件时使用全宽阅读视图，同时保留文件夹侧边栏。",
+        "horizontal": "底部阅读窗格",
+        "horizontal_description": "在顶部显示邮件列表，并在下方的阅读窗格中打开所选邮件。"
       },
       "show_preview": {
         "label": "显示预览文本",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "自动选择回复地址",
         "description": "回复时自动将发件人地址切换为最初收到该邮件的身份"
+      },
+      "signature_position": {
+        "label": "签名位置",
+        "description": "在回复和转发中插入签名的位置。位于引用文本上方时，可作为回复的自然结尾；位于下方时，保持原始邮件连贯。",
+        "above_quote": "引用文本之前",
+        "below_quote": "引用文本之后"
+      },
+      "signature_separator": {
+        "label": "签名分隔符",
+        "description": "在签名前加入标准的 “-- ” 分隔行（RFC 3676）。如果希望正文直接连到签名，请关闭。"
       },
       "sub_address_delimiter": {
         "label": "子地址分隔符",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "新建子文件夹...",
     "new_folder": "新建文件夹...",
     "rename": "重命名...",
+    "import_email": "导入 .eml...",
     "empty_folder": "清空文件夹",
     "empty_folder_generic": "清空文件夹",
     "delete_folder": "删除文件夹",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archive@example.com",
       "text_signature_label": "文字签名",
       "html_signature_label": "HTML 签名",
+      "signature_byte_counter": "{bytes} / {max} 字节",
+      "signature_byte_limit_reached": "已达服务器限制",
       "save": "保存身份",
       "cancel": "取消",
       "creating": "创建中...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "文件超过 10MB 限制",
       "invalid_format": "日历文件格式无效"
     },
+    "webcal_action": {
+      "title": "打开日历链接",
+      "description": "您想如何使用 \"{name}\"？",
+      "import_title": "导入一次",
+      "import_description": "立即获取事件并复制到您的某个日历中。",
+      "subscribe_title": "订阅",
+      "subscribe_description": "将此日历作为单独的日历自动同步。",
+      "cancel": "取消"
+    },
     "management": {
       "title": "日历管理",
       "description": "创建、重命名和自定义您的日历。右键单击侧栏中的日历可快速更改其颜色。",
@@ -2821,6 +2891,8 @@
     "restart_title": "新手导览",
     "restart_desc": "重新查看界面功能引导",
     "restart_button": "重新开始导览",
+    "show_on_new_devices_title": "在新设备上显示",
+    "show_on_new_devices_desc": "首次在新设备登录时重新显示欢迎横幅和导览，即使您已在其他设备完成",
     "sidebar_title": "邮箱文件夹",
     "sidebar_desc": "这里是邮箱文件夹列表。点击任意文件夹即可查看邮件。你可以创建文件夹、拖动邮件进行整理，并快速查看未读邮件数量。",
     "compose_title": "写邮件",

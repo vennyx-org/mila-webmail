@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Email, ContactCard, Mailbox } from "@/lib/jmap/types";
-import { EMAIL_IFRAME_SANITIZE_CONFIG, collapseBlockedImageContainers, plainTextToSafeHtml } from "@/lib/email-sanitization";
+import { EMAIL_IFRAME_SANITIZE_CONFIG, collapseBlockedImageContainers, escapeHtml, plainTextToSafeHtml, sanitizeEmailHtml, sanitizePlainTextRenderedHtml } from "@/lib/email-sanitization";
 import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -82,7 +82,7 @@ import { useTour } from "@/components/tour/tour-provider";
 import { SmimePassphraseDialog } from "@/components/settings/smime-passphrase-dialog";
 import { findCalendarAttachment, isCalendarMimeType } from "@/lib/calendar-invitation";
 import { RecipientPopover } from "./recipient-popover";
-import { isFilePreviewable } from "@/lib/file-preview";
+import { isFilePreviewable, isMimeTypeSafeForInlinePreview } from "@/lib/file-preview";
 import { SmimeStatusBanner } from "./smime-status-banner";
 import { detectSmime } from "@/lib/smime/smime-detect";
 import { smimeDecrypt, SmimeKeyLockedError, normalizeCmsBytes } from "@/lib/smime/smime-decrypt";
@@ -93,10 +93,12 @@ import { parseTnef, isTnefAttachment } from "@/lib/tnef";
 import { debug } from "@/lib/debug";
 import type { TnefAttachment } from "@/lib/tnef";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
-import { usePluginStore } from "@/stores/plugin-store";
+import { usePluginSlotOffers } from "@/hooks/use-plugin-slot-offers";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { emailHooks, uiHooks } from "@/lib/plugin-hooks";
 import type { AttachmentInfo, AttachmentPreview } from "@/lib/plugin-types";
+import { useAttachmentDrag, isDragOutSupported, type AttachmentDragSource } from "@/hooks/use-attachment-drag";
+import type { IJMAPClient } from "@/lib/jmap/client-interface";
 
 interface EmailViewerProps {
   email: Email | null;
@@ -795,6 +797,48 @@ function ContactSidebarPanel({
   );
 }
 
+interface DraggableAttachmentChipProps {
+  attachment: EffectiveAttachment;
+  client: IJMAPClient | null;
+  enabled: boolean;
+  children: (dragProps: {
+    draggable: boolean;
+    onPointerEnter: () => void;
+    onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
+  }) => React.ReactNode;
+}
+
+function DraggableAttachmentChip({ attachment, client, enabled, children }: DraggableAttachmentChipProps) {
+  const source = useMemo<AttachmentDragSource>(() => ({
+    name: attachment.name || 'download',
+    type: attachment.type || 'application/octet-stream',
+    getBlobUrl: async () => {
+      if (attachment.blobId && client) {
+        try {
+          return await client.fetchBlobAsObjectUrl(attachment.blobId, attachment.name || undefined, attachment.type);
+        } catch {
+          return null;
+        }
+      }
+      if (attachment.tnefData) {
+        const bytes = attachment.tnefData;
+        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        return URL.createObjectURL(new Blob([buffer], { type: attachment.type || 'application/octet-stream' }));
+      }
+      if (attachment.decryptedAttachment) {
+        const bytes = getAttachmentContentBytes(attachment.decryptedAttachment);
+        if (!bytes || bytes.byteLength === 0) return null;
+        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        return URL.createObjectURL(new Blob([buffer], { type: attachment.type || 'application/octet-stream' }));
+      }
+      return null;
+    },
+  }), [attachment, client]);
+  const drag = useAttachmentDrag(source, enabled);
+  return <>{children(drag)}</>;
+}
+
 function SidebarSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -862,6 +906,7 @@ export function EmailViewer({
   const calendarInvitationParsingEnabled = useSettingsStore((state) => state.calendarInvitationParsingEnabled);
   const hideInlineImageAttachments = useSettingsStore((state) => state.hideInlineImageAttachments);
   const attachmentImagePreviewsEnabled = useSettingsStore((state) => state.attachmentImagePreviewsEnabled);
+  const dragOutActive = useMemo(() => isDragOutSupported(), []);
   const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
 
@@ -958,8 +1003,8 @@ export function EmailViewer({
   const [embeddedEmailUnwrapped, setEmbeddedEmailUnwrapped] = useState(false);
 
   // Plugin detail sidebar state
-  const detailSlots = usePluginStore(s => s.slots['email-detail-sidebar']);
-  const hasDetailSidebar = detailSlots && detailSlots.length > 0;
+  const detailSlots = usePluginSlotOffers('email-detail-sidebar');
+  const hasDetailSidebar = detailSlots.length > 0;
   const [detailSidebarCollapsed, setDetailSidebarCollapsed] = useState(false);
   const [detailSidebarWidth, setDetailSidebarWidth] = useState(280);
   const detailSidebarWidthRef = useRef(280);
@@ -2327,17 +2372,24 @@ export function EmailViewer({
 
       if (email.htmlBody?.[0]?.partId && email.bodyValues[email.htmlBody[0].partId]) {
         htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
-        // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
-        // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
-        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody —
-        // in that case there is no real plain-text alternative, so always render the HTML.
-        const textPartId = email.textBody?.[0]?.partId;
-        const htmlPartId = email.htmlBody[0].partId;
-        const hasDistinctTextBody = !!textPartId && textPartId !== htmlPartId && !!email.bodyValues[textPartId];
-        if (hasDistinctTextBody && htmlContent) {
-          useHtmlVersion = hasMeaningfulHtmlBody(htmlContent);
+        // Per RFC 8621 § 4.1.4, when a message has only one alternative the server
+        // exposes the same part in both htmlBody and textBody. The shared part may
+        // actually be text/plain (plain-text-only mail) - rendering that as HTML
+        // collapses newlines and skips linkification, so route by the part's type.
+        const htmlPart = email.htmlBody[0];
+        if (htmlPart.type && htmlPart.type.toLowerCase() !== 'text/html') {
+          useHtmlVersion = false;
         } else {
-          useHtmlVersion = !!htmlContent;
+          // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
+          // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
+          const textPartId = email.textBody?.[0]?.partId;
+          const htmlPartId = htmlPart.partId;
+          const hasDistinctTextBody = !!textPartId && textPartId !== htmlPartId && !!email.bodyValues[textPartId];
+          if (hasDistinctTextBody && htmlContent) {
+            useHtmlVersion = hasMeaningfulHtmlBody(htmlContent);
+          } else {
+            useHtmlVersion = !!htmlContent;
+          }
         }
       }
 
@@ -2470,7 +2522,7 @@ export function EmailViewer({
     }
 
     return {
-      html: '<p style="color: var(--color-muted-foreground);">No content available</p>',
+      html: `<p style="color: var(--color-muted-foreground); font-style: italic;">${t('no_body_content')}</p>`,
       isHtml: false,
       hasStyleTag: false,
     };
@@ -2478,7 +2530,7 @@ export function EmailViewer({
     // toggling permission imperatively unblocks content via restoreBlockedContent
     // in an effect below, so the iframe srcDoc stays stable and doesn't reload/flash.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, externalContentPolicy, cidBlobUrls]);
+  }, [email, externalContentPolicy, cidBlobUrls, t]);
 
   // Override email content with S/MIME decrypted content when available
   const effectiveEmailContent = useMemo(() => {
@@ -2516,7 +2568,12 @@ export function EmailViewer({
 
   const handleEffectiveAttachmentOpen = useCallback(async (attachment: EffectiveAttachment) => {
     const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
-    const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
+    // Blob URLs inherit our origin; script-bearing MIME types (text/html,
+    // image/svg+xml, etc.) would execute as the webmail origin if opened
+    // top-level. Force the download path for anything not on the inert allowlist.
+    const opensPreview = isPreviewable
+      && mailAttachmentAction === 'preview'
+      && isMimeTypeSafeForInlinePreview(attachment.type);
 
     const info: AttachmentInfo = {
       name: attachment.name || '',
@@ -2715,9 +2772,14 @@ export function EmailViewer({
     // Re-invert leaf media elements so they appear normal.
     // Container selectors (bgcolor, background, etc.) use :not(:has(...)) to avoid
     // double re-inverting images nested inside those containers.
+    // Nested bgcolor containers must NOT add another invert layer: each filter
+    // toggles the inversion, so an odd number of stacked filters (e.g. body +
+    // outer bgcolor table + inner bgcolor table) produces an inverted result -
+    // i.e. light-on-light. The second rule disables filter on bgcolor-like
+    // elements that are descendants of another bgcolor-like element.
     const darkModeCSS = isDark && !emailHasNativeDarkMode ? `
-      html { background: #1a1a1a; }
-      body { filter: invert(1) hue-rotate(180deg); }
+      html { background: #121212; }
+      body { filter: invert(1) hue-rotate(180deg); background: #ededed; }
       img, video, svg, canvas, object, embed, input[type="image"] {
         filter: invert(1) hue-rotate(180deg);
       }
@@ -2728,6 +2790,10 @@ export function EmailViewer({
       td[background]:not(:has(img, video, svg, canvas, object, embed)),
       table[background]:not(:has(img, video, svg, canvas, object, embed)) {
         filter: invert(1) hue-rotate(180deg);
+      }
+      :where([style*="background-image"], [style*="background:"], [background], [bgcolor])
+        :where([style*="background-image"], [style*="background:"], [background], [bgcolor]):not(:has(img, video, svg, canvas, object, embed)) {
+        filter: none !important;
       }
     ` : '';
 
@@ -2748,10 +2814,20 @@ export function EmailViewer({
       p.MsoNormal, li.MsoNormal, div.MsoNormal { margin: 0 0 6px; }
     ` : '';
 
+    // Defense-in-depth CSP inside srcDoc: even if the sanitizer ever lets a
+    // <script> tag through, the iframe document forbids script execution
+    // (default-src 'none'). img/style/font remain permissive to match what the
+    // sanitizer is allowed to emit and what the host already permits when
+    // external content is loaded.
+    const iframeCsp = "default-src 'none'; img-src data: blob: http: https:; style-src 'unsafe-inline'; font-src data: http: https:; media-src data: blob: http: https:; base-uri 'none'; form-action 'none'; frame-src 'none'";
+
     return `<!DOCTYPE html>
 <html style="color-scheme: ${colorScheme};"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="${iframeCsp}">
 <style>
+  html, body { overflow: hidden; }
   body { margin: 0; padding: ${bodyPadding}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
+  @media (max-width: 640px) { body { padding-left: 0; padding-right: 0; } }
   img { max-width: 100% !important; height: auto !important; }
   a { color: #1a73e8; }
   table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
@@ -2826,7 +2902,10 @@ export function EmailViewer({
   // True while the new email's body is still being fetched. Catches the
   // window between selectedEmail changing and isLoading flipping true, so the
   // quick reply / body don't flicker through a partial render.
-  const isBodyLoading = isLoading || !email?.bodyValues || Object.keys(email.bodyValues).length === 0;
+  // An empty bodyValues with no referenced parts means the email has no body
+  // (e.g. calendar-only invites) — not "still loading".
+  const hasBodyParts = (email?.textBody?.length ?? 0) > 0 || (email?.htmlBody?.length ?? 0) > 0;
+  const isBodyLoading = isLoading || (hasBodyParts && (!email?.bodyValues || Object.keys(email.bodyValues).length === 0));
 
   // Gates the quick reply on the iframe having loaded the current srcDoc, so
   // it doesn't flash in below a still-resizing iframe.
@@ -2901,6 +2980,75 @@ export function EmailViewer({
                 }
               }
             });
+
+            // Re-invert emoji glyphs so they keep their original colors. The
+            // body's invert filter flips colored emoji (yellow smiley → blue,
+            // red heart → cyan, etc.). Wrap each emoji run in a span that
+            // re-inverts. Only act when the ancestor invert depth is odd -
+            // emojis inside a double-inverted bgcolor container already render
+            // at their original colors.
+            let emojiRe: RegExp;
+            try {
+              emojiRe = new RegExp('\\p{RGI_Emoji}', 'gv');
+            } catch {
+              emojiRe = /\p{Extended_Pictographic}(?:\uFE0F)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F)?)*/gu;
+            }
+            const emojiTestRe = /\p{Extended_Pictographic}/u;
+            const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'IFRAME']);
+
+            const isOddInvertDepth = (start: Element | null) => {
+              let count = 0;
+              let n: Element | null = start;
+              while (n) {
+                if (n === doc.body) { count++; break; }
+                const cs = win.getComputedStyle(n);
+                if (cs.filter && cs.filter.includes('invert')) count++;
+                n = n.parentElement;
+              }
+              return count % 2 === 1;
+            };
+
+            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+              acceptNode(node) {
+                let p = node.parentElement;
+                while (p) {
+                  if (SKIP_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
+                  p = p.parentElement;
+                }
+                return emojiTestRe.test(node.nodeValue || '')
+                  ? NodeFilter.FILTER_ACCEPT
+                  : NodeFilter.FILTER_REJECT;
+              },
+            });
+
+            const emojiTextNodes: Text[] = [];
+            let cur: Node | null;
+            while ((cur = walker.nextNode())) emojiTextNodes.push(cur as Text);
+
+            emojiTextNodes.forEach((textNode) => {
+              const parent = textNode.parentElement;
+              if (!parent || !isOddInvertDepth(parent)) return;
+              const text = textNode.nodeValue || '';
+              emojiRe.lastIndex = 0;
+              const frag = doc.createDocumentFragment();
+              let lastIndex = 0;
+              let m: RegExpExecArray | null;
+              while ((m = emojiRe.exec(text)) !== null) {
+                if (m.index > lastIndex) {
+                  frag.appendChild(doc.createTextNode(text.slice(lastIndex, m.index)));
+                }
+                const span = doc.createElement('span');
+                span.style.cssText = 'filter:invert(1) hue-rotate(180deg)';
+                span.textContent = m[0];
+                frag.appendChild(span);
+                lastIndex = m.index + m[0].length;
+              }
+              if (lastIndex === 0) return;
+              if (lastIndex < text.length) {
+                frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
+              }
+              parent.replaceChild(frag, textNode);
+            });
           }
         }
       }
@@ -2953,14 +3101,26 @@ export function EmailViewer({
     if (!email) return;
     const printSender = email.from?.[0];
     const date = email.sentAt ? formatDateTime(email.sentAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '';
-    const toList = email.to?.map(r => r.name ? `${r.name} &lt;${r.email}&gt;` : r.email).join(', ') || '';
-    const ccList = email.cc?.map(r => r.name ? `${r.name} &lt;${r.email}&gt;` : r.email).join(', ') || '';
+    const formatRecipient = (r: { name?: string | null; email: string }) =>
+      r.name ? `${escapeHtml(r.name)} &lt;${escapeHtml(r.email)}&gt;` : escapeHtml(r.email);
+    const toList = email.to?.map(formatRecipient).join(', ') || '';
+    const ccList = email.cc?.map(formatRecipient).join(', ') || '';
+    const subjectText = email.subject || t('no_subject');
+    const senderText = printSender?.name
+      ? `${printSender.name} <${printSender.email}>`
+      : printSender?.email || t('unknown_sender');
+    // The body was sanitized with EMAIL_IFRAME_SANITIZE_CONFIG which permits
+    // <style>. The print window has no iframe isolation, so re-sanitize with
+    // the stricter config that forbids <style> before injecting into the DOM.
+    const printableBody = effectiveEmailContent.isHtml
+      ? sanitizeEmailHtml(effectiveEmailContent.html)
+      : effectiveEmailContent.html;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     printWindow.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${DOMPurify.sanitize(email.subject || t('no_subject'))}</title>
+<html><head><meta charset="utf-8"><title>${escapeHtml(subjectText)}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 40px; color: #000; }
   .header { border-bottom: 1px solid #ccc; padding-bottom: 16px; margin-bottom: 16px; }
@@ -2972,15 +3132,15 @@ export function EmailViewer({
   @media print { body { margin: 20px; } }
 </style></head><body>
 <div class="header">
-  <div class="subject">${DOMPurify.sanitize(email.subject || t('no_subject'))}</div>
+  <div class="subject">${escapeHtml(subjectText)}</div>
   <div class="meta">
-    <div><strong>${t('from')}:</strong> ${DOMPurify.sanitize(printSender?.name ? `${printSender.name} <${printSender.email}>` : printSender?.email || t('unknown_sender'))}</div>
-    ${toList ? `<div><strong>${t('to')}:</strong> ${toList}</div>` : ''}
+    <div><strong>${escapeHtml(t('from'))}:</strong> ${escapeHtml(senderText)}</div>
+    ${toList ? `<div><strong>${escapeHtml(t('to'))}:</strong> ${toList}</div>` : ''}
     ${ccList ? `<div><strong>CC:</strong> ${ccList}</div>` : ''}
-    ${date ? `<div><strong>${t('date')}:</strong> ${DOMPurify.sanitize(date)}</div>` : ''}
+    ${date ? `<div><strong>${escapeHtml(t('date'))}:</strong> ${escapeHtml(date)}</div>` : ''}
   </div>
 </div>
-<div class="body">${effectiveEmailContent.html}</div>
+<div class="body">${printableBody}</div>
 </body></html>`);
     printWindow.document.close();
     printWindow.focus();
@@ -3958,7 +4118,8 @@ export function EmailViewer({
       )}
 
       {/* Email Content Area */}
-      <div className={cn("flex-1 overflow-auto overscroll-contain bg-muted/30", isMobile && "pb-16")}>
+      <div className={cn("flex-1 overflow-auto overscroll-contain bg-muted/30", isMobile && "pb-[calc(3.25rem+env(safe-area-inset-bottom)/2)] sm:pb-0")}>
+      <div className="min-h-full flex flex-col">
 
       {/* === SENDER INFO (Desktop) === */}
       <div className="hidden lg:block bg-background border-b border-border px-6" style={{ paddingBlock: 'var(--density-header-py)' }}>
@@ -3982,13 +4143,16 @@ export function EmailViewer({
               <div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
-                      className="font-semibold text-foreground hover:text-primary hover:underline transition-colors cursor-pointer text-left"
-                      title={t('view_contact')}
-                    >
-                      {sender?.name || sender?.email || t('unknown_sender')}
-                    </button>
+                    {sender?.email ? (
+                      <RecipientPopover
+                        name={sender?.name}
+                        email={sender.email}
+                        onViewContact={handleViewContactSidebar}
+                        className="font-semibold text-left"
+                      />
+                    ) : (
+                      <span className="font-semibold text-foreground">{t('unknown_sender')}</span>
+                    )}
                     <EmailIdentityBadge email={email} identities={identities} />
                     {shouldShowUnsubBanner && listHeaders?.listUnsubscribe && (
                       <UnsubscribeBanner
@@ -4064,99 +4228,337 @@ export function EmailViewer({
                 </button>
               </div>
 
-              {/* Expandable Details */}
-              {showFullHeaders && (() => {
-                const translateAuthResult = (result?: string) => {
-                  const r = (result || '').toLowerCase();
-                  switch (r) {
-                    case 'pass': return t('authentication.result.pass');
-                    case 'fail': return t('authentication.result.fail');
-                    case 'softfail': return t('authentication.result.softfail');
-                    case 'neutral': return t('authentication.result.neutral');
-                    case 'permerror': return t('authentication.result.permerror');
-                    case 'temperror': return t('authentication.result.temperror');
-                    case 'none': return t('authentication.result.none');
-                    default: return result || '';
-                  }
-                };
-                const replyToDifferent = !!email.replyTo?.length &&
-                  (!email.from || email.replyTo[0].email !== email.from[0]?.email);
-                const deliveryDeltaMs = email.sentAt && email.receivedAt
-                  ? Math.abs(new Date(email.receivedAt).getTime() - new Date(email.sentAt).getTime())
-                  : 0;
-                const formatDelta = (diff: number) => {
-                  const minutes = Math.floor(diff / 60000);
-                  const hours = Math.floor(minutes / 60);
-                  const days = Math.floor(hours / 24);
-                  const dayUnit = days > 1 ? t('time.days') : t('time.day');
-                  const hourUnit = (hours % 24) > 1 ? t('time.hours') : t('time.hour');
-                  const minuteUnit = (minutes % 60) > 1 ? t('time.minutes') : t('time.minute');
-                  const minuteUnitSingle = minutes > 1 ? t('time.minutes') : t('time.minute');
-                  if (days > 0) return `${days} ${dayUnit} ${hours % 24} ${hourUnit}`;
-                  if (hours > 0) return `${hours} ${hourUnit} ${minutes % 60} ${minuteUnit}`;
-                  return `${minutes} ${minuteUnitSingle}`;
-                };
-                const fullDate = (iso?: string) => iso
-                  ? formatDateTime(iso, timeFormat, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', second: '2-digit', timeZoneName: 'short' })
-                  : '-';
-                const auth = email.authenticationResults;
-                const totalAttachmentSize = effectiveAttachments.reduce((s, a) => s + (a.size || 0), 0);
-                const topMimeType = email.bodyStructure?.type;
-                const SectionHeader = ({ children }: { children: React.ReactNode }) => (
-                  <div className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase mb-1.5">
-                    {children}
-                  </div>
-                );
-                const Row = ({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) => (
-                  <>
-                    <dt className="text-muted-foreground text-xs pt-1">{label}</dt>
-                    <dd className={cn(
-                      "text-sm text-foreground min-w-0 break-words",
-                      mono && "font-mono text-xs",
-                    )}>{children}</dd>
-                  </>
-                );
-                const AuthChip = ({ name, result, extra, tooltip }: { name: string; result?: string; extra?: React.ReactNode; tooltip?: string }) => {
-                  if (!result) return null;
-                  const status = getSecurityStatus(result);
-                  const Icon = status.icon === 'check' ? Check
-                    : status.icon === 'x' ? X
-                    : status.icon === 'alert' ? AlertTriangle
-                    : Minus;
-                  return (
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs",
-                        tooltip && "cursor-help",
-                        status.icon === 'check' && "bg-green-500/[0.07] border-green-500/30",
-                        status.icon === 'x' && "bg-red-500/[0.07] border-red-500/30",
-                        status.icon === 'alert' && "bg-amber-500/[0.07] border-amber-500/30",
-                        status.icon === 'minus' && "bg-muted/40 border-border",
-                      )}
-                      title={tooltip}
+
+              </div>
+              {/* Attachments on the right (beside-sender mode) */}
+              {attachmentPosition === 'beside-sender' && effectiveAttachments.length > 0 && (
+                <div className="relative flex flex-col items-end justify-start gap-1 flex-shrink-0 max-w-[50%]">
+                  {effectiveAttachments.slice(0, 2).map((attachment) => {
+                    const FileIcon = getFileIcon(attachment.name || undefined, attachment.type);
+                    const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
+                    const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
+                    const thumbUrl = imageThumbUrls[attachment.id];
+                    return (
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                        {(dragProps) => (
+                      <div
+                        className={cn(
+                          "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer overflow-hidden",
+                          thumbUrl
+                            ? "inline-flex flex-col w-40"
+                            : "inline-flex items-center gap-1.5 px-2 py-1",
+                        )}
+                        title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
+                        onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                        draggable={dragProps.draggable}
+                        onPointerEnter={dragProps.onPointerEnter}
+                        onDragStart={dragProps.onDragStart}
+                        onDragEnd={dragProps.onDragEnd}
+                      >
+                        {thumbUrl && (
+                          <div className="w-full h-16 bg-background/40 flex items-center justify-center overflow-hidden">
+                            <img src={thumbUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                          </div>
+                        )}
+                        <div className={cn(
+                          "flex items-center gap-1.5",
+                          thumbUrl && "px-2 py-1 border-t border-border/50 w-full",
+                        )}>
+                          <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className={cn(
+                            "text-xs text-foreground truncate",
+                            thumbUrl ? "flex-1 min-w-0" : "max-w-[140px]",
+                          )}>
+                            {getAttachmentDisplayName(attachment.name, attachment.type)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                            {formatFileSize(attachment.size)}
+                          </span>
+                        </div>
+                        <div className={cn(
+                          "absolute bg-background/95 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 px-1.5 rounded-md",
+                          thumbUrl ? "top-1 right-1" : "inset-y-0 right-0 rounded-l-none rounded-r-md",
+                        )}>
+                          <button
+                            className="p-1 hover:bg-accent rounded transition-colors"
+                            title={t('download')}
+                            onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentDownload(attachment); }}
+                          >
+                            <Download className="w-3.5 h-3.5 text-foreground" />
+                          </button>
+                          {opensPreview && (
+                            <button
+                              className="p-1 hover:bg-accent rounded transition-colors"
+                              title={tFiles('preview')}
+                              onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentOpen(attachment); }}
+                            >
+                              <Eye className="w-3.5 h-3.5 text-foreground" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                        )}
+                      </DraggableAttachmentChip>
+                    );
+                  })}
+                  {effectiveAttachments.length > 2 && (
+                    <button
+                      onClick={() => setShowAllBesideAttachments(!showAllBesideAttachments)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5"
                     >
-                      <Icon className={cn("w-3.5 h-3.5 flex-shrink-0", status.color)} />
-                      <span className="font-medium text-foreground">{name}</span>
-                      <span className={cn("text-[10px] uppercase tracking-wider", status.color)}>
-                        {translateAuthResult(result)}
-                      </span>
-                      {extra && (
-                        <>
-                          <span className="text-muted-foreground/50">·</span>
-                          <span className="text-muted-foreground">{extra}</span>
-                        </>
-                      )}
-                    </span>
-                  );
-                };
+                      +{effectiveAttachments.length - 2} {t('more')}
+                    </button>
+                  )}
+                  {/* Floating popup for remaining attachments */}
+                  {showAllBesideAttachments && effectiveAttachments.length > 2 && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowAllBesideAttachments(false)} />
+                      <div className="absolute top-full right-0 mt-1 z-50 bg-background border border-border rounded-lg shadow-lg p-2 flex flex-col gap-1 min-w-[220px]">
+                        {effectiveAttachments.slice(2).map((attachment) => {
+                          const FileIcon = getFileIcon(attachment.name || undefined, attachment.type);
+                          const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
+                          const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
+                          return (
+                            <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                              {(dragProps) => (
+                            <div
+                              className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
+                              title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
+                              onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllBesideAttachments(false); }}
+                              draggable={dragProps.draggable}
+                              onPointerEnter={dragProps.onPointerEnter}
+                              onDragStart={dragProps.onDragStart}
+                              onDragEnd={dragProps.onDragEnd}
+                            >
+                              <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                              <span className="text-xs text-foreground truncate max-w-[180px]">
+                                {getAttachmentDisplayName(attachment.name, attachment.type)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
+                                {formatFileSize(attachment.size)}
+                              </span>
+                              <div className="absolute inset-y-0 right-0 rounded-r-md bg-background/95 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 px-1.5">
+                                <button
+                                  className="p-1 hover:bg-accent rounded transition-colors"
+                                  title={t('download')}
+                                  onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentDownload(attachment); setShowAllBesideAttachments(false); }}
+                                >
+                                  <Download className="w-3.5 h-3.5 text-foreground" />
+                                </button>
+                                {opensPreview && (
+                                  <button
+                                    className="p-1 hover:bg-accent rounded transition-colors"
+                                    title={tFiles('preview')}
+                                    onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentOpen(attachment); setShowAllBesideAttachments(false); }}
+                                  >
+                                    <Eye className="w-3.5 h-3.5 text-foreground" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                              )}
+                            </DraggableAttachmentChip>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+      </div>
 
-                const hasIdentifiers = !!(email.messageId || email.inReplyTo?.length || email.references?.length || email.threadId);
-                const hasListInfo = !!(listHeaders?.listId || listHeaders?.listUnsubscribe || listHeaders?.listHelp || listHeaders?.listPost);
-                const hasAuthSection = !!(auth?.spf || auth?.dkim || auth?.dmarc || auth?.iprev || email.spamScore !== undefined || email.spamLLM);
+        {/* Mobile/Tablet Sender Info - scrolls with content */}
+        <div className="lg:hidden bg-background border-b border-border px-4" style={{ paddingBlock: 'var(--density-header-py)' }}>
+          <div className="flex items-start" style={{ gap: 'var(--density-item-gap)' }}>
+            <button
+              onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
+              className="cursor-pointer group flex-shrink-0"
+              title={sender?.email || undefined}
+            >
+              <Avatar
+                name={sender?.name}
+                email={sender?.email}
+                size="lg"
+                className="shadow-sm w-10 h-10 group-hover:ring-2 group-hover:ring-primary/30 transition-all"
+              />
+            </button>
+            <div className="flex-1 min-w-0">
+              {/* Row 1: Sender name + badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {sender?.email ? (
+                  <RecipientPopover
+                    name={sender?.name}
+                    email={sender.email}
+                    onViewContact={handleViewContactSidebar}
+                    className="text-sm font-semibold text-left"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-foreground">{t('unknown_sender')}</span>
+                )}
+                <EmailIdentityBadge email={email} identities={identities} />
+                {shouldShowUnsubBanner && listHeaders?.listUnsubscribe && (
+                  <UnsubscribeBanner
+                    listUnsubscribe={listHeaders.listUnsubscribe}
+                    senderEmail={email?.from?.[0]?.email || ''}
+                    onDismiss={() => {
+                      const messageId = email?.messageId || '';
+                      const newSet = new Set(dismissedUnsubBanners).add(messageId);
+                      setDismissedUnsubBanners(newSet);
+                      localStorage.setItem('dismissed-unsub-banners', JSON.stringify([...newSet]));
+                    }}
+                  />
+                )}
+              </div>
+              {/* Email address under name */}
+              {sender?.email && sender?.name && (
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">{sender.email}</div>
+              )}
+              {/* Row 2: Recipients */}
+              <div className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
+                {email.to && email.to.length > 0 && (
+                  <>
+                    <span>→ {t('recipient_to_prefix')}</span>
+                    {renderClickableRecipients(email.to, currentUserEmail, t, handleViewContactSidebar)}
+                  </>
+                )}
+                {email.cc && email.cc.length > 0 && (
+                  <>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span>CC:</span>
+                    {renderClickableRecipients(email.cc, currentUserEmail, t, handleViewContactSidebar)}
+                    {email.cc.length > 2 && (
+                      <span>+{email.cc.length - 2}</span>
+                    )}
+                  </>
+                )}
+                <button
+                  onClick={() => setShowFullHeaders(!showFullHeaders)}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors ml-1"
+                >
+                  {showFullHeaders ? (
+                    <>
+                      <ChevronUp className="w-3 h-3" />
+                      {t('hide_details')}
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3 h-3" />
+                      {t('show_details')}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+            {/* Date/time + size on the right (mobile) */}
+            <div className="sm:hidden flex-shrink-0 text-right ml-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatDateTime(email.receivedAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+              </span>
+              {email.size > 0 && (
+                <div className="text-xs text-muted-foreground/60">
+                  {formatFileSize(email.size)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-                return (
-                <div className="mt-3 pt-3 border-t border-border grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-5">
-                  <section>
+        {/* Expandable Details (shared across mobile/tablet/desktop) */}
+        {showFullHeaders && (() => {
+          const translateAuthResult = (result?: string) => {
+            const r = (result || '').toLowerCase();
+            switch (r) {
+              case 'pass': return t('authentication.result.pass');
+              case 'fail': return t('authentication.result.fail');
+              case 'softfail': return t('authentication.result.softfail');
+              case 'neutral': return t('authentication.result.neutral');
+              case 'permerror': return t('authentication.result.permerror');
+              case 'temperror': return t('authentication.result.temperror');
+              case 'none': return t('authentication.result.none');
+              default: return result || '';
+            }
+          };
+          const replyToDifferent = !!email.replyTo?.length &&
+            (!email.from || email.replyTo[0].email !== email.from[0]?.email);
+          const deliveryDeltaMs = email.sentAt && email.receivedAt
+            ? Math.abs(new Date(email.receivedAt).getTime() - new Date(email.sentAt).getTime())
+            : 0;
+          const formatDelta = (diff: number) => {
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            const dayUnit = days > 1 ? t('time.days') : t('time.day');
+            const hourUnit = (hours % 24) > 1 ? t('time.hours') : t('time.hour');
+            const minuteUnit = (minutes % 60) > 1 ? t('time.minutes') : t('time.minute');
+            const minuteUnitSingle = minutes > 1 ? t('time.minutes') : t('time.minute');
+            if (days > 0) return `${days} ${dayUnit} ${hours % 24} ${hourUnit}`;
+            if (hours > 0) return `${hours} ${hourUnit} ${minutes % 60} ${minuteUnit}`;
+            return `${minutes} ${minuteUnitSingle}`;
+          };
+          const fullDate = (iso?: string) => iso
+            ? formatDateTime(iso, timeFormat, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', second: '2-digit', timeZoneName: 'short' })
+            : '-';
+          const auth = email.authenticationResults;
+          const totalAttachmentSize = effectiveAttachments.reduce((s, a) => s + (a.size || 0), 0);
+          const topMimeType = email.bodyStructure?.type;
+          const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+            <div className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase mb-1.5">
+              {children}
+            </div>
+          );
+          const Row = ({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) => (
+            <>
+              <dt className="text-muted-foreground text-xs pt-1">{label}</dt>
+              <dd className={cn(
+                "text-sm text-foreground min-w-0 break-words",
+                mono && "font-mono text-xs",
+              )}>{children}</dd>
+            </>
+          );
+          const AuthChip = ({ name, result, extra, tooltip }: { name: string; result?: string; extra?: React.ReactNode; tooltip?: string }) => {
+            if (!result) return null;
+            const status = getSecurityStatus(result);
+            const Icon = status.icon === 'check' ? Check
+              : status.icon === 'x' ? X
+              : status.icon === 'alert' ? AlertTriangle
+              : Minus;
+            return (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs",
+                  tooltip && "cursor-help",
+                  status.icon === 'check' && "bg-green-500/[0.07] border-green-500/30",
+                  status.icon === 'x' && "bg-red-500/[0.07] border-red-500/30",
+                  status.icon === 'alert' && "bg-amber-500/[0.07] border-amber-500/30",
+                  status.icon === 'minus' && "bg-muted/40 border-border",
+                )}
+                title={tooltip}
+              >
+                <Icon className={cn("w-3.5 h-3.5 flex-shrink-0", status.color)} />
+                <span className="font-medium text-foreground">{name}</span>
+                <span className={cn("text-[10px] uppercase tracking-wider", status.color)}>
+                  {translateAuthResult(result)}
+                </span>
+                {extra && (
+                  <>
+                    <span className="text-muted-foreground/50">·</span>
+                    <span className="text-muted-foreground">{extra}</span>
+                  </>
+                )}
+              </span>
+            );
+          };
+
+          const hasIdentifiers = !!(email.messageId || email.inReplyTo?.length || email.references?.length || email.threadId);
+          const hasListInfo = !!(listHeaders?.listId || listHeaders?.listUnsubscribe || listHeaders?.listHelp || listHeaders?.listPost);
+          const hasAuthSection = !!(auth?.spf || auth?.dkim || auth?.dmarc || auth?.iprev || email.spamScore !== undefined || email.spamLLM);
+
+          return (
+            <div className="bg-background border-b border-border px-4 lg:px-6" style={{ paddingBlock: 'var(--density-header-py)' }}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-5">
+                <section className="min-w-0">
                   <SectionHeader>{t('details.recipients_routing')}</SectionHeader>
                   <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
                     <Row label={t('from')}>
@@ -4210,366 +4612,165 @@ export function EmailViewer({
                       )}
                     </Row>
                   </dl>
-                  </section>
+                </section>
 
-                  {hasAuthSection && (
-                    <section>
-                      <SectionHeader>{t('details.authentication_security')}</SectionHeader>
-                      <div className="flex flex-wrap gap-1.5">
-                        {auth?.spf && (
-                          <AuthChip name="SPF" result={auth.spf.result} extra={auth.spf.domain} tooltip={t('authentication.tooltip_spf')} />
-                        )}
-                        {auth?.dkim && (
-                          <AuthChip name="DKIM" result={auth.dkim.result} extra={auth.dkim.domain} tooltip={t('authentication.tooltip_dkim')} />
-                        )}
-                        {auth?.dmarc && (
-                          <AuthChip name="DMARC" result={auth.dmarc.result} extra={auth.dmarc.policy ? `${t('authentication.policy').toLowerCase()}: ${auth.dmarc.policy}` : undefined} tooltip={t('authentication.tooltip_dmarc')} />
-                        )}
-                        {auth?.iprev && (
-                          <AuthChip name={t('details.iprev')} result={auth.iprev.result} extra={auth.iprev.ip} />
-                        )}
-                        {email.spamScore !== undefined && (
+                {hasAuthSection && (
+                  <section className="min-w-0">
+                    <SectionHeader>{t('details.authentication_security')}</SectionHeader>
+                    <div className="flex flex-wrap gap-1.5">
+                      {auth?.spf && (
+                        <AuthChip name="SPF" result={auth.spf.result} extra={auth.spf.domain} tooltip={t('authentication.tooltip_spf')} />
+                      )}
+                      {auth?.dkim && (
+                        <AuthChip name="DKIM" result={auth.dkim.result} extra={auth.dkim.domain} tooltip={t('authentication.tooltip_dkim')} />
+                      )}
+                      {auth?.dmarc && (
+                        <AuthChip name="DMARC" result={auth.dmarc.result} extra={auth.dmarc.policy ? `${t('authentication.policy').toLowerCase()}: ${auth.dmarc.policy}` : undefined} tooltip={t('authentication.tooltip_dmarc')} />
+                      )}
+                      {auth?.iprev && (
+                        <AuthChip name={t('details.iprev')} result={auth.iprev.result} extra={auth.iprev.ip} />
+                      )}
+                      {email.spamScore !== undefined && (
+                        <span className={cn(
+                          "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs",
+                          email.spamScore > 5 ? "bg-red-500/[0.07] border-red-500/30" :
+                          email.spamScore > 2 ? "bg-amber-500/[0.07] border-amber-500/30" :
+                          "bg-green-500/[0.07] border-green-500/30",
+                        )}>
+                          <Shield className={cn(
+                            "w-3.5 h-3.5",
+                            email.spamScore > 5 ? "text-red-700 dark:text-red-400" :
+                            email.spamScore > 2 ? "text-amber-700 dark:text-amber-400" :
+                            "text-green-700 dark:text-green-400",
+                          )} />
+                          <span className="font-medium text-foreground">{t('authentication.spam_score')}</span>
                           <span className={cn(
-                            "inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs",
-                            email.spamScore > 5 ? "bg-red-500/[0.07] border-red-500/30" :
-                            email.spamScore > 2 ? "bg-amber-500/[0.07] border-amber-500/30" :
-                            "bg-green-500/[0.07] border-green-500/30",
+                            "text-[10px] uppercase tracking-wider",
+                            email.spamScore > 5 ? "text-red-700 dark:text-red-400" :
+                            email.spamScore > 2 ? "text-amber-700 dark:text-amber-400" :
+                            "text-green-700 dark:text-green-400",
                           )}>
-                            <Shield className={cn(
-                              "w-3.5 h-3.5",
-                              email.spamScore > 5 ? "text-red-700 dark:text-red-400" :
-                              email.spamScore > 2 ? "text-amber-700 dark:text-amber-400" :
-                              "text-green-700 dark:text-green-400",
-                            )} />
-                            <span className="font-medium text-foreground">{t('authentication.spam_score')}</span>
-                            <span className={cn(
-                              "text-[10px] uppercase tracking-wider",
-                              email.spamScore > 5 ? "text-red-700 dark:text-red-400" :
-                              email.spamScore > 2 ? "text-amber-700 dark:text-amber-400" :
-                              "text-green-700 dark:text-green-400",
-                            )}>
-                              {email.spamScore.toFixed(1)}
-                            </span>
-                            {email.spamStatus && (
-                              <>
-                                <span className="text-muted-foreground/50">·</span>
-                                <span className="text-muted-foreground">{email.spamStatus}</span>
-                              </>
-                            )}
+                            {email.spamScore.toFixed(1)}
                           </span>
-                        )}
-                      </div>
-                      {email.spamLLM && (
-                        <div className="mt-2 flex items-start gap-2 text-sm">
-                          {email.spamLLM.verdict === 'LEGITIMATE' ? <Brain className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-700 dark:text-green-400" /> :
-                           email.spamLLM.verdict === 'SPAM' ? <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-700 dark:text-red-400" /> :
-                           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-700 dark:text-amber-400" />}
-                          <div className="min-w-0">
-                            <span className={cn(
-                              "font-medium",
-                              email.spamLLM.verdict === 'LEGITIMATE' ? "text-green-700 dark:text-green-400" :
-                              email.spamLLM.verdict === 'SPAM' ? "text-red-700 dark:text-red-400" :
-                              "text-amber-700 dark:text-amber-400",
-                            )}>
-                              {email.spamLLM.verdict}
-                            </span>
-                            <span className="text-muted-foreground"> · {email.spamLLM.explanation}</span>
-                          </div>
+                          {email.spamStatus && (
+                            <>
+                              <span className="text-muted-foreground/50">·</span>
+                              <span className="text-muted-foreground">{email.spamStatus}</span>
+                            </>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                    {email.spamLLM && (
+                      <div className="mt-2 flex items-start gap-2 text-sm">
+                        {email.spamLLM.verdict === 'LEGITIMATE' ? <Brain className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-700 dark:text-green-400" /> :
+                         email.spamLLM.verdict === 'SPAM' ? <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-700 dark:text-red-400" /> :
+                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-700 dark:text-amber-400" />}
+                        <div className="min-w-0">
+                          <span className={cn(
+                            "font-medium",
+                            email.spamLLM.verdict === 'LEGITIMATE' ? "text-green-700 dark:text-green-400" :
+                            email.spamLLM.verdict === 'SPAM' ? "text-red-700 dark:text-red-400" :
+                            "text-amber-700 dark:text-amber-400",
+                          )}>
+                            {email.spamLLM.verdict}
+                          </span>
+                          <span className="text-muted-foreground"> · {email.spamLLM.explanation}</span>
                         </div>
-                      )}
-                    </section>
-                  )}
+                      </div>
+                    )}
+                  </section>
+                )}
 
-                  {hasIdentifiers && (
-                    <section>
-                      <SectionHeader>{t('details.identifiers_threading')}</SectionHeader>
-                      <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
-                        {email.messageId && (
-                          <Row label={t('headers.message_id')} mono>{email.messageId}</Row>
-                        )}
-                        {email.inReplyTo && email.inReplyTo.length > 0 && (
-                          <Row label={t('details.in_reply_to')} mono>
-                            <div className="space-y-0.5">
-                              {email.inReplyTo.map((id, i) => <div key={i} className="break-all">{id}</div>)}
-                            </div>
-                          </Row>
-                        )}
-                        {email.references && email.references.length > 0 && (
-                          <Row label={t('details.references')}>
-                            <details className="group">
-                              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-1">
-                                <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
-                                {t(email.references.length === 1 ? 'previous_messages' : 'previous_messages_plural', { count: email.references.length })}
-                              </summary>
-                              <div className="mt-1 space-y-0.5 font-mono text-xs">
-                                {email.references.map((id, i) => <div key={i} className="break-all">{id}</div>)}
-                              </div>
-                            </details>
-                          </Row>
-                        )}
-                        {email.threadId && (
-                          <Row label={t('details.thread_id')} mono>{email.threadId}</Row>
-                        )}
-                      </dl>
-                    </section>
-                  )}
-
-                  <section>
-                    <SectionHeader>{t('details.message_properties')}</SectionHeader>
+                {hasIdentifiers && (
+                  <section className="min-w-0">
+                    <SectionHeader>{t('details.identifiers_threading')}</SectionHeader>
                     <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
-                      {email.subject !== undefined && (
-                        <Row label={t('subject')}>{email.subject || <span className="italic text-muted-foreground">{t('details.no_subject')}</span>}</Row>
+                      {email.messageId && (
+                        <Row label={t('headers.message_id')} mono>{email.messageId}</Row>
                       )}
-                      <Row label={t('details.size')}>
-                        {formatFileSize(email.size)}
-                        {topMimeType && (
-                          <span className="text-muted-foreground"> · <span className="font-mono text-xs">{topMimeType}</span></span>
-                        )}
-                      </Row>
-                      {effectiveAttachments.length > 0 && (
-                        <Row label={t('attachments')}>
-                          {t('details.attachments_summary', {
-                            count: effectiveAttachments.length,
-                            size: formatFileSize(totalAttachmentSize),
-                          })}
+                      {email.inReplyTo && email.inReplyTo.length > 0 && (
+                        <Row label={t('details.in_reply_to')} mono>
+                          <div className="space-y-0.5">
+                            {email.inReplyTo.map((id, i) => <div key={i} className="break-all">{id}</div>)}
+                          </div>
                         </Row>
                       )}
-                      {email.accountLabel && (
-                        <Row label={t('details.account')}>{email.accountLabel}</Row>
+                      {email.references && email.references.length > 0 && (
+                        <Row label={t('details.references')}>
+                          <details className="group">
+                            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors list-none flex items-center gap-1">
+                              <ChevronDown className="w-3 h-3 group-open:rotate-180 transition-transform" />
+                              {t(email.references.length === 1 ? 'previous_messages' : 'previous_messages_plural', { count: email.references.length })}
+                            </summary>
+                            <div className="mt-1 space-y-0.5 font-mono text-xs">
+                              {email.references.map((id, i) => <div key={i} className="break-all">{id}</div>)}
+                            </div>
+                          </details>
+                        </Row>
+                      )}
+                      {email.threadId && (
+                        <Row label={t('details.thread_id')} mono>{email.threadId}</Row>
                       )}
                     </dl>
                   </section>
-
-                  {hasListInfo && (
-                    <section className="lg:col-span-2">
-                      <SectionHeader>{t('details.mailing_list')}</SectionHeader>
-                      <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
-                        {listHeaders?.listId && (
-                          <Row label={t('details.list_id')} mono>{listHeaders.listId}</Row>
-                        )}
-                        {listHeaders?.listUnsubscribe?.preferred && (
-                          <Row label={t('details.list_unsubscribe')}>
-                            <span className="break-all">
-                              {listHeaders.listUnsubscribe.preferred === 'http'
-                                ? listHeaders.listUnsubscribe.http
-                                : listHeaders.listUnsubscribe.mailto}
-                            </span>
-                          </Row>
-                        )}
-                        {listHeaders?.listHelp && (
-                          <Row label={t('details.list_help')}><span className="break-all">{listHeaders.listHelp}</span></Row>
-                        )}
-                        {listHeaders?.listPost && (
-                          <Row label={t('details.list_post')}><span className="break-all">{listHeaders.listPost}</span></Row>
-                        )}
-                      </dl>
-                    </section>
-                  )}
-                </div>
-                );
-              })()}
-
-              </div>
-              {/* Attachments on the right (beside-sender mode) */}
-              {attachmentPosition === 'beside-sender' && effectiveAttachments.length > 0 && (
-                <div className="relative flex flex-col items-end justify-start gap-1 flex-shrink-0 max-w-[50%]">
-                  {effectiveAttachments.slice(0, 2).map((attachment) => {
-                    const FileIcon = getFileIcon(attachment.name || undefined, attachment.type);
-                    const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
-                    const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
-                    const thumbUrl = imageThumbUrls[attachment.id];
-                    return (
-                      <div
-                        key={attachment.id}
-                        className={cn(
-                          "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer overflow-hidden",
-                          thumbUrl
-                            ? "inline-flex flex-col w-40"
-                            : "inline-flex items-center gap-1.5 px-2 py-1",
-                        )}
-                        title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
-                        onClick={() => handleEffectiveAttachmentOpen(attachment)}
-                      >
-                        {thumbUrl && (
-                          <div className="w-full h-16 bg-background/40 flex items-center justify-center overflow-hidden">
-                            <img src={thumbUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                        )}
-                        <div className={cn(
-                          "flex items-center gap-1.5",
-                          thumbUrl && "px-2 py-1 border-t border-border/50 w-full",
-                        )}>
-                          <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className={cn(
-                            "text-xs text-foreground truncate",
-                            thumbUrl ? "flex-1 min-w-0" : "max-w-[140px]",
-                          )}>
-                            {getAttachmentDisplayName(attachment.name, attachment.type)}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                            {formatFileSize(attachment.size)}
-                          </span>
-                        </div>
-                        <div className={cn(
-                          "absolute bg-background/95 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 px-1.5 rounded-md",
-                          thumbUrl ? "top-1 right-1" : "inset-y-0 right-0 rounded-l-none rounded-r-md",
-                        )}>
-                          <button
-                            className="p-1 hover:bg-accent rounded transition-colors"
-                            title={t('download')}
-                            onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentDownload(attachment); }}
-                          >
-                            <Download className="w-3.5 h-3.5 text-foreground" />
-                          </button>
-                          {opensPreview && (
-                            <button
-                              className="p-1 hover:bg-accent rounded transition-colors"
-                              title={tFiles('preview')}
-                              onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentOpen(attachment); }}
-                            >
-                              <Eye className="w-3.5 h-3.5 text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {effectiveAttachments.length > 2 && (
-                    <button
-                      onClick={() => setShowAllBesideAttachments(!showAllBesideAttachments)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5"
-                    >
-                      +{effectiveAttachments.length - 2} {t('more')}
-                    </button>
-                  )}
-                  {/* Floating popup for remaining attachments */}
-                  {showAllBesideAttachments && effectiveAttachments.length > 2 && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowAllBesideAttachments(false)} />
-                      <div className="absolute top-full right-0 mt-1 z-50 bg-background border border-border rounded-lg shadow-lg p-2 flex flex-col gap-1 min-w-[220px]">
-                        {effectiveAttachments.slice(2).map((attachment) => {
-                          const FileIcon = getFileIcon(attachment.name || undefined, attachment.type);
-                          const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
-                          const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
-                          return (
-                            <div
-                              key={attachment.id}
-                              className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
-                              title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
-                              onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllBesideAttachments(false); }}
-                            >
-                              <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              <span className="text-xs text-foreground truncate max-w-[180px]">
-                                {getAttachmentDisplayName(attachment.name, attachment.type)}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">
-                                {formatFileSize(attachment.size)}
-                              </span>
-                              <div className="absolute inset-y-0 right-0 rounded-r-md bg-background/95 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 px-1.5">
-                                <button
-                                  className="p-1 hover:bg-accent rounded transition-colors"
-                                  title={t('download')}
-                                  onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentDownload(attachment); setShowAllBesideAttachments(false); }}
-                                >
-                                  <Download className="w-3.5 h-3.5 text-foreground" />
-                                </button>
-                                {opensPreview && (
-                                  <button
-                                    className="p-1 hover:bg-accent rounded transition-colors"
-                                    title={tFiles('preview')}
-                                    onClick={(e) => { e.stopPropagation(); handleEffectiveAttachmentOpen(attachment); setShowAllBesideAttachments(false); }}
-                                  >
-                                    <Eye className="w-3.5 h-3.5 text-foreground" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-      </div>
-
-        {/* Mobile/Tablet Sender Info - scrolls with content */}
-        <div className="lg:hidden bg-background border-b border-border px-4" style={{ paddingBlock: 'var(--density-header-py)' }}>
-          <div className="flex items-start" style={{ gap: 'var(--density-item-gap)' }}>
-            <button
-              onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
-              className="cursor-pointer group flex-shrink-0"
-              title={sender?.email || undefined}
-            >
-              <Avatar
-                name={sender?.name}
-                email={sender?.email}
-                size="lg"
-                className="shadow-sm w-10 h-10 group-hover:ring-2 group-hover:ring-primary/30 transition-all"
-              />
-            </button>
-            <div className="flex-1 min-w-0">
-              {/* Row 1: Sender name + badges */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
-                  className="text-sm font-semibold text-foreground hover:text-primary hover:underline transition-colors cursor-pointer text-left"
-                >
-                  {sender?.name || sender?.email || t('unknown_sender')}
-                </button>
-                <EmailIdentityBadge email={email} identities={identities} />
-                {shouldShowUnsubBanner && listHeaders?.listUnsubscribe && (
-                  <UnsubscribeBanner
-                    listUnsubscribe={listHeaders.listUnsubscribe}
-                    senderEmail={email?.from?.[0]?.email || ''}
-                    onDismiss={() => {
-                      const messageId = email?.messageId || '';
-                      const newSet = new Set(dismissedUnsubBanners).add(messageId);
-                      setDismissedUnsubBanners(newSet);
-                      localStorage.setItem('dismissed-unsub-banners', JSON.stringify([...newSet]));
-                    }}
-                  />
                 )}
-              </div>
-              {/* Email address under name */}
-              {sender?.email && sender?.name && (
-                <div className="text-xs text-muted-foreground mt-0.5 truncate">{sender.email}</div>
-              )}
-              {/* Row 2: Recipients */}
-              <div className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
-                {email.to && email.to.length > 0 && (
-                  <>
-                    <span>→ {t('recipient_to_prefix')}</span>
-                    {renderClickableRecipients(email.to, currentUserEmail, t, handleViewContactSidebar)}
-                  </>
-                )}
-                {email.cc && email.cc.length > 0 && (
-                  <>
-                    <span className="text-muted-foreground/50">|</span>
-                    <span>CC:</span>
-                    {renderClickableRecipients(email.cc, currentUserEmail, t, handleViewContactSidebar)}
-                    {email.cc.length > 2 && (
-                      <span>+{email.cc.length - 2}</span>
+
+                <section className="min-w-0">
+                  <SectionHeader>{t('details.message_properties')}</SectionHeader>
+                  <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
+                    {email.subject !== undefined && (
+                      <Row label={t('subject')}>{email.subject || <span className="italic text-muted-foreground">{t('details.no_subject')}</span>}</Row>
                     )}
-                  </>
+                    <Row label={t('details.size')}>
+                      {formatFileSize(email.size)}
+                      {topMimeType && (
+                        <span className="text-muted-foreground"> · <span className="font-mono text-xs">{topMimeType}</span></span>
+                      )}
+                    </Row>
+                    {effectiveAttachments.length > 0 && (
+                      <Row label={t('attachments')}>
+                        {t('details.attachments_summary', {
+                          count: effectiveAttachments.length,
+                          size: formatFileSize(totalAttachmentSize),
+                        })}
+                      </Row>
+                    )}
+                    {email.accountLabel && (
+                      <Row label={t('details.account')}>{email.accountLabel}</Row>
+                    )}
+                  </dl>
+                </section>
+
+                {hasListInfo && (
+                  <section className="lg:col-span-2 min-w-0">
+                    <SectionHeader>{t('details.mailing_list')}</SectionHeader>
+                    <dl className="grid grid-cols-[7rem_1fr] gap-x-4 gap-y-1.5">
+                      {listHeaders?.listId && (
+                        <Row label={t('details.list_id')} mono>{listHeaders.listId}</Row>
+                      )}
+                      {listHeaders?.listUnsubscribe?.preferred && (
+                        <Row label={t('details.list_unsubscribe')}>
+                          <span className="break-all">
+                            {listHeaders.listUnsubscribe.preferred === 'http'
+                              ? listHeaders.listUnsubscribe.http
+                              : listHeaders.listUnsubscribe.mailto}
+                          </span>
+                        </Row>
+                      )}
+                      {listHeaders?.listHelp && (
+                        <Row label={t('details.list_help')}><span className="break-all">{listHeaders.listHelp}</span></Row>
+                      )}
+                      {listHeaders?.listPost && (
+                        <Row label={t('details.list_post')}><span className="break-all">{listHeaders.listPost}</span></Row>
+                      )}
+                    </dl>
+                  </section>
                 )}
               </div>
             </div>
-            {/* Date/time + size on the right (mobile) */}
-            <div className="sm:hidden flex-shrink-0 text-right ml-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {formatDateTime(email.receivedAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-              </span>
-              {email.size > 0 && (
-                <div className="text-xs text-muted-foreground/60">
-                  {formatFileSize(email.size)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* S/MIME Status Banner */}
         {smimeStatus && (
@@ -4771,8 +4972,9 @@ export function EmailViewer({
               const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
               const thumbUrl = imageThumbUrls[attachment.id];
               return (
+                <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                  {(dragProps) => (
                 <div
-                  key={attachment.id}
                   className={cn(
                     "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer flex-shrink-0 overflow-hidden",
                     thumbUrl
@@ -4781,6 +4983,10 @@ export function EmailViewer({
                   )}
                   title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                   onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                  draggable={dragProps.draggable}
+                  onPointerEnter={dragProps.onPointerEnter}
+                  onDragStart={dragProps.onDragStart}
+                  onDragEnd={dragProps.onDragEnd}
                 >
                   {thumbUrl && (
                     <div className="w-full h-20 bg-background/40 flex items-center justify-center overflow-hidden">
@@ -4829,6 +5035,8 @@ export function EmailViewer({
                     )}
                   </div>
                 </div>
+                  )}
+                </DraggableAttachmentChip>
               );
             })}
             {visibleBelowHeaderCount !== null && effectiveAttachments.length > visibleBelowHeaderCount && (
@@ -4849,11 +5057,16 @@ export function EmailViewer({
                     const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                     const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                     return (
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                        {(dragProps) => (
                       <div
-                        key={attachment.id}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
                         title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                         onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllBelowHeaderAttachments(false); }}
+                        draggable={dragProps.draggable}
+                        onPointerEnter={dragProps.onPointerEnter}
+                        onDragStart={dragProps.onDragStart}
+                        onDragEnd={dragProps.onDragEnd}
                       >
                         <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <span className="text-sm text-foreground truncate max-w-[220px]">
@@ -4881,6 +5094,8 @@ export function EmailViewer({
                           )}
                         </div>
                       </div>
+                        )}
+                      </DraggableAttachmentChip>
                     );
                   })}
                 </div>
@@ -4900,8 +5115,9 @@ export function EmailViewer({
                 const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                 const thumbUrl = imageThumbUrls[attachment.id];
                 return (
+                  <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                    {(dragProps) => (
                   <div
-                    key={attachment.id}
                     className={cn(
                       "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer overflow-hidden",
                       thumbUrl
@@ -4910,6 +5126,10 @@ export function EmailViewer({
                     )}
                     title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                     onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                    draggable={dragProps.draggable}
+                    onPointerEnter={dragProps.onPointerEnter}
+                    onDragStart={dragProps.onDragStart}
+                    onDragEnd={dragProps.onDragEnd}
                   >
                     {thumbUrl && (
                       <div className="w-full h-20 bg-background/40 flex items-center justify-center overflow-hidden">
@@ -4953,6 +5173,8 @@ export function EmailViewer({
                       )}
                     </div>
                   </div>
+                    )}
+                  </DraggableAttachmentChip>
                 );
               })}
               {effectiveAttachments.length > 2 && (
@@ -4972,11 +5194,16 @@ export function EmailViewer({
                       const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                       const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                       return (
+                        <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                          {(dragProps) => (
                         <div
-                          key={attachment.id}
                           className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
                           title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                           onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllMobileAttachments(false); }}
+                          draggable={dragProps.draggable}
+                          onPointerEnter={dragProps.onPointerEnter}
+                          onDragStart={dragProps.onDragStart}
+                          onDragEnd={dragProps.onDragEnd}
                         >
                           <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                           <span className="text-xs text-foreground truncate max-w-[180px]">
@@ -5004,6 +5231,8 @@ export function EmailViewer({
                             )}
                           </div>
                         </div>
+                          )}
+                        </DraggableAttachmentChip>
                       );
                     })}
                   </div>
@@ -5013,13 +5242,14 @@ export function EmailViewer({
           </div>
         )}
 
-        <div>
+        <div className="grow shrink-0 flex flex-col">
 
           {/* Email Body */}
           <div className={cn(
             "email-content-wrapper overflow-x-auto",
             !isDark && resolvedTheme === 'dark' ? "bg-white email-content-light" : "bg-background"
-          )}>
+          )}
+          style={isDark ? { backgroundColor: '#121212' } : undefined}>
             {isBodyLoading ? (
               <div
                 className="space-y-3 px-6 py-4 animate-pulse"
@@ -5037,14 +5267,15 @@ export function EmailViewer({
                 srcDoc={emailIframeSrcDoc}
                 sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                 title="Email content"
-                className="w-full border-0"
+                className="w-full border-0 block"
+                scrolling="no"
                 style={{ minHeight: '100px', colorScheme: isDark && emailHasNativeDarkMode ? 'light dark' : 'light' }}
                 onLoad={handleIframeLoad}
               />
             ) : (
               <div
                 className="email-content-text text-foreground"
-                dangerouslySetInnerHTML={{ __html: effectiveEmailContent.html }}
+                dangerouslySetInnerHTML={{ __html: sanitizePlainTextRenderedHtml(effectiveEmailContent.html) }}
                 style={{
                   fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace',
                   fontSize: '14px',
@@ -5059,7 +5290,7 @@ export function EmailViewer({
           <PluginSlot name="email-footer" />
 
           {/* Quick Reply Section - hidden for drafts and while loading a new email */}
-          {!isDraft && !isScheduled && !isBodyLoading && (effectiveEmailContent.isHtml ? iframeReady : true) && (<div className="bg-background border-t border-border px-6" style={{ paddingBlock: 'var(--density-header-py)' }}>
+          {!isDraft && !isScheduled && !isBodyLoading && (effectiveEmailContent.isHtml ? iframeReady : true) && (<div className="bg-background border-t border-border px-6 mt-auto" style={{ paddingBlock: 'var(--density-header-py)' }}>
             <div className="flex items-start" style={{ gap: 'var(--density-item-gap)' }}>
               <div className="flex-shrink-0">
                 <Avatar
@@ -5154,6 +5385,7 @@ export function EmailViewer({
           </div>)}
         </div>
       </div>
+      </div>
 
       {/* Email Source Modal */}
       {showSourceModal && email && (
@@ -5205,7 +5437,7 @@ export function EmailViewer({
 
     {/* Mobile bottom action bar */}
     {isMobile && (
-      <nav className="fixed bottom-0 left-0 right-0 z-[50] bg-background border-t border-border sm:hidden overflow-hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border sm:hidden overflow-hidden pb-[calc(env(safe-area-inset-bottom)/2)]">
         <div className="flex items-center overflow-x-auto mobile-scroll-hidden">
           <button
             onClick={onNavigatePrev}

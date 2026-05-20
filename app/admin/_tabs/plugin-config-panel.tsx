@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Puzzle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { apiFetch } from '@/lib/browser-navigation';
+import { usePluginSlotOffers } from '@/hooks/use-plugin-slot-offers';
+import { PluginIframeSlot } from '@/components/plugins/plugin-iframe-slot';
 
 interface ConfigField {
   type: 'string' | 'secret' | 'boolean' | 'number' | 'select';
@@ -286,6 +288,27 @@ export function PluginConfigPanel({ pluginId, onBack }: Props) {
           <p className="text-sm text-muted-foreground">This plugin does not declare any configuration settings.</p>
         </div>
       )}
+
+      <PluginAdminSection pluginId={pluginId} />
+    </div>
+  );
+}
+
+/**
+ * Renders the plugin's own `admin-plugin-page` slot, if the plugin offers
+ * one. Sandboxed plugins ship a React component under `slots['admin-plugin-page']`
+ * and the host gives it a dedicated iframe inside the admin panel.
+ */
+function PluginAdminSection({ pluginId }: { pluginId: string }) {
+  const offers = usePluginSlotOffers('admin-plugin-page');
+  const offer = offers.find((o) => o.pluginId === pluginId);
+  if (!offer) return null;
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Plugin admin panel
+      </div>
+      <PluginIframeSlot pluginId={pluginId} slot="admin-plugin-page" />
     </div>
   );
 }

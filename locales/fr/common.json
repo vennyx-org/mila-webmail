@@ -135,6 +135,40 @@
     "shared": "Partagé",
     "scheduled": "Planifiés"
   },
+  "protocol_handlers": {
+    "title": "Applications par défaut",
+    "description": "Choisissez si les liens d'e-mail et de calendrier s'ouvrent dans Bulwark. Techniquement, Bulwark s'enregistre comme gestionnaire de protocole pour les liens mailto: et webcal:.",
+    "unsupported": "Ce navigateur ou cette connexion ne prend pas en charge l'enregistrement manuel des gestionnaires de protocole. Vous pourrez peut-être quand même utiliser la PWA installée via les paramètres du navigateur ou du système.",
+    "mailto_label": "Liens e-mail",
+    "mailto_description": "Ouvre les liens mailto: dans Bulwark avec un éditeur prérempli.",
+    "protocol_open_mode_label": "À l’ouverture des liens de protocole",
+    "protocol_open_mode_description": "Choisissez si Bulwark ouvre les liens mailto: et webcal: dans un nouvel onglet ou réutilise une session ouverte. L’option de session active nécessite l’autorisation des notifications afin que vous puissiez cliquer sur une notification de secours pour ramener Bulwark au premier plan si le navigateur bloque le focus.",
+    "protocol_open_mode_active_session": "Ouvrir dans la session active si possible",
+    "protocol_open_mode_new_tab": "Toujours ouvrir un nouvel onglet",
+    "focus_notification_title": "Ouvrir Bulwark",
+    "focus_notification_body": "Le lien a été ouvert dans Bulwark. Cliquez pour ramener la fenêtre au premier plan.",
+    "webcal_label": "Liens de calendrier",
+    "webcal_description": "Ouvre les liens webcal: dans Bulwark avec une boîte de dialogue d'abonnement au calendrier préremplie.",
+    "register_mailto": "Enregistrer l'application e-mail",
+    "register_webcal": "Enregistrer l'application de calendrier",
+    "mailto_registered": "Enregistrement du gestionnaire d'e-mail demandé",
+    "webcal_registered": "Enregistrement du gestionnaire de calendrier demandé",
+    "registration_failed": "Échec de l'enregistrement du gestionnaire de protocole",
+    "opening_mailto": "Ouverture de l'éditeur...",
+    "opening_webcal": "Ouverture du calendrier...",
+    "browser_note": "Votre navigateur ou système d'exploitation peut vous demander de confirmer et peut exiger que Bulwark soit installé avant de pouvoir le sélectionner comme application par défaut.",
+    "select_account_title": "Choisir un compte",
+    "select_mailto_account": "Choisissez le compte qui doit ouvrir ce lien e-mail.",
+    "select_webcal_account": "Choisissez le compte qui doit ouvrir ce lien de calendrier.",
+    "select_account_note": "Cette sélection s'applique uniquement à ce lien de protocole.",
+    "detail_to": "À",
+    "detail_subject": "Objet",
+    "detail_no_subject": "Sans objet",
+    "detail_calendar": "Calendrier",
+    "detail_source": "Source",
+    "active_account": "Actif",
+    "switching_account": "Changement de compte..."
+  },
   "sidebar_apps": {
     "modal_title": "Applications de la barre latérale",
     "add_new": "Ajouter une application",
@@ -225,6 +259,8 @@
     "compose": "Rédiger",
     "compose_hint": "Rédiger un nouveau message",
     "no_subject": "(Sans objet)",
+    "no_body_content": "(Aucun contenu disponible)",
+    "no_preview_available": "Aucun aperçu disponible",
     "loading_email": "Chargement de l'email...",
     "loading": "Chargement...",
     "reply": "Répondre",
@@ -548,6 +584,15 @@
       "to": "À : {recipients}"
     },
     "remove_sub_address": "Retirer le sous-adressage",
+    "from_override": {
+      "toggle_off": "Remplacer",
+      "toggle_on": "Annuler le remplacement",
+      "toggle_tooltip": "Modifiez librement le nom et l'adresse d'expéditeur. Le courrier est toujours envoyé via votre identité - seul l'en-tête De visible change.",
+      "name_label": "Nom de l'expéditeur",
+      "name_placeholder": "Nom",
+      "email_label": "Adresse e-mail de l'expéditeur",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Modèle",
     "save_as_template": "Enregistrer comme modèle",
     "validation": {
@@ -756,6 +801,7 @@
       "encryption": "Chiffrement",
       "files": "Fichiers",
       "contacts": "Contacts",
+      "protocol_handlers": "Applications par défaut",
       "sidebar_apps": "Apps de la barre latérale",
       "notifications": "Notifications",
       "layout": "Mise en page",
@@ -973,7 +1019,9 @@
         "split": "Volet divisé",
         "split_description": "Garder la liste des messages et le volet de lecture visibles côte à côte.",
         "focus": "Liste focalisée",
-        "focus_description": "Afficher une ligne par message et ouvrir le courrier en pleine largeur tout en gardant la barre latérale des dossiers visible."
+        "focus_description": "Afficher une ligne par message et ouvrir le courrier en pleine largeur tout en gardant la barre latérale des dossiers visible.",
+        "horizontal": "Volet de lecture en bas",
+        "horizontal_description": "Afficher la liste des messages en haut et ouvrir le message sélectionné dans un volet de lecture en dessous."
       },
       "disable_threading": {
         "label": "Désactiver le regroupement par conversation",
@@ -986,6 +1034,16 @@
       "auto_select_reply_identity": {
         "label": "Sélection automatique de l'adresse de réponse",
         "description": "Lors d'une réponse, bascule automatiquement l'adresse d'expédition vers l'identité qui a reçu le message d'origine"
+      },
+      "signature_position": {
+        "label": "Position de la signature",
+        "description": "Où insérer votre signature dans les réponses et les transferts. Au-dessus du texte cité, elle se lit naturellement comme la conclusion de la réponse ; en dessous, elle garde le message d'origine contigu.",
+        "above_quote": "Avant le texte cité",
+        "below_quote": "Après le texte cité"
+      },
+      "signature_separator": {
+        "label": "Délimiteur de signature",
+        "description": "Préfixer la signature par la ligne de délimitation standard \"-- \" (RFC 3676). Désactivez si vous préférez enchaîner directement du message à la signature."
       },
       "sub_address_delimiter": {
         "label": "Délimiteur de sous-adresse",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nouveau sous-dossier...",
     "new_folder": "Nouveau dossier...",
     "rename": "Renommer...",
+    "import_email": "Importer un .eml...",
     "empty_folder": "Vider le dossier",
     "empty_folder_generic": "Vider le dossier",
     "delete_folder": "Supprimer le dossier",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archive@email.com",
       "text_signature_label": "Signature texte",
       "html_signature_label": "Signature HTML",
+      "signature_byte_counter": "{bytes} / {max} octets",
+      "signature_byte_limit_reached": "Limite du serveur atteinte",
       "save": "Enregistrer l'identité",
       "cancel": "Annuler",
       "creating": "Création...",
@@ -2466,6 +2527,15 @@
       "file_too_large": "Le fichier dépasse la limite de 10 Mo",
       "invalid_format": "Format de fichier calendrier invalide"
     },
+    "webcal_action": {
+      "title": "Ouvrir le lien de calendrier",
+      "description": "Comment souhaitez-vous utiliser \"{name}\" ?",
+      "import_title": "Importer une fois",
+      "import_description": "Récupérer les événements maintenant et les copier dans l'un de vos calendriers.",
+      "subscribe_title": "S'abonner",
+      "subscribe_description": "Synchroniser automatiquement ce calendrier comme calendrier séparé.",
+      "cancel": "Annuler"
+    },
     "management": {
       "title": "Gestion des calendriers",
       "description": "Créez, renommez et personnalisez vos calendriers. Clic droit sur un calendrier dans la barre latérale pour changer rapidement sa couleur.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Visite d'introduction",
     "restart_desc": "Rejouer la visite guidée de l'interface",
     "restart_button": "Relancer la visite",
+    "show_on_new_devices_title": "Afficher sur les nouveaux appareils",
+    "show_on_new_devices_desc": "Rejouer la bannière d'accueil et la visite lors de votre première connexion sur un nouvel appareil, même si vous les avez déjà terminées ailleurs",
     "sidebar_title": "Vos boîtes mail",
     "sidebar_desc": "Voici votre barre latérale de dossiers. Cliquez sur une boîte pour voir ses emails. Vous pouvez créer des dossiers, glisser des emails entre eux et voir les compteurs de non lus.",
     "compose_title": "Rédiger un email",

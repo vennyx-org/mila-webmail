@@ -182,7 +182,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center overflow-auto p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="flex-1 flex items-center justify-center overflow-auto p-4">
         {loading && (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="w-8 h-8 animate-spin" />
@@ -194,13 +194,19 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
         )}
 
         {!loading && !error && (fileType === "text") && content !== null && (
-          <pre className="bg-background rounded-lg p-6 max-w-4xl w-full max-h-full overflow-auto text-sm font-mono whitespace-pre-wrap break-words">
+          <pre
+            className="bg-background rounded-lg p-6 max-w-4xl w-full max-h-full overflow-auto text-sm font-mono whitespace-pre-wrap break-words"
+            onClick={(e) => e.stopPropagation()}
+          >
             {content}
           </pre>
         )}
 
         {!loading && !error && fileType === "markdown" && content !== null && (
-          <div className="bg-background rounded-lg p-6 max-w-4xl w-full max-h-full overflow-auto text-sm">
+          <div
+            className="bg-background rounded-lg p-6 max-w-4xl w-full max-h-full overflow-auto text-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
             <SimpleMarkdown content={content} />
           </div>
         )}
@@ -211,6 +217,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
             alt={name}
             className="max-w-full max-h-full object-contain rounded-lg bg-background"
             draggable={false}
+            onClick={(e) => e.stopPropagation()}
           />
         )}
 
@@ -220,6 +227,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
             sandbox=""
             className="w-full max-w-5xl h-full rounded-lg bg-white"
             title={name}
+            onClick={(e) => e.stopPropagation()}
           />
         )}
 
@@ -229,6 +237,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
             type="application/pdf"
             className="w-full max-w-5xl h-full rounded-lg bg-white"
             aria-label={name}
+            onClick={(e) => e.stopPropagation()}
           >
             <Button onClick={() => void onDownload()}>
               <Download className="w-4 h-4 mr-2" />
@@ -238,14 +247,19 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
         )}
 
         {!loading && !error && fileType === "audio" && objectUrl && (
-          <div className="bg-background rounded-lg p-8 max-w-lg w-full">
+          <div className="bg-background rounded-lg p-8 max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-medium mb-4 text-center">{name}</p>
             <audio controls className="w-full" src={objectUrl} />
           </div>
         )}
 
         {!loading && !error && fileType === "video" && objectUrl && (
-          <video controls className="max-w-4xl max-h-full rounded-lg" src={objectUrl} />
+          <video
+            controls
+            className="max-w-4xl max-h-full rounded-lg"
+            src={objectUrl}
+            onClick={(e) => e.stopPropagation()}
+          />
         )}
       </div>
     </div>

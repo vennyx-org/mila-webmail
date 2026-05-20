@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { configManager } from "@/lib/admin/config-manager";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,8 +17,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export async function generateMetadata(): Promise<Metadata> {
-  const faviconUrl = process.env.FAVICON_URL;
+  await configManager.ensureLoaded();
+  const faviconUrl = configManager.get<string>("faviconUrl", "/branding/Bulwark_Favicon.svg");
 
   return {
     title: process.env.APP_NAME || process.env.NEXT_PUBLIC_APP_NAME || "Webmail",
@@ -30,7 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
     formatDetection: {
       telephone: false,
     },
-    ...(faviconUrl ? { icons: { icon: faviconUrl } } : {}),
+    icons: { icon: faviconUrl },
   };
 }
 

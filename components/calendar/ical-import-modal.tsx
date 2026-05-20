@@ -17,6 +17,7 @@ interface ICalImportModalProps {
   calendars: Calendar[];
   client: IJMAPClient;
   onClose: () => void;
+  initialUrl?: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -25,7 +26,7 @@ const ACCEPTED_EXTENSIONS = [".ics", ".ical"];
 type ImportStep = "select" | "preview" | "importing";
 type ImportMode = "file" | "url";
 
-export function ICalImportModal({ calendars, client, onClose }: ICalImportModalProps) {
+export function ICalImportModal({ calendars, client, onClose, initialUrl }: ICalImportModalProps) {
   const t = useTranslations("calendar.import");
   const tCal = useTranslations("calendar");
   const tCommon = useTranslations("common");
@@ -43,8 +44,8 @@ export function ICalImportModal({ calendars, client, onClose }: ICalImportModalP
   const [isParsing, setIsParsing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [importMode, setImportMode] = useState<ImportMode>("file");
-  const [urlInput, setUrlInput] = useState("");
+  const [importMode, setImportMode] = useState<ImportMode>(initialUrl ? "url" : "file");
+  const [urlInput, setUrlInput] = useState(initialUrl || "");
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);

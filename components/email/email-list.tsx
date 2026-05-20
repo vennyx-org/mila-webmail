@@ -24,6 +24,7 @@ interface EmailListProps {
   emails: Email[];
   selectedEmailId?: string;
   onEmailSelect?: (email: Email) => void;
+  onEmailDoubleClick?: (email: Email) => void;
   className?: string;
   isLoading?: boolean;
   onOpenConversation?: (thread: ThreadGroup) => void;
@@ -50,6 +51,7 @@ export function EmailList({
   emails,
   selectedEmailId,
   onEmailSelect,
+  onEmailDoubleClick,
   className,
   isLoading = false,
   onOpenConversation,
@@ -121,7 +123,7 @@ export function EmailList({
 
   const estimateSize = useCallback(() => {
     if (isFocusedMailLayout) {
-      return { 'extra-compact': 32, compact: 40, regular: 46, comfortable: 54 }[density];
+      return { 'extra-compact': 28, compact: 40, regular: 56, comfortable: 64 }[density];
     }
     const base = { 'extra-compact': 32, compact: 60, regular: 84, comfortable: 104 }[density];
     return (showPreview && density !== 'extra-compact') ? base + 36 : base;
@@ -494,6 +496,7 @@ export function EmailList({
                       expandedEmails={threadEmailsCache.get(thread.threadId)}
                       onToggleExpand={() => handleToggleThreadExpansion(thread.threadId)}
                       onEmailSelect={(email) => onEmailSelect?.(email)}
+                      onEmailDoubleClick={onEmailDoubleClick ? (email) => onEmailDoubleClick(email) : undefined}
                       onContextMenu={openContextMenu}
                       onOpenConversation={onOpenConversation}
                       onToggleStar={onToggleStar ? (email) => onToggleStar(email) : undefined}

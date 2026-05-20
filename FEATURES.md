@@ -2,19 +2,23 @@
 
 ## Mail
 
-- Read, compose, reply, reply-all, and forward with a Tiptap rich text editor (inline images, drag-and-drop embedding)
+- Read, compose, reply, reply-all, and forward with a Tiptap rich text editor (inline images, drag-and-drop embedding, tables)
 - Gmail-style threading with inline expansion and an optional conversation toggle
 - Unified mailbox view across all connected accounts
-- Draft auto-save with identity preservation
-- Attachment upload, download, and inline preview; forgotten-attachment warning
+- Three selectable mail layouts: split (three-pane), focused list, and reading pane at bottom
+- Draft auto-save with identity preservation, persisted HTML body, and proper `In-Reply-To` / `References` headers on replies
+- Attachment upload, download, drag-out to local file system, and inline preview; image thumbnails and forgotten-attachment warning
 - Full-text search with JMAP filter panel, search chips, wildcards, OR conditions, and cross-mailbox queries
 - Batch operations – multi-select, archive, delete, move, tag
 - Archive modes – direct, by year, or by month
 - Multi-tag support with color labels, reordering, and drag-and-drop assignment
 - Star/unstar with configurable mark-as-read delay
-- Virtual scrolling for large mailboxes
+- Virtual scrolling for large mailboxes plus prefetching of initial email data on login
 - Quick reply, hover actions, sender avatars (favicon-based), and recipient popovers
 - Plain-text composer mode and Reply-To support
+- Configurable signature position (above or below quoted text) per identity
+- From-header override in the composer with optional catch-all auto-reply: replies to an alias on a domain you own auto-fill the alias as the sender even when it isn't a configured identity
+- `.eml` file import via folder right-click menu
 - TNEF (`winmail.dat`) extraction and `message/rfc822` unwrapping
 - Folder management with icon picker, subfolders, and sidebar counts
 - Print directly from the viewer
@@ -79,7 +83,7 @@
 
 ## Interface
 
-- Three-pane layout with resizable columns
+- Selectable mail layouts (split three-pane, focused list, reading pane at bottom) with resizable columns
 - Dark and light themes with intelligent email color transformation
 - Responsive desktop, tablet, and mobile layouts
 - Full keyboard navigation
@@ -94,31 +98,38 @@
 
 ## Internationalization
 
-15 languages: English · Français · 日本語 · Español · Italiano · Deutsch · Nederlands · Português · Русский · Türkçe · 한국어 · Polski · Latviešu · 简体中文 · Українська
+17 languages: Česky · Dansk · Deutsch · English · Español · Français · Italiano · Latviešu · Nederlands · Polski · Português · Türkçe · Русский · Українська · 한국어 · 日本語 · 简体中文
 
 Automatic browser detection with persistent preference. Configurable locale URL prefix via `NEXT_PUBLIC_LOCALE_PREFIX`.
 
 ## Identity & Multi-Account
 
-- Up to 5 simultaneous accounts with instant switching and per-account session persistence
+- Multiple simultaneous accounts with instant switching and per-account session persistence; the 5-account cap is lifted on HTTP/2 servers (limited by browser connection pooling on HTTP/1.1)
 - Account switcher with connection status and default account selection
 - Multiple sender identities with per-identity signatures, automatic sync, and badges in viewer/list
-- Sub-addressing (`user+tag@domain.com`) with contextual tag suggestions
+- Configurable signature position (above or below quoted text)
+- Sub-addressing (`user+tag@domain.com`) with configurable delimiter and contextual tag suggestions
 - Shared folders across accounts
+- Multiple JMAP servers per deployment with optional auto-pick by email domain
 - Optional custom JMAP endpoints on the login form (`ALLOW_CUSTOM_JMAP_ENDPOINT`)
 
 ## Admin & Extensibility
 
-- Stalwart admin dashboard with dedicated policy sections
-- Plugin system – schema-driven config UI, render and intercept hooks, `onAvatarResolve` and i18n APIs, calendar event slots, and managed policy enforcement
+- Web setup wizard for first launch – guides through JMAP server(s), OAuth/OIDC, session secret, logging, branding (with file upload), and admin password; persists to the admin config dir, no `.env.local` editing required
+- Stalwart admin dashboard with dedicated policy sections, collapsed into a single tabbed page
+- Split admin storage: `ADMIN_CONFIG_DIR` (operator-authored, mountable read-only after setup) and `ADMIN_STATE_DIR` (runtime audit log and login timestamps)
+- Plugin system – schema-driven config UI, render and intercept hooks, `onAvatarResolve`, `onBeforeEmailSend`, composer-sidebar and email-banner slots, calendar event slots, i18n APIs, and managed policy enforcement
+- Plugin hot-reload and dev-folder loading, on-demand `src/` bundling via esbuild, and `http:fetch` permission with `httpOrigins`
 - Themes – upload, enforce, and manage admin-controlled themes as ZIP bundles
-- Extension marketplace – browse and install plugins and themes from a configurable directory (`EXTENSION_DIRECTORY_URL`)
+- Extension marketplace – browse and install plugins and themes from a configurable directory (`EXTENSION_DIRECTORY_URL`); install/uninstall restricted to the admin dashboard
 - Bundled plugins including Jitsi Meet calendar integration
 
 ## Operations
 
-- Progressive Web App with service worker, install prompt, and dynamic manifest
-- Automatic update check with server-side logging of new releases
+- Progressive Web App with service worker, install prompt, web push notifications for inbox mail, and dynamic manifest
+- Automatic update check with server-side logging of new releases and a non-dismissible update notice
 - Structured logging (`text` or `json`) with category-based levels
+- Anonymous instance telemetry (opt-out via admin UI or `BULWARK_TELEMETRY=off`) – version, platform, bucketed account counts, feature toggles only
 - Release (`main`) and development (`dev`) Docker images on GHCR
+- Subpath deployment via `NEXT_PUBLIC_BASE_PATH` for mounting behind a reverse proxy
 - Demo mode with fixture data – no mail server required

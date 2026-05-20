@@ -6,9 +6,10 @@ import { Check, Plus, LogOut, Star, ChevronDown, AlertCircle } from "lucide-reac
 import { useTranslations } from "next-intl";
 import { useAccountStore, type AccountEntry } from "@/stores/account-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { getInitials, getMaxAccounts } from "@/lib/account-utils";
+import { getMaxAccounts } from "@/lib/account-utils";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/i18n/navigation";
+import { Avatar } from "@/components/ui/avatar";
 
 interface AccountSwitcherProps {
   /** "rail" = small avatar only (NavigationRail), "expanded" = avatar + name + email (Sidebar) */
@@ -17,17 +18,15 @@ interface AccountSwitcherProps {
 }
 
 function AccountAvatar({ account, size = "sm" }: { account: AccountEntry; size?: "sm" | "md" }) {
-  const initials = getInitials(account.displayName || account.label, account.email || account.username);
-  const sizeClasses = size === "sm" ? "w-8 h-8 text-xs" : "w-9 h-9 text-sm";
-
   return (
-    <div
-      className={cn("rounded-full flex items-center justify-center text-white font-medium flex-shrink-0", sizeClasses)}
-      style={{ backgroundColor: account.avatarColor }}
-      title={account.label}
-    >
-      {initials}
-    </div>
+    <Avatar
+      name={account.displayName || account.label}
+      email={account.email || account.username}
+      size="sm"
+      className={cn("flex-shrink-0", size === "md" && "w-9 h-9 text-sm")}
+      disableFavicon
+      fallbackColor={account.avatarColor}
+    />
   );
 }
 
@@ -49,7 +48,6 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
   const switchAccount = useAuthStore((s) => s.switchAccount);
   const logout = useAuthStore((s) => s.logout);
   const logoutAll = useAuthStore((s) => s.logoutAll);
-  const primaryIdentity = useAuthStore((s) => s.primaryIdentity);
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -115,9 +113,11 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
     setDefaultAccount(accountId);
   };
 
-  // Display name for the active account
-  const displayName = primaryIdentity?.name || activeAccount?.displayName || activeAccount?.label || "";
-  const displayEmail = primaryIdentity?.email || activeAccount?.email || activeAccount?.username || "";
+  // Show the account's own identity, not the preferred sending identity -
+  // primaryIdentity can be an alias (e.g. info@korazo.net) that differs from
+  // the actually logged-in account (info@linusrath.de).
+  const displayName = activeAccount?.displayName || activeAccount?.label || "";
+  const displayEmail = activeAccount?.email || activeAccount?.username || "";
 
   return (
     <>

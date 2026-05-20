@@ -8,6 +8,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Strip embedded Basic-auth credentials from a URL for display.
+ * `https://user:pass@host/path` → `https://host/path`. Falls back to
+ * regex stripping if URL parsing fails.
+ */
+export function redactUrlCredentials(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.username || parsed.password) {
+      parsed.username = '';
+      parsed.password = '';
+      return parsed.toString();
+    }
+    return rawUrl;
+  } catch {
+    return rawUrl.replace(/^([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)[^/@\s]+@/, '$1');
+  }
+}
+
 export function generateUUID(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -76,6 +95,21 @@ export function formatDateTime(
   }
 
   return d.toLocaleString(undefined, localeOptions);
+}
+
+// Marketing emails pad the preheader with whitespace, format chars (soft
+// hyphens, zero-width chars, BOM, directional marks) and combining marks
+// (e.g. U+034F) to push real content past the preview window. Strip them all.
+// \p{Cf} = Format, \p{Mn} = combining marks; \s covers figure space, NBSP, etc.
+const LEADING_INVISIBLE_RE = /^[\s\p{Cf}\p{Mn}]+/u;
+// After stripping, a server-side truncation indicator like "..." may be all
+// that's left. Treat that as no preview so callers can fall back.
+const ONLY_PUNCTUATION_RE = /^[.\u2026\s]+$/;
+
+export function stripInvisibleLeading(text: string): string {
+  const stripped = text.replace(LEADING_INVISIBLE_RE, '');
+  if (ONLY_PUNCTUATION_RE.test(stripped)) return '';
+  return stripped;
 }
 
 export function truncateText(text: string, maxLength: number): string {

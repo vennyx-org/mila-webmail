@@ -48,7 +48,96 @@ function grammaticalGenderToVcardSex(gender: string): string {
 }
 
 function unfoldLines(vcf: string): string {
-  return vcf.replace(/\r\n[ \t]/g, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  // Normalize line endings first, then unfold continuation lines (RFC 6350 §3.2).
+  // Continuation lines start with a single SPACE or TAB; we must handle both
+  // CRLF (RFC-canonical) and LF-only files (common from Unix exporters).
+  return vcf
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n[ \t]/g, "");
+}
+
+// RFC 6868 parameter value encoding — used inside parameter values only.
+// Caret-encoded sequences: ^n → LF, ^^ → ^, ^' → DQUOTE.
+function decodeParamValue(s: string): string {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "^" && i + 1 < s.length) {
+      const next = s[i + 1];
+      if (next === "n") { out += "\n"; i++; continue; }
+      if (next === "^") { out += "^"; i++; continue; }
+      if (next === "'") { out += '"'; i++; continue; }
+    }
+    out += s[i];
+  }
+  return out;
+}
+
+// Split on delim, respecting DQUOTE-quoted spans (RFC 6350 §3.3 / §5).
+function splitRespectingQuotes(s: string, delim: string): string[] {
+  const out: string[] = [];
+  let buf = "";
+  let inQuote = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '"') {
+      inQuote = !inQuote;
+      buf += ch;
+      continue;
+    }
+    if (ch === delim && !inQuote) {
+      out.push(buf);
+      buf = "";
+      continue;
+    }
+    buf += ch;
+  }
+  out.push(buf);
+  return out;
+}
+
+// Find the first ":" outside of a DQUOTE-quoted parameter value.
+// Returns -1 when none. Needed because property params may carry quoted
+// values that contain colons (e.g. ADR;LABEL="Suite 100:..." or X- params).
+function findValueColon(line: string): number {
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (ch === ":" && !inQuote) return i;
+  }
+  return -1;
+}
+
+// vCard properties may carry a group prefix: "item1.EMAIL:foo@bar".
+// Strip the prefix and return the bare property name + params component.
+function stripGroupPrefix(keyPart: string): string {
+  const dot = keyPart.indexOf(".");
+  if (dot < 0) return keyPart;
+  const before = keyPart.substring(0, dot);
+  // Only treat as group if the segment before the dot has no ";" (which would
+  // indicate it's actually a param boundary) and matches the RFC 6350 group
+  // grammar (ALPHA / DIGIT / "-").
+  if (before.includes(";")) return keyPart;
+  if (!/^[A-Za-z0-9-]+$/.test(before)) return keyPart;
+  return keyPart.substring(dot + 1);
+}
+
+// Strip URI scheme prefix from a value (e.g. "tel:+1-555" → "+1-555").
+function stripUriScheme(val: string, scheme: string): string {
+  const prefix = `${scheme}:`;
+  if (val.toLowerCase().startsWith(prefix)) return val.substring(prefix.length);
+  return val;
+}
+
+function parsePrefParam(params: Record<string, string>): number | undefined {
+  if (params.PREF) {
+    const n = parseInt(params.PREF, 10);
+    if (!Number.isNaN(n)) return n;
+  }
+  // vCard 3.0 style: TYPE=PREF (no numeric value)
+  if (params.TYPE && /\bPREF\b/i.test(params.TYPE)) return 1;
+  return undefined;
 }
 
 // vCard 2.1 quoted-printable soft line breaks: a line ending in `=` continues
@@ -117,11 +206,18 @@ function encodeValue(val: string): string {
 function parseParams(paramStr: string): Record<string, string> {
   const params: Record<string, string> = {};
   if (!paramStr) return params;
-  const parts = paramStr.split(";");
+  const parts = splitRespectingQuotes(paramStr, ";");
   for (const part of parts) {
+    if (!part) continue;
     const eq = part.indexOf("=");
     if (eq > 0) {
-      params[part.substring(0, eq).toUpperCase()] = part.substring(eq + 1).replace(/"/g, "");
+      const name = part.substring(0, eq).toUpperCase();
+      // Strip surrounding quotes then RFC 6868 caret-decode.
+      // Strip surrounding DQUOTE if present (RFC 6350 §3.3). Pre-decode there
+      // are no literal LFs in a parameter value (those arrive as "^n" via
+      // RFC 6868), so we don't need the dotAll flag.
+      const rawVal = part.substring(eq + 1).replace(/^"(.*)"$/, "$1");
+      params[name] = decodeParamValue(rawVal);
     } else {
       const upper = part.toUpperCase();
       if (upper === "QUOTED-PRINTABLE" || upper === "BASE64") {
@@ -190,9 +286,9 @@ export function parseVCard(vcfString: string): ContactCard[] {
     }
 
     if (current) {
-      const colonIdx = trimmed.indexOf(":");
+      const colonIdx = findValueColon(trimmed);
       if (colonIdx < 1) continue;
-      const keyPart = trimmed.substring(0, colonIdx);
+      const keyPart = stripGroupPrefix(trimmed.substring(0, colonIdx));
       const value = trimmed.substring(colonIdx + 1);
       if (!current[keyPart]) current[keyPart] = [];
       current[keyPart].push(value);
@@ -205,12 +301,18 @@ export function parseVCard(vcfString: string): ContactCard[] {
 function buildContact(raw: Record<string, string[]>): ContactCard | null {
   const id = `import-${generateUUID()}`;
   const card: ContactCard = { id, addressBookIds: {} };
+  // Deferred BIRTHPLACE/DEATHPLACE values — attach to anniversary at end,
+  // because the BDAY/DEATHDATE entry may appear in any order.
+  let birthPlace: string | undefined;
+  let deathPlace: string | undefined;
 
   for (const [fullKey, values] of Object.entries(raw)) {
-    const semiIdx = fullKey.indexOf(";");
-    const propName = (semiIdx > 0 ? fullKey.substring(0, semiIdx) : fullKey).toUpperCase();
-    const paramStr = semiIdx > 0 ? fullKey.substring(semiIdx + 1) : "";
+    // splitRespectingQuotes so a quoted param value containing ";" survives.
+    const segments = splitRespectingQuotes(fullKey, ";");
+    const propName = (segments.shift() || "").toUpperCase();
+    const paramStr = segments.join(";");
     const params = parseParams(paramStr);
+    const pref = parsePrefParam(params);
 
     const isQuotedPrintable = params.ENCODING?.toUpperCase() === "QUOTED-PRINTABLE";
 
@@ -257,8 +359,10 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           if (!card.emails) card.emails = {};
           const idx = Object.keys(card.emails).length;
           card.emails[`e${idx}`] = {
-            address: val,
+            address: stripUriScheme(val, "mailto"),
             contexts: typeToContext(params.TYPE),
+            label: params["X-ABLABEL"] || undefined,
+            pref,
           };
           break;
         }
@@ -267,9 +371,13 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           if (!card.phones) card.phones = {};
           const idx = Object.keys(card.phones).length;
           card.phones[`p${idx}`] = {
-            number: val,
+            // vCard 4.0 TEL is a URI value (RFC 6350 §6.4.1); strip the
+            // "tel:" scheme for storage as a bare number.
+            number: stripUriScheme(val, "tel"),
             contexts: typeToContext(params.TYPE),
             features: typeToPhoneFeatures(params.TYPE),
+            label: params["X-ABLABEL"] || undefined,
+            pref,
           };
           break;
         }
@@ -295,7 +403,15 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
             region: adrParts[4] || undefined,
             postcode: adrParts[5] || undefined,
             country: adrParts[6] || undefined,
+            // vCard 4.0 (RFC 9554 §3.2): CC param carries ISO country code,
+            // and LABEL/GEO/TZ params attach directly to the ADR.
+            countryCode: params.CC || undefined,
+            fullAddress: params.LABEL || undefined,
+            coordinates: params.GEO ? stripUriScheme(params.GEO, "geo") : undefined,
+            timeZone: params.TZ || undefined,
             contexts: typeToContext(params.TYPE),
+            label: params["X-ABLABEL"] || undefined,
+            pref,
           };
           break;
         }
@@ -318,8 +434,10 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           break;
 
         case "KIND": {
+          // RFC 6350 §6.1.4 plus RFC 6473 (application).
           const k = val.toLowerCase();
-          if (k === "group" || k === "individual" || k === "org") {
+          if (k === "group" || k === "individual" || k === "org" ||
+              k === "location" || k === "device" || k === "application") {
             card.kind = k;
           }
           break;
@@ -336,7 +454,8 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           if (!card.media) card.media = {};
           const idx = Object.keys(card.media).length;
           const encoding = params.ENCODING?.toUpperCase();
-          const mediaType = params.TYPE || params.MEDIATYPE || "";
+          // vCard 4.0 uses MEDIATYPE; 3.0 reuses TYPE for the image kind.
+          const mediaType = params.MEDIATYPE || (params.TYPE && params.TYPE.includes("/") ? params.TYPE : (params.TYPE && /^(JPEG|JPG|PNG|GIF|WEBP|HEIC|BMP|SVG)$/i.test(params.TYPE) ? params.TYPE : "")) || "";
           if (encoding === "B" || encoding === "BASE64") {
             // Inline base64 photo - construct a data URI
             const mime = mediaType.includes("/") ? mediaType : mediaType ? `image/${mediaType.toLowerCase()}` : "image/jpeg";
@@ -346,7 +465,7 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
               mediaType: mime,
             };
           } else if (val.startsWith("data:") || val.startsWith("http://") || val.startsWith("https://")) {
-            // URI value (data URI or URL)
+            // vCard 4.0 URI value (data URI or URL) — no ENCODING param.
             card.media[`m${idx}`] = {
               kind: "photo",
               uri: val,
@@ -376,28 +495,36 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           card.onlineServices[`u${idx}`] = {
             uri: val,
             contexts: typeToContext(params.TYPE),
-            label: params.TYPE?.toLowerCase() === "home" || params.TYPE?.toLowerCase() === "work" ? undefined : params.TYPE,
+            label: params["X-ABLABEL"] ||
+              (params.TYPE?.toLowerCase() === "home" || params.TYPE?.toLowerCase() === "work" ? undefined : params.TYPE),
+            pref,
           };
           break;
         }
 
         case "IMPP":
-        case "X-SOCIALPROFILE": {
+        case "X-SOCIALPROFILE":
+        case "SOCIALPROFILE": {
+          // RFC 9554 §3.7 introduces SOCIALPROFILE; treat the same as IMPP/X-SOCIALPROFILE.
           if (!card.onlineServices) card.onlineServices = {};
           const idx = Object.keys(card.onlineServices).length;
           const svc: ContactOnlineService = {
             uri: val,
             contexts: typeToContext(params.TYPE),
+            pref,
           };
           if (params["X-SERVICE-TYPE"]) {
             svc.service = params["X-SERVICE-TYPE"];
-          } else if (propName === "X-SOCIALPROFILE" && params.TYPE) {
+          } else if (params.SERVICE) {
+            svc.service = params.SERVICE;
+          } else if ((propName === "X-SOCIALPROFILE" || propName === "SOCIALPROFILE") && params.TYPE) {
             const typeVal = params.TYPE.toLowerCase();
             if (typeVal !== "work" && typeVal !== "home") {
               svc.service = params.TYPE;
             }
           }
           if (params["X-USER"]) svc.user = params["X-USER"];
+          if (params["X-ABLABEL"]) svc.label = params["X-ABLABEL"];
           card.onlineServices[`u${idx}`] = svc;
           break;
         }
@@ -405,6 +532,14 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
         case "BDAY": {
           if (!card.anniversaries) card.anniversaries = {};
           card.anniversaries.a0 = { kind: "birth", date: val };
+          break;
+        }
+
+        case "BIRTHPLACE": {
+          // RFC 6474 §2.1. Stash the location and attach to the birth
+          // anniversary at the end of buildContact, since BDAY may appear
+          // either before or after BIRTHPLACE in the vCard.
+          birthPlace = val;
           break;
         }
 
@@ -424,6 +559,12 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           break;
         }
 
+        case "DEATHPLACE": {
+          // RFC 6474 §2.2.
+          deathPlace = val;
+          break;
+        }
+
         case "CATEGORIES": {
           if (!card.keywords) card.keywords = {};
           const cats = val.split(",").map(c => c.trim()).filter(Boolean);
@@ -438,6 +579,7 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           const idx = Object.keys(card.cryptoKeys).length;
           card.cryptoKeys[`k${idx}`] = {
             uri: val,
+            mediaType: params.MEDIATYPE || (params.TYPE && params.TYPE.includes("/") ? params.TYPE : undefined),
             contexts: typeToContext(params.TYPE),
           };
           break;
@@ -445,9 +587,15 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
 
         case "RELATED": {
           if (!card.relatedTo) card.relatedTo = {};
-          const relType = params.TYPE?.toLowerCase();
+          // RFC 6350 §6.6.6: TYPE may be a comma-separated list (or
+          // multi-valued via repeated params); convert to relation map.
           const relation: Record<string, boolean> = {};
-          if (relType) relation[relType] = true;
+          if (params.TYPE) {
+            for (const t of params.TYPE.split(",")) {
+              const norm = t.trim().toLowerCase();
+              if (norm) relation[norm] = true;
+            }
+          }
           card.relatedTo[val] = { relation: Object.keys(relation).length > 0 ? relation : undefined };
           break;
         }
@@ -458,6 +606,7 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           card.preferredLanguages[`l${idx}`] = {
             language: val,
             contexts: typeToContext(params.TYPE),
+            pref,
           };
           break;
         }
@@ -494,16 +643,22 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
         }
 
         case "GENDER": {
+          // vCard 4.0 §6.2.7: sex-component[;identity-component]. We map the
+          // sex letter to JSContact's grammaticalGender and stuff the free-
+          // form identity into pronouns (a coarse approximation; RFC 9554's
+          // PRONOUNS / GRAMGENDER, handled below, are preferred when present).
           const gParts = val.split(";");
           const sexCode = gParts[0]?.toUpperCase();
           const identityText = gParts[1];
           if (sexCode || identityText) {
-            card.speakToAs = {};
+            if (!card.speakToAs) card.speakToAs = {};
             if (sexCode) {
               card.speakToAs.grammaticalGender = vcardSexToGrammaticalGender(sexCode);
             }
             if (identityText) {
-              card.speakToAs.pronouns = { p0: { pronouns: identityText } };
+              if (!card.speakToAs.pronouns) card.speakToAs.pronouns = {};
+              const pkey = `p${Object.keys(card.speakToAs.pronouns).length}`;
+              card.speakToAs.pronouns[pkey] = { pronouns: identityText };
             }
           }
           break;
@@ -513,7 +668,9 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           if (!card.media) card.media = {};
           const idx = Object.keys(card.media).length;
           const encoding = params.ENCODING?.toUpperCase();
-          const mediaType = params.TYPE || params.MEDIATYPE || "";
+          // Prefer MEDIATYPE (vCard 4.0); fall back to TYPE only when it's a
+          // MIME type or a known image format token (vCard 3.0 idiom).
+          const mediaType = params.MEDIATYPE || (params.TYPE && (params.TYPE.includes("/") || /^(JPEG|JPG|PNG|GIF|WEBP|SVG)$/i.test(params.TYPE)) ? params.TYPE : "");
           if (encoding === "B" || encoding === "BASE64") {
             const mime = mediaType.includes("/") ? mediaType : mediaType ? `image/${mediaType.toLowerCase()}` : "image/png";
             card.media[`m${idx}`] = {
@@ -535,7 +692,7 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
           if (!card.media) card.media = {};
           const idx = Object.keys(card.media).length;
           const encoding = params.ENCODING?.toUpperCase();
-          const mediaType = params.TYPE || params.MEDIATYPE || "";
+          const mediaType = params.MEDIATYPE || (params.TYPE && (params.TYPE.includes("/") || /^(OGG|MP3|WAV|AAC|FLAC)$/i.test(params.TYPE)) ? params.TYPE : "");
           if (encoding === "B" || encoding === "BASE64") {
             const mime = mediaType.includes("/") ? mediaType : mediaType ? `audio/${mediaType.toLowerCase()}` : "audio/ogg";
             card.media[`m${idx}`] = {
@@ -581,7 +738,107 @@ function buildContact(raw: Record<string, string[]>): ContactCard | null {
         case "SOURCE":
           card.source = val;
           break;
+
+        // ---- RFC 6715 (EXPERTISE / HOBBY / INTEREST / ORG-DIRECTORY) ----
+        case "EXPERTISE":
+        case "HOBBY":
+        case "INTEREST": {
+          if (!card.personalInfo) card.personalInfo = {};
+          const idx = Object.keys(card.personalInfo).length;
+          const kind = propName.toLowerCase() as "expertise" | "hobby" | "interest";
+          const rawLevel = params.LEVEL?.toLowerCase();
+          // RFC 6715 levels: expertise uses beginner/average/expert; hobby/
+          // interest use high/medium/low. Normalize all into JSContact's
+          // high/medium/low triplet.
+          const levelMap: Record<string, "high" | "medium" | "low"> = {
+            beginner: "low", average: "medium", expert: "high",
+            low: "low", medium: "medium", high: "high",
+          };
+          const level = rawLevel ? levelMap[rawLevel] : undefined;
+          card.personalInfo[`i${idx}`] = { kind, value: val, level };
+          break;
+        }
+
+        case "ORG-DIRECTORY": {
+          // RFC 6715 §2.4 — directory URI for the contact's organization.
+          if (!card.directories) card.directories = {};
+          const idx = Object.keys(card.directories).length;
+          card.directories[`d${idx}`] = {
+            uri: val,
+            kind: "directory",
+            mediaType: params.MEDIATYPE || undefined,
+          };
+          break;
+        }
+
+        // ---- RFC 8605 (CONTACT-URI) ----
+        case "CONTACT-URI": {
+          if (!card.links) card.links = {};
+          const idx = Object.keys(card.links).length;
+          card.links[`l${idx}`] = {
+            uri: val,
+            kind: "contact",
+            pref,
+          };
+          break;
+        }
+
+        // ---- RFC 9554 vCard 4.0 extensions ----
+        case "CREATED":
+          card.created = val;
+          break;
+
+        case "GRAMGENDER": {
+          // RFC 9554 §3.4 — grammatical gender (animate/common/feminine/masculine/neuter).
+          if (!card.speakToAs) card.speakToAs = {};
+          card.speakToAs.grammaticalGender = val.toLowerCase();
+          break;
+        }
+
+        case "PRONOUNS": {
+          // RFC 9554 §3.5 — free-form pronouns. May appear multiple times.
+          if (!card.speakToAs) card.speakToAs = {};
+          if (!card.speakToAs.pronouns) card.speakToAs.pronouns = {};
+          const pkey = `p${Object.keys(card.speakToAs.pronouns).length}`;
+          card.speakToAs.pronouns[pkey] = {
+            pronouns: val,
+            pref,
+            contexts: typeToContext(params.TYPE),
+          };
+          break;
+        }
+
+        // Silently swallow purely structural / sync metadata properties so
+        // they don't appear in any catch-all default.
+        case "VERSION":
+        case "XML":
+        case "CLIENTPIDMAP":
+        case "X-ABLABEL":
+          break;
       }
+    }
+  }
+
+  // Attach BIRTHPLACE/DEATHPLACE to the matching anniversary, creating an
+  // anniversary entry if no BDAY/DEATHDATE was present.
+  if (birthPlace || deathPlace) {
+    if (!card.anniversaries) card.anniversaries = {};
+    if (birthPlace) {
+      let birth = Object.values(card.anniversaries).find(a => a.kind === "birth");
+      if (!birth) {
+        card.anniversaries.a0 = { kind: "birth", date: "" };
+        birth = card.anniversaries.a0;
+      }
+      birth.place = { fullAddress: birthPlace };
+    }
+    if (deathPlace) {
+      let death = Object.values(card.anniversaries).find(a => a.kind === "death");
+      if (!death) {
+        const key = `a${Object.keys(card.anniversaries).length}`;
+        card.anniversaries[key] = { kind: "death", date: "" };
+        death = card.anniversaries[key];
+      }
+      death.place = { fullAddress: deathPlace };
     }
   }
 
@@ -640,8 +897,11 @@ function generateSingleVCard(contact: ContactCard): string {
   if (contact.emails) {
     for (const email of Object.values(contact.emails)) {
       const type = contextToType(email.contexts);
-      const typeParam = type ? `;TYPE=${type}` : "";
-      lines.push(`EMAIL${typeParam}:${email.address}`);
+      const params: string[] = [];
+      if (type) params.push(`TYPE=${type}`);
+      if (email.pref) params.push(`PREF=${email.pref}`);
+      const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+      lines.push(`EMAIL${paramStr}:${email.address}`);
     }
   }
 
@@ -655,8 +915,11 @@ function generateSingleVCard(contact: ContactCard): string {
           if (phone.features[feat]) typeParts.push(feat.toUpperCase());
         }
       }
-      const typeParam = typeParts.length > 0 ? `;TYPE=${typeParts.join(",")}` : "";
-      lines.push(`TEL${typeParam}:${phone.number}`);
+      const params: string[] = [];
+      if (typeParts.length > 0) params.push(`TYPE=${typeParts.join(",")}`);
+      if (phone.pref) params.push(`PREF=${phone.pref}`);
+      const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+      lines.push(`TEL${paramStr}:${phone.number}`);
     }
   }
 
@@ -681,7 +944,11 @@ function generateSingleVCard(contact: ContactCard): string {
   if (contact.addresses) {
     for (const addr of Object.values(contact.addresses)) {
       const type = contextToType(addr.contexts);
-      const typeParam = type ? `;TYPE=${type}` : "";
+      const adrParams: string[] = [];
+      if (type) adrParams.push(`TYPE=${type}`);
+      if (addr.countryCode) adrParams.push(`CC=${addr.countryCode}`);
+      if (addr.pref) adrParams.push(`PREF=${addr.pref}`);
+      const paramStr = adrParams.length > 0 ? `;${adrParams.join(";")}` : "";
       let street = addr.street || "";
       let locality = addr.locality || "";
       let region = addr.region || "";
@@ -707,7 +974,7 @@ function generateSingleVCard(contact: ContactCard): string {
         postcode,
         country,
       ];
-      lines.push(`ADR${typeParam}:${parts.map(encodeValue).join(";")}`);
+      lines.push(`ADR${paramStr}:${parts.map(encodeValue).join(";")}`);
     }
   }
 
@@ -715,11 +982,17 @@ function generateSingleVCard(contact: ContactCard): string {
     for (const ann of Object.values(contact.anniversaries)) {
       const dateStr = anniversaryDateToVcardString(ann.date);
       if (ann.kind === "birth") {
-        lines.push(`BDAY:${dateStr}`);
+        if (dateStr) lines.push(`BDAY:${dateStr}`);
+        if (ann.place?.fullAddress) {
+          lines.push(`BIRTHPLACE:${encodeValue(ann.place.fullAddress)}`);
+        }
       } else if (ann.kind === "wedding") {
-        lines.push(`ANNIVERSARY:${dateStr}`);
+        if (dateStr) lines.push(`ANNIVERSARY:${dateStr}`);
       } else if (ann.kind === "death") {
-        lines.push(`DEATHDATE:${dateStr}`);
+        if (dateStr) lines.push(`DEATHDATE:${dateStr}`);
+        if (ann.place?.fullAddress) {
+          lines.push(`DEATHPLACE:${encodeValue(ann.place.fullAddress)}`);
+        }
       }
     }
   }
@@ -732,13 +1005,17 @@ function generateSingleVCard(contact: ContactCard): string {
         if (svc.service) params.push(`X-SERVICE-TYPE=${svc.service}`);
         const ctxType = contextToType(svc.contexts);
         if (ctxType) params.push(`TYPE=${ctxType}`);
+        if (svc.pref) params.push(`PREF=${svc.pref}`);
         const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
         lines.push(`IMPP${paramStr}:${svc.uri}`);
       } else {
         // Output as URL for plain web links
         const type = contextToType(svc.contexts);
-        const typeParam = type ? `;TYPE=${type}` : "";
-        lines.push(`URL${typeParam}:${svc.uri}`);
+        const params: string[] = [];
+        if (type) params.push(`TYPE=${type}`);
+        if (svc.pref) params.push(`PREF=${svc.pref}`);
+        const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+        lines.push(`URL${paramStr}:${svc.uri}`);
       }
     }
   }
@@ -753,8 +1030,11 @@ function generateSingleVCard(contact: ContactCard): string {
   if (contact.preferredLanguages) {
     for (const lang of Object.values(contact.preferredLanguages)) {
       const type = contextToType(lang.contexts);
-      const typeParam = type ? `;TYPE=${type}` : "";
-      lines.push(`LANG${typeParam}:${lang.language}`);
+      const params: string[] = [];
+      if (type) params.push(`TYPE=${type}`);
+      if (lang.pref) params.push(`PREF=${lang.pref}`);
+      const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+      lines.push(`LANG${paramStr}:${lang.language}`);
     }
   }
 
@@ -769,8 +1049,50 @@ function generateSingleVCard(contact: ContactCard): string {
   if (contact.cryptoKeys) {
     for (const key of Object.values(contact.cryptoKeys)) {
       const type = contextToType(key.contexts);
-      const typeParam = type ? `;TYPE=${type}` : "";
-      lines.push(`KEY${typeParam}:${key.uri}`);
+      const params: string[] = [];
+      if (type) params.push(`TYPE=${type}`);
+      if (key.mediaType) params.push(`MEDIATYPE=${key.mediaType}`);
+      const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+      lines.push(`KEY${paramStr}:${key.uri}`);
+    }
+  }
+
+  if (contact.personalInfo) {
+    // RFC 6715 — emit EXPERTISE / HOBBY / INTEREST with LEVEL.
+    const levelOut: Record<string, Record<string, string>> = {
+      expertise: { high: "expert", medium: "average", low: "beginner" },
+      hobby: { high: "high", medium: "medium", low: "low" },
+      interest: { high: "high", medium: "medium", low: "low" },
+    };
+    for (const info of Object.values(contact.personalInfo)) {
+      const propMap: Record<string, string> = {
+        expertise: "EXPERTISE", hobby: "HOBBY", interest: "INTEREST",
+      };
+      const prop = propMap[info.kind];
+      if (!prop) continue;
+      const levelParam = info.level && levelOut[info.kind]?.[info.level]
+        ? `;LEVEL=${levelOut[info.kind][info.level]}` : "";
+      lines.push(`${prop}${levelParam}:${encodeValue(info.value)}`);
+    }
+  }
+
+  if (contact.directories) {
+    for (const dir of Object.values(contact.directories)) {
+      const mt = dir.mediaType ? `;MEDIATYPE=${dir.mediaType}` : "";
+      lines.push(`ORG-DIRECTORY${mt}:${dir.uri}`);
+    }
+  }
+
+  if (contact.links) {
+    // RFC 8605 CONTACT-URI for kind=contact; everything else falls back to URL.
+    for (const link of Object.values(contact.links)) {
+      const params: string[] = [];
+      const type = contextToType(link.contexts);
+      if (type) params.push(`TYPE=${type}`);
+      if (link.pref) params.push(`PREF=${link.pref}`);
+      const paramStr = params.length > 0 ? `;${params.join(";")}` : "";
+      const prop = link.kind === "contact" ? "CONTACT-URI" : "URL";
+      lines.push(`${prop}${paramStr}:${link.uri}`);
     }
   }
 
@@ -842,6 +1164,11 @@ function generateSingleVCard(contact: ContactCard): string {
 
   if (contact.source) {
     lines.push(`SOURCE:${contact.source}`);
+  }
+
+  if (contact.created) {
+    // RFC 9554 §3.1 — CREATED is a timestamp; emit as-is for round-trip.
+    lines.push(`CREATED:${contact.created}`);
   }
 
   lines.push("END:VCARD");

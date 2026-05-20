@@ -481,6 +481,258 @@ describe("round-trip: parse → generate → parse", () => {
   });
 });
 
+describe("vCard 4.0 parsing (issue #289)", () => {
+  it("strips group prefix from property names (item1.EMAIL)", () => {
+    // Evolution / Apple Contacts emit grouped properties so an X-ABLABEL line
+    // can attach a label. We must still parse the EMAIL itself.
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Ada Lovelace",
+      "item1.EMAIL:ada@example.com",
+      "item1.X-ABLABEL:Personal",
+      "item2.TEL:tel:+1-555-0100",
+      "item2.X-ABLABEL:Mobile",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result).toHaveLength(1);
+    const card = result[0];
+    expect(card.emails?.e0?.address).toBe("ada@example.com");
+    expect(card.phones?.p0?.number).toBe("+1-555-0100");
+  });
+
+  it("strips tel:/mailto: URI scheme from TEL/EMAIL values", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Alan Turing",
+      "EMAIL:mailto:alan@example.com",
+      "TEL;VALUE=uri:tel:+44-20-1234-5678",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result[0].emails?.e0?.address).toBe("alan@example.com");
+    expect(result[0].phones?.p0?.number).toBe("+44-20-1234-5678");
+  });
+
+  it("maps PREF=n parameter to pref field", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Grace Hopper",
+      "EMAIL;PREF=1:grace@home.example",
+      "EMAIL;PREF=2:grace@work.example",
+      "TEL;PREF=1:+1-555-9999",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result[0].emails?.e0?.pref).toBe(1);
+    expect(result[0].emails?.e1?.pref).toBe(2);
+    expect(result[0].phones?.p0?.pref).toBe(1);
+  });
+
+  it("decodes RFC 6868 caret-encoded parameter values", () => {
+    // ^n → LF, ^^ → ^, ^' → DQUOTE
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Test",
+      'ADR;LABEL="Line 1^nLine 2";TYPE=HOME:;;Sub St;Town;;;US',
+      "EMAIL:t@example.com",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result[0].addresses?.a0?.fullAddress).toBe("Line 1\nLine 2");
+    expect(result[0].addresses?.a0?.contexts).toEqual({ private: true });
+  });
+
+  it("survives quoted parameter values containing semicolons", () => {
+    // Without quote-aware param splitting, the ; inside LABEL would shred
+    // the param list and the ADR would lose its TYPE.
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Lev",
+      'ADR;LABEL="Building A; Suite 12";TYPE=WORK:;;1 Plaza;NYC;NY;10001;US',
+      "EMAIL:lev@example.com",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result[0].addresses?.a0?.fullAddress).toBe("Building A; Suite 12");
+    expect(result[0].addresses?.a0?.contexts).toEqual({ work: true });
+    expect(result[0].addresses?.a0?.locality).toBe("NYC");
+  });
+
+  it("parses BIRTHPLACE and DEATHPLACE (RFC 6474)", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Marie Curie",
+      "BDAY:18671107",
+      "BIRTHPLACE:Warsaw\\, Poland",
+      "DEATHDATE:19340704",
+      "DEATHPLACE:Passy\\, France",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    const annivs = Object.values(result[0].anniversaries || {});
+    const birth = annivs.find((a) => a.kind === "birth");
+    const death = annivs.find((a) => a.kind === "death");
+    expect(birth?.place?.fullAddress).toBe("Warsaw, Poland");
+    expect(death?.place?.fullAddress).toBe("Passy, France");
+  });
+
+  it("parses EXPERTISE / HOBBY / INTEREST with LEVEL (RFC 6715)", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Polymath",
+      "EXPERTISE;LEVEL=expert:cryptography",
+      "EXPERTISE;LEVEL=beginner:welding",
+      "HOBBY;LEVEL=high:gardening",
+      "INTEREST;LEVEL=medium:opera",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    const info = Object.values(result[0].personalInfo || {});
+    expect(info).toEqual(expect.arrayContaining([
+      { kind: "expertise", value: "cryptography", level: "high" },
+      { kind: "expertise", value: "welding", level: "low" },
+      { kind: "hobby", value: "gardening", level: "high" },
+      { kind: "interest", value: "opera", level: "medium" },
+    ]));
+  });
+
+  it("parses ORG-DIRECTORY (RFC 6715) and CONTACT-URI (RFC 8605)", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Corp Person",
+      "ORG-DIRECTORY:https://example.com/staff/",
+      "CONTACT-URI;PREF=1:https://example.com/contact",
+      "EMAIL:c@example.com",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(Object.values(result[0].directories || {})[0]).toMatchObject({
+      uri: "https://example.com/staff/",
+      kind: "directory",
+    });
+    const links = Object.values(result[0].links || {});
+    expect(links[0]).toMatchObject({
+      uri: "https://example.com/contact",
+      kind: "contact",
+      pref: 1,
+    });
+  });
+
+  it("parses RFC 9554 CREATED, GRAMGENDER, PRONOUNS", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Modern Person",
+      "CREATED:20250101T120000Z",
+      "GRAMGENDER:neuter",
+      "PRONOUNS:they/them",
+      "PRONOUNS;PREF=2:ze/zir",
+      "EMAIL:m@example.com",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    expect(result[0].created).toBe("20250101T120000Z");
+    expect(result[0].speakToAs?.grammaticalGender).toBe("neuter");
+    const pronouns = Object.values(result[0].speakToAs?.pronouns || {});
+    expect(pronouns).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pronouns: "they/them" }),
+      expect.objectContaining({ pronouns: "ze/zir", pref: 2 }),
+    ]));
+  });
+
+  it("accepts vCard 4.0 KIND values (location, device, application)", () => {
+    for (const k of ["location", "device", "application"] as const) {
+      const vcf = [
+        "BEGIN:VCARD",
+        "VERSION:4.0",
+        `KIND:${k}`,
+        "FN:Thing",
+        "END:VCARD",
+      ].join("\r\n");
+      expect(parseVCard(vcf)[0].kind).toBe(k);
+    }
+  });
+
+  it("handles ADR with LABEL/GEO/TZ/CC parameters (RFC 9554)", () => {
+    const vcf = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:GeoPerson",
+      'ADR;CC=DE;GEO="geo:52.5,13.4";TZ=Europe/Berlin;LABEL="Unter den Linden 1\\nBerlin":;;Unter den Linden 1;Berlin;;10117;Germany',
+      "END:VCARD",
+    ].join("\r\n");
+
+    const result = parseVCard(vcf);
+    const addr = result[0].addresses?.a0;
+    expect(addr?.countryCode).toBe("DE");
+    expect(addr?.coordinates).toBe("52.5,13.4");
+    expect(addr?.timeZone).toBe("Europe/Berlin");
+    expect(addr?.fullAddress).toContain("Unter den Linden 1");
+    expect(addr?.locality).toBe("Berlin");
+  });
+
+  it("unfolds LF-only continuation lines (no CR)", () => {
+    // Unix exporters often use LF only; we must still unfold.
+    const vcf = "BEGIN:VCARD\nVERSION:4.0\nFN:John\n Doe\nEMAIL:j@d.com\nEND:VCARD";
+    const result = parseVCard(vcf);
+    expect(result[0].name?.components).toEqual(
+      expect.arrayContaining([{ kind: "given", value: "JohnDoe" }])
+    );
+  });
+
+  it("round-trips vCard 4.0-only properties through generateVCard", () => {
+    const original = [
+      "BEGIN:VCARD",
+      "VERSION:4.0",
+      "FN:Round Trip",
+      "EMAIL;PREF=1:rt@example.com",
+      "BDAY:19700101",
+      "BIRTHPLACE:Somewhere",
+      "EXPERTISE;LEVEL=expert:vCard",
+      "HOBBY;LEVEL=medium:reading",
+      "ORG-DIRECTORY:https://example.com/dir",
+      "CONTACT-URI:https://example.com/contact",
+      "CREATED:20240101T000000Z",
+      "END:VCARD",
+    ].join("\r\n");
+
+    const exported = generateVCard(parseVCard(original));
+    const reparsed = parseVCard(exported)[0];
+
+    expect(reparsed.emails?.e0?.pref).toBe(1);
+    expect(Object.values(reparsed.anniversaries || {}).find(a => a.kind === "birth")?.place?.fullAddress).toBe("Somewhere");
+    const info = Object.values(reparsed.personalInfo || {});
+    expect(info).toEqual(expect.arrayContaining([
+      { kind: "expertise", value: "vCard", level: "high" },
+      { kind: "hobby", value: "reading", level: "medium" },
+    ]));
+    expect(Object.values(reparsed.directories || {})[0]?.uri).toBe("https://example.com/dir");
+    expect(Object.values(reparsed.links || {})[0]).toMatchObject({
+      uri: "https://example.com/contact",
+      kind: "contact",
+    });
+    expect(reparsed.created).toBe("20240101T000000Z");
+  });
+});
+
 describe("detectDuplicates", () => {
   it("detects duplicates by matching email (case-insensitive)", () => {
     const existing: ContactCard[] = [

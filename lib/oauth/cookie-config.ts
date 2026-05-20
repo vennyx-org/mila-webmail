@@ -1,13 +1,16 @@
-const COOKIE_SAME_SITE = (process.env.COOKIE_SAME_SITE || 'lax') as 'lax' | 'none' | 'strict';
-const COOKIE_SECURE = process.env.COOKIE_SECURE !== undefined
-  ? process.env.COOKIE_SECURE === 'true'
-  : (COOKIE_SAME_SITE === 'none' || process.env.NODE_ENV === 'production');
+import { configManager } from '@/lib/admin/config-manager';
+
+type SameSite = 'lax' | 'none' | 'strict';
 
 export function getCookieOptions() {
+  const sameSite = configManager.get<SameSite>('cookieSameSite', 'lax');
+  const secure = process.env.COOKIE_SECURE !== undefined
+    ? process.env.COOKIE_SECURE === 'true'
+    : (sameSite === 'none' || process.env.NODE_ENV === 'production');
   return {
     httpOnly: true,
-    secure: COOKIE_SECURE,
-    sameSite: COOKIE_SAME_SITE,
+    secure,
+    sameSite,
     path: '/',
     maxAge: 30 * 24 * 60 * 60,
   };

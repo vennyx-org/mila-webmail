@@ -16,116 +16,13 @@ import {
   extractCertificateInfo,
 } from '@/lib/smime/certificate-utils';
 
-const REMEMBERED_UNLOCKS_STORAGE_KEY = 'smime-unlocked-session';
-
-type RememberedUnlocks = Record<string, string>;
-
-function readRememberedUnlocks(): RememberedUnlocks {
-  if (typeof window === 'undefined') {
-    return {};
-  }
-
-  try {
-    const raw = window.sessionStorage.getItem(REMEMBERED_UNLOCKS_STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {};
-    }
-
-    const rememberedUnlocks: RememberedUnlocks = {};
-    for (const [keyId, passphrase] of Object.entries(parsed)) {
-      if (typeof passphrase === 'string') {
-        rememberedUnlocks[keyId] = passphrase;
-      }
-    }
-
-    return rememberedUnlocks;
-  } catch {
-    return {};
-  }
-}
-
-function writeRememberedUnlocks(rememberedUnlocks: RememberedUnlocks): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    if (Object.keys(rememberedUnlocks).length === 0) {
-      window.sessionStorage.removeItem(REMEMBERED_UNLOCKS_STORAGE_KEY);
-      return;
-    }
-
-    window.sessionStorage.setItem(
-      REMEMBERED_UNLOCKS_STORAGE_KEY,
-      JSON.stringify(rememberedUnlocks),
-    );
-  } catch {
-    // Ignore unavailable or blocked session storage.
-  }
-}
-
-function rememberUnlockedKey(keyId: string, passphrase: string): void {
-  const rememberedUnlocks = readRememberedUnlocks();
-  rememberedUnlocks[keyId] = passphrase;
-  writeRememberedUnlocks(rememberedUnlocks);
-}
-
-function forgetUnlockedKey(keyId: string): void {
-  const rememberedUnlocks = readRememberedUnlocks();
-  if (!(keyId in rememberedUnlocks)) {
-    return;
-  }
-
-  delete rememberedUnlocks[keyId];
-  writeRememberedUnlocks(rememberedUnlocks);
-}
-
-function clearRememberedUnlocks(): void {
-  writeRememberedUnlocks({});
-}
-
-async function restoreRememberedKeys(keyRecords: SmimeKeyRecord[]): Promise<{
-  unlockedKeys: Map<string, CryptoKey>;
-  unlockedDecryptionKeys: Map<string, CryptoKey>;
-  unlockedLegacyDecryptionKeys: Map<string, CryptoKey>;
-}> {
-  const rememberedUnlocks = readRememberedUnlocks();
-  const unlockedKeys = new Map<string, CryptoKey>();
-  const unlockedDecryptionKeys = new Map<string, CryptoKey>();
-  const unlockedLegacyDecryptionKeys = new Map<string, CryptoKey>();
-  let removedStaleEntries = false;
-
-  for (const record of keyRecords) {
-    const passphrase = rememberedUnlocks[record.id];
-    if (!passphrase) {
-      continue;
-    }
-
-    try {
-      const { signingKey, decryptionKey, legacyDecryptionKey } = await unlockPrivateKey(record, passphrase);
-      unlockedKeys.set(record.id, signingKey);
-      if (decryptionKey) {
-        unlockedDecryptionKeys.set(record.id, decryptionKey);
-      }
-      if (legacyDecryptionKey) {
-        unlockedLegacyDecryptionKeys.set(record.id, legacyDecryptionKey);
-      }
-    } catch {
-      delete rememberedUnlocks[record.id];
-      removedStaleEntries = true;
-    }
-  }
-
-  if (removedStaleEntries) {
-    writeRememberedUnlocks(rememberedUnlocks);
-  }
-
-  return { unlockedKeys, unlockedDecryptionKeys, unlockedLegacyDecryptionKeys };
+// Legacy storage key used by an earlier build that persisted unlock passphrases
+// in sessionStorage. Wipe on module load so any in-flight tab upgrading to this
+// version doesn't leave plaintext key material sitting around. New code never
+// writes here — unlocked CryptoKey handles live only in the in-memory Map below.
+const LEGACY_REMEMBERED_UNLOCKS_KEY = 'smime-unlocked-session';
+if (typeof window !== 'undefined') {
+  try { window.sessionStorage.removeItem(LEGACY_REMEMBERED_UNLOCKS_KEY); } catch { /* ignore */ }
 }
 
 interface SmimePersistedState {
@@ -135,7 +32,6 @@ interface SmimePersistedState {
     defaultSignIdentity: Record<string, boolean>;
     defaultEncrypt: boolean;
   }>;
-  rememberUnlockedKeys: boolean;
   autoImportSignerCerts: boolean;
 }
 
@@ -172,7 +68,6 @@ interface SmimeStore extends SmimePersistedState {
   getRecipientCerts: (emails: string[]) => { found: SmimePublicCert[]; missing: string[] };
   setSignDefault: (identityId: string, value: boolean) => void;
   setEncryptDefault: (value: boolean) => void;
-  setRememberUnlockedKeys: (value: boolean) => void;
   setAutoImportSignerCerts: (value: boolean) => void;
   isKeyUnlocked: (id: string) => boolean;
   getUnlockedKey: (id: string) => CryptoKey | undefined;
@@ -184,7 +79,6 @@ export const useSmimeStore = create<SmimeStore>()(
     (set, get) => ({
       // Persisted preferences
       accountPreferences: {},
-      rememberUnlockedKeys: false,
       autoImportSignerCerts: true,
 
       // Runtime state
@@ -225,28 +119,6 @@ export const useSmimeStore = create<SmimeStore>()(
             listKeyRecords(acctId ?? undefined),
             listPublicCerts(acctId ?? undefined),
           ]);
-
-          if (get().rememberUnlockedKeys) {
-            const restoredKeys = await restoreRememberedKeys(keyRecords);
-            set((state) => ({
-              keyRecords,
-              publicCerts,
-              unlockedKeys: new Map([
-                ...state.unlockedKeys,
-                ...restoredKeys.unlockedKeys,
-              ]),
-              unlockedDecryptionKeys: new Map([
-                ...state.unlockedDecryptionKeys,
-                ...restoredKeys.unlockedDecryptionKeys,
-              ]),
-              unlockedLegacyDecryptionKeys: new Map([
-                ...state.unlockedLegacyDecryptionKeys,
-                ...restoredKeys.unlockedLegacyDecryptionKeys,
-              ]),
-              isLoading: false,
-            }));
-            return;
-          }
 
           set({ keyRecords, publicCerts, isLoading: false });
         } catch (err) {
@@ -338,7 +210,6 @@ export const useSmimeStore = create<SmimeStore>()(
 
       removeKeyRecord: async (id) => {
         await deleteKeyRecordDB(id);
-        forgetUnlockedKey(id);
         set((state) => {
           const unlockedKeys = new Map(state.unlockedKeys);
           unlockedKeys.delete(id);
@@ -379,9 +250,6 @@ export const useSmimeStore = create<SmimeStore>()(
         if (!record) throw new Error('Key record not found');
 
         const { signingKey, decryptionKey, legacyDecryptionKey } = await unlockPrivateKey(record, passphrase);
-        if (get().rememberUnlockedKeys) {
-          rememberUnlockedKey(id, passphrase);
-        }
         set((state) => {
           const unlockedKeys = new Map(state.unlockedKeys);
           unlockedKeys.set(id, signingKey);
@@ -398,7 +266,6 @@ export const useSmimeStore = create<SmimeStore>()(
       },
 
       lockKey: (id) => {
-        forgetUnlockedKey(id);
         set((state) => {
           const unlockedKeys = new Map(state.unlockedKeys);
           unlockedKeys.delete(id);
@@ -411,7 +278,6 @@ export const useSmimeStore = create<SmimeStore>()(
       },
 
       lockAllKeys: () => {
-        clearRememberedUnlocks();
         set({ unlockedKeys: new Map(), unlockedDecryptionKeys: new Map(), unlockedLegacyDecryptionKeys: new Map() });
       },
 
@@ -474,14 +340,6 @@ export const useSmimeStore = create<SmimeStore>()(
         });
       },
 
-      setRememberUnlockedKeys: (value) => {
-        set({ rememberUnlockedKeys: value });
-        if (!value) {
-          clearRememberedUnlocks();
-          set({ unlockedKeys: new Map(), unlockedDecryptionKeys: new Map() });
-        }
-      },
-
       setAutoImportSignerCerts: (value) => {
         set({ autoImportSignerCerts: value });
       },
@@ -491,7 +349,6 @@ export const useSmimeStore = create<SmimeStore>()(
       getUnlockedKey: (id) => get().unlockedKeys.get(id),
 
       clearState: () => {
-        clearRememberedUnlocks();
         set({
           keyRecords: [],
           publicCerts: [],
@@ -513,7 +370,6 @@ export const useSmimeStore = create<SmimeStore>()(
       name: 'smime-preferences',
       partialize: (state): SmimePersistedState => ({
         accountPreferences: state.accountPreferences,
-        rememberUnlockedKeys: state.rememberUnlockedKeys,
         autoImportSignerCerts: state.autoImportSignerCerts,
       }),
       merge: (persisted, current) => {
@@ -522,7 +378,6 @@ export const useSmimeStore = create<SmimeStore>()(
           ...current,
           // Migrate legacy flat preferences into accountPreferences
           accountPreferences: p?.accountPreferences ?? {},
-          rememberUnlockedKeys: p?.rememberUnlockedKeys ?? false,
           autoImportSignerCerts: p?.autoImportSignerCerts ?? true,
         };
       },

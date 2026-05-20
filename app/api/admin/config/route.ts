@@ -2,22 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { configManager } from '@/lib/admin/config-manager';
 import { requireAdminAuth, getClientIP } from '@/lib/admin/session';
 import { auditLog } from '@/lib/admin/audit';
-import { CONFIG_ENV_MAP } from '@/lib/admin/types';
+import { CONFIG_ENV_MAP, SENSITIVE_CONFIG_KEYS } from '@/lib/admin/types';
 import { parseJmapServers } from '@/lib/admin/jmap-servers';
 import { logger } from '@/lib/logger';
 
+// Strings that count as "no real secret configured" — used so the dashboard
+// can warn about a placeholder session secret without us ever returning the
+// raw value to the client.
+const SENSITIVE_PLACEHOLDERS = new Set(['your-secret-key-here']);
+
 /**
  * GET /api/admin/config - Get full config with sources (admin-protected)
+ *
+ * Sensitive keys (sessionSecret, oauthClientSecret) are returned with
+ * `value` omitted and a `hasValue` boolean instead. An admin session is
+ * enough to read every other config knob; the secrets themselves stay on
+ * the server so that an XSS or session-theft can't lift them in one
+ * request and forge admin/user session cookies offline.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     await configManager.ensureLoaded();
     const config = configManager.getAllWithSources();
 
-    return NextResponse.json(config, {
+    const safe: Record<string, { value?: unknown; source: 'admin' | 'env' | 'default'; hasValue?: boolean }> = {};
+    for (const [key, entry] of Object.entries(config)) {
+      if (SENSITIVE_CONFIG_KEYS.has(key)) {
+        const v = entry.value;
+        const hasValue =
+          typeof v === 'string' && v.length > 0 && !SENSITIVE_PLACEHOLDERS.has(v);
+        safe[key] = { source: entry.source, hasValue };
+      } else {
+        safe[key] = entry;
+      }
+    }
+
+    return NextResponse.json(safe, {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
@@ -31,7 +54,7 @@ export async function GET() {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);
@@ -86,7 +109,7 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const result = await requireAdminAuth();
+    const result = await requireAdminAuth(request);
     if ('error' in result) return result.error;
 
     const ip = getClientIP(request);

@@ -13,6 +13,7 @@ import {
   Inbox, Send, FileText, Trash, ShieldAlert, Archive,
   Star, Heart, Bookmark, Tag, Flag, Briefcase, Users,
   Bell, Zap, Globe, Lock, Eye, MessageSquare, Mail,
+  AlertTriangle, NotebookPen, CalendarClock, BellOff,
   type LucideIcon,
 } from 'lucide-react';
 import { cn, buildMailboxTree, type MailboxNode } from '@/lib/utils';
@@ -27,6 +28,11 @@ const ROLE_ICONS: Record<string, LucideIcon> = {
   trash: Trash,
   junk: ShieldAlert,
   archive: Archive,
+  shared: Users,
+  important: AlertTriangle,
+  memos: NotebookPen,
+  scheduled: CalendarClock,
+  snoozed: BellOff,
 };
 
 const ICON_CHOICES: { name: string; icon: LucideIcon }[] = [

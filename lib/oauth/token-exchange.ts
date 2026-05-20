@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger';
 import { discoverOAuth } from '@/lib/oauth/discovery';
 import type { OAuthMetadata } from '@/lib/oauth/discovery';
+import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { readFileEnv } from '@/lib/read-file-env';
 import { configManager } from '@/lib/admin/config-manager';
 import { parseJmapServers, findServerById } from '@/lib/admin/jmap-servers';
@@ -46,7 +47,7 @@ function getClientSecret(serverId?: string | null): string {
 
 export async function getTokenEndpoint(serverId?: string | null): Promise<string> {
   const { discoveryUrl } = getRequiredConfig(serverId);
-  const metadata = await discoverOAuth(discoveryUrl);
+  const metadata = await discoverOAuth(discoveryUrl, { validateEndpoint: isPublicHttpUrl });
   if (!metadata?.token_endpoint) {
     throw new Error('OAuth token endpoint not found');
   }
@@ -55,7 +56,7 @@ export async function getTokenEndpoint(serverId?: string | null): Promise<string
 
 export async function getMetadata(serverId?: string | null): Promise<OAuthMetadata | null> {
   const { discoveryUrl } = getRequiredConfig(serverId);
-  return discoverOAuth(discoveryUrl);
+  return discoverOAuth(discoveryUrl, { validateEndpoint: isPublicHttpUrl });
 }
 
 export function buildOAuthParams(base: Record<string, string>, serverId?: string | null): URLSearchParams {

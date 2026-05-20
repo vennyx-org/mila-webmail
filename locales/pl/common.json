@@ -135,6 +135,40 @@
     "shared": "Udostępnione",
     "scheduled": "Zaplanowane"
   },
+  "protocol_handlers": {
+    "title": "Aplikacje domyślne",
+    "description": "Wybierz, czy linki e-mail i kalendarza mają otwierać się w Bulwark. Technicznie Bulwark rejestruje się jako obsługa protokołu dla linków mailto: i webcal:.",
+    "unsupported": "Ta przeglądarka lub to połączenie nie obsługuje ręcznej rejestracji obsługi protokołu. Nadal możesz mieć możliwość użycia zainstalowanej aplikacji PWA w ustawieniach przeglądarki lub systemu.",
+    "mailto_label": "Linki e-mail",
+    "mailto_description": "Otwiera linki mailto: w Bulwark z wstępnie wypełnionym edytorem wiadomości.",
+    "protocol_open_mode_label": "Podczas otwierania linków protokołu",
+    "protocol_open_mode_description": "Wybierz, czy Bulwark ma otwierać linki mailto: i webcal: w nowej karcie, czy ponownie używać otwartej sesji. Opcja aktywnej sesji wymaga uprawnienia do powiadomień, aby można było kliknąć powiadomienie awaryjne i przenieść Bulwark na pierwszy plan, jeśli przeglądarka blokuje fokus.",
+    "protocol_open_mode_active_session": "Jeśli to możliwe, otwórz w aktywnej sesji",
+    "protocol_open_mode_new_tab": "Zawsze otwieraj nową kartę",
+    "focus_notification_title": "Otwórz Bulwark",
+    "focus_notification_body": "Link został otwarty w Bulwark. Kliknij, aby przenieść okno na pierwszy plan.",
+    "webcal_label": "Linki kalendarza",
+    "webcal_description": "Otwiera linki webcal: w Bulwark z wstępnie wypełnionym oknem subskrypcji kalendarza.",
+    "register_mailto": "Zarejestruj aplikację e-mail",
+    "register_webcal": "Zarejestruj aplikację kalendarza",
+    "mailto_registered": "Zażądano rejestracji obsługi e-mail",
+    "webcal_registered": "Zażądano rejestracji obsługi kalendarza",
+    "registration_failed": "Rejestracja obsługi protokołu nie powiodła się",
+    "opening_mailto": "Otwieranie edytora...",
+    "opening_webcal": "Otwieranie kalendarza...",
+    "browser_note": "Przeglądarka lub system operacyjny może poprosić o potwierdzenie i może wymagać zainstalowania Bulwark, zanim będzie można wybrać go jako aplikację domyślną.",
+    "select_account_title": "Wybierz konto",
+    "select_mailto_account": "Wybierz konto, które ma otworzyć ten link e-mail.",
+    "select_webcal_account": "Wybierz konto, które ma otworzyć ten link kalendarza.",
+    "select_account_note": "Ten wybór dotyczy tylko tego linku protokołu.",
+    "detail_to": "Do",
+    "detail_subject": "Temat",
+    "detail_no_subject": "Bez tematu",
+    "detail_calendar": "Kalendarz",
+    "detail_source": "Źródło",
+    "active_account": "Aktywne",
+    "switching_account": "Przełączanie konta..."
+  },
   "sidebar_apps": {
     "modal_title": "Aplikacje paska bocznego",
     "add_new": "Dodaj aplikację",
@@ -225,6 +259,8 @@
     "compose": "Napisz",
     "compose_hint": "Napisz nową wiadomość",
     "no_subject": "(Bez tematu)",
+    "no_body_content": "(Brak treści)",
+    "no_preview_available": "Podgląd niedostępny",
     "loading_email": "Ładowanie wiadomości...",
     "loading": "Ładowanie...",
     "reply": "Odpowiedz",
@@ -548,6 +584,15 @@
       "to": "Do: {recipients}"
     },
     "remove_sub_address": "Usuń podadres",
+    "from_override": {
+      "toggle_off": "Zastąp",
+      "toggle_on": "Anuluj zastąpienie",
+      "toggle_tooltip": "Swobodnie edytuj nazwę i adres nadawcy. Poczta jest nadal wysyłana przez twoją tożsamość - zmienia się tylko widoczny nagłówek Od.",
+      "name_label": "Nazwa nadawcy",
+      "name_placeholder": "Nazwa",
+      "email_label": "Adres e-mail nadawcy",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Szablon",
     "save_as_template": "Zapisz jako szablon",
     "validation": {
@@ -756,6 +801,7 @@
       "files": "Pliki",
       "contacts": "Kontakty",
       "encryption": "Szyfrowanie",
+      "protocol_handlers": "Aplikacje domyślne",
       "sidebar_apps": "Aplikacje paska bocznego",
       "notifications": "Powiadomienia",
       "layout": "Układ",
@@ -973,7 +1019,9 @@
         "split": "Widok podzielony",
         "split_description": "Lista wiadomości i panel czytania pozostają widoczne obok siebie.",
         "focus": "Skupiona lista",
-        "focus_description": "Pokazuj jeden wiersz na wiadomość i otwieraj pocztę na pełną szerokość, pozostawiając widoczny pasek folderów."
+        "focus_description": "Pokazuj jeden wiersz na wiadomość i otwieraj pocztę na pełną szerokość, pozostawiając widoczny pasek folderów.",
+        "horizontal": "Okienko czytania na dole",
+        "horizontal_description": "Pokaż listę wiadomości u góry i otwórz wybraną wiadomość w okienku czytania pod nią."
       },
       "show_preview": {
         "label": "Pokaż tekst podglądu",
@@ -991,6 +1039,16 @@
       "auto_select_reply_identity": {
         "label": "Automatycznie wybieraj adres odpowiedzi",
         "description": "Podczas odpowiadania automatycznie przełączaj adres nadawcy na tożsamość, która pierwotnie otrzymała wiadomość"
+      },
+      "signature_position": {
+        "label": "Pozycja podpisu",
+        "description": "Gdzie wstawić podpis w odpowiedziach i wiadomościach przekazanych dalej. Nad cytowanym tekstem brzmi naturalnie jako zakończenie odpowiedzi; pod nim zachowuje oryginalną wiadomość w całości.",
+        "above_quote": "Przed cytowanym tekstem",
+        "below_quote": "Po cytowanym tekście"
+      },
+      "signature_separator": {
+        "label": "Separator podpisu",
+        "description": "Poprzedź podpis standardową linią separatora \"-- \" (RFC 3676). Wyłącz, jeśli chcesz przejść bezpośrednio z treści wiadomości do podpisu."
       },
       "sub_address_delimiter": {
         "label": "Separator sub-adresu",
@@ -1727,6 +1785,7 @@
     "new_subfolder": "Nowy podfolder...",
     "new_folder": "Nowy folder...",
     "rename": "Zmień nazwę...",
+    "import_email": "Importuj .eml...",
     "empty_folder": "Opróżnij folder",
     "empty_folder_generic": "Opróżnij folder",
     "delete_folder": "Usuń folder",
@@ -1847,6 +1906,8 @@
       "bcc_placeholder": "archive@email.com",
       "text_signature_label": "Podpis tekstowy",
       "html_signature_label": "Podpis HTML",
+      "signature_byte_counter": "{bytes} / {max} bajtów",
+      "signature_byte_limit_reached": "Osiągnięto limit serwera",
       "save": "Zapisz tożsamość",
       "cancel": "Anuluj",
       "creating": "Tworzenie...",
@@ -2452,6 +2513,15 @@
       "file_too_large": "Plik przekracza limit 10 MB",
       "invalid_format": "Nieprawidłowy format pliku kalendarza"
     },
+    "webcal_action": {
+      "title": "Otwórz link kalendarza",
+      "description": "Jak chcesz użyć \"{name}\"?",
+      "import_title": "Importuj jednorazowo",
+      "import_description": "Pobierz wydarzenia teraz i skopiuj je do jednego ze swoich kalendarzy.",
+      "subscribe_title": "Subskrybuj",
+      "subscribe_description": "Automatycznie synchronizuj ten kalendarz jako oddzielny kalendarz.",
+      "cancel": "Anuluj"
+    },
     "management": {
       "title": "Zarządzanie kalendarzem",
       "description": "Twórz, zmieniaj nazwy i dostosowuj swoje kalendarze. Kliknij prawym przyciskiem kalendarz na pasku bocznym, aby szybko zmienić jego kolor.",
@@ -2821,6 +2891,8 @@
     "restart_title": "Przewodnik wprowadzający",
     "restart_desc": "Odtwórz przewodnik po interfejsie krok po kroku",
     "restart_button": "Uruchom przewodnik ponownie",
+    "show_on_new_devices_title": "Pokaż na nowych urządzeniach",
+    "show_on_new_devices_desc": "Wyświetl ponownie baner powitalny i przewodnik przy pierwszym logowaniu na nowym urządzeniu, nawet jeśli zostały już ukończone w innym miejscu",
     "sidebar_title": "Twoje skrzynki pocztowe",
     "sidebar_desc": "To jest pasek boczny z folderami. Kliknij dowolną skrzynkę, aby zobaczyć jej wiadomości. Możesz tworzyć foldery, przeciągać między nimi wiadomości i od razu widzieć liczbę nieprzeczytanych.",
     "compose_title": "Napisz wiadomość",

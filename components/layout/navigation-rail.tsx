@@ -17,11 +17,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useAccountStore } from "@/stores/account-store";
 import { useUpdateStore, selectHasUpdate } from "@/stores/update-store";
 import { getActiveAccountSlotHeaders } from "@/lib/auth/active-account-slot";
-import { getInitials, getMaxAccounts } from "@/lib/account-utils";
+import { getMaxAccounts } from "@/lib/account-utils";
 import { cn, formatFileSize } from "@/lib/utils";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { apiFetch } from "@/lib/browser-navigation";
+import { Avatar } from "@/components/ui/avatar";
 
 interface NavItem {
   id: string;
@@ -44,6 +45,19 @@ interface NavigationRailProps {
   onInlineApp?: (appId: string, url: string, name: string) => void;
   onCloseInlineApp?: () => void;
   activeAppId?: string | null;
+  /**
+   * If provided, intercepts the rail's built-in route navigation. Return
+   * `true` to prevent the underlying `<Link>` from navigating — used by the
+   * Pro interface to open the route as a tab instead. The visual rail is
+   * unchanged.
+   */
+  onNavigate?: (itemId: 'mail' | 'calendar' | 'contacts' | 'files' | 'settings') => boolean | void;
+  /**
+   * When `onNavigate` is in use, this controls which nav item the rail
+   * highlights as active (since the URL alone no longer reflects the
+   * active app).
+   */
+  activeItemId?: 'mail' | 'calendar' | 'contacts' | 'files' | 'settings' | null;
 }
 
 function StorageQuotaCircle({ quota, usagePercent }: { quota: { used: number; total: number }; usagePercent: number }) {
@@ -159,6 +173,8 @@ export function NavigationRail({
   onInlineApp,
   onCloseInlineApp,
   activeAppId,
+  onNavigate,
+  activeItemId,
 }: NavigationRailProps) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
@@ -174,6 +190,7 @@ export function NavigationRail({
   const showRailAccountList = useSettingsStore((s) => s.showRailAccountList);
   const sidebarAppsEnabled = usePolicyStore((s) => s.isFeatureEnabled('sidebarAppsEnabled'));
   const filesEnabled = usePolicyStore((s) => s.isFeatureEnabled('filesEnabled'));
+  const contactsEnabled = usePolicyStore((s) => s.isFeatureEnabled('contactsEnabled'));
   const visibleSidebarApps = sidebarAppsEnabled ? sidebarApps : [];
   const inboxUnread = mailboxes.find(m => m.role === "inbox")?.unreadEmails || 0;
   const [isStalwartAdmin, setIsStalwartAdmin] = useState(false);
@@ -253,37 +270,58 @@ export function NavigationRail({
   const navItems: NavItem[] = [
     { id: "mail", icon: Mail, labelKey: "mail", href: "/", badge: inboxUnread },
     { id: "calendar", icon: Calendar, labelKey: "calendar", href: "/calendar", hidden: !supportsCalendar },
-    { id: "contacts", icon: BookUser, labelKey: "contacts", href: "/contacts", hidden: !supportsContacts },
+    { id: "contacts", icon: BookUser, labelKey: "contacts", href: "/contacts", hidden: !supportsContacts || !contactsEnabled },
     { id: "files", icon: HardDrive, labelKey: "files", href: "/files", hidden: !supportsFiles || !filesEnabled },
   ];
 
-  const isSettingsActive = !activeAppId && pathname.startsWith("/settings");
+  // When the host (e.g. the Pro shell) takes over navigation via `onNavigate`,
+  // it tells us which item is active; otherwise we infer it from the URL.
+  const isSettingsActive = onNavigate
+    ? activeItemId === 'settings'
+    : !activeAppId && pathname.startsWith("/settings");
 
   const visibleItems = navItems.filter((item) => !item.hidden);
 
-  const getIsActive = (href: string) => {
+  const getIsActive = (href: string, itemId: string) => {
     if (activeAppId) return false;
+    if (onNavigate) {
+      return activeItemId === itemId;
+    }
     if (href === "/") {
       return pathname === "/" || pathname === "";
     }
     return pathname.startsWith(href);
   };
 
+  const handleNavClick = (itemId: 'mail' | 'calendar' | 'contacts' | 'files' | 'settings') =>
+    (e: React.MouseEvent) => {
+      if (onNavigate) {
+        const intercepted = onNavigate(itemId);
+        if (intercepted !== false) {
+          e.preventDefault();
+        }
+        return;
+      }
+      if (activeAppId) {
+        onCloseInlineApp?.();
+      }
+    };
+
   if (orientation === "horizontal") {
     return (
       <nav
-        className={cn("flex items-center bg-background border-t border-border shrink-0 overflow-x-auto mobile-scroll-hidden", className)}
+        className={cn("flex items-center bg-background border-t border-border shrink-0 overflow-x-auto mobile-scroll-hidden pb-[calc(env(safe-area-inset-bottom)/2)]", className)}
         role="navigation"
         aria-label={t("nav_label")}
       >
         {visibleItems.map((item) => {
-          const isActive = getIsActive(item.href);
+          const isActive = getIsActive(item.href, item.id);
           const Icon = item.icon;
           return (
             <Link
               key={item.id}
               href={item.href}
-              onClick={activeAppId ? () => onCloseInlineApp?.() : undefined}
+              onClick={handleNavClick(item.id as 'mail' | 'calendar' | 'contacts' | 'files' | 'settings')}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px]",
                 "transition-colors duration-150",
@@ -373,7 +411,7 @@ export function NavigationRail({
         {/* Settings */}
         <Link
           href="/settings"
-          onClick={activeAppId ? () => onCloseInlineApp?.() : undefined}
+          onClick={handleNavClick('settings')}
           className={cn(
             "flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px]",
             "transition-colors duration-150",
@@ -427,13 +465,13 @@ export function NavigationRail({
         aria-label={t("nav_label")}
       >
         {visibleItems.map((item) => {
-          const isActive = getIsActive(item.href);
+          const isActive = getIsActive(item.href, item.id);
           const Icon = item.icon;
           return (
             <Link
               key={item.id}
               href={item.href}
-              onClick={activeAppId ? () => onCloseInlineApp?.() : undefined}
+              onClick={handleNavClick(item.id as 'mail' | 'calendar' | 'contacts' | 'files' | 'settings')}
               data-tour={`nav-${item.id}`}
               className={cn(
                 "relative flex items-center gap-2.5 rounded-md transition-colors duration-150",
@@ -553,7 +591,7 @@ export function NavigationRail({
 
         <Link
           href="/settings"
-          onClick={activeAppId ? () => onCloseInlineApp?.() : undefined}
+          onClick={handleNavClick('settings')}
           data-tour="nav-settings"
           className={cn(
             "flex items-center justify-center w-10 h-10 rounded-md transition-colors",
@@ -610,7 +648,6 @@ export function NavigationRail({
             <div className="flex flex-col items-center gap-3">
             {accounts.map((account) => {
               const isActive = account.id === activeAccountId;
-              const initials = getInitials(account.displayName || account.label, account.email || account.username);
               return (
                 <button
                   key={account.id}
@@ -618,15 +655,20 @@ export function NavigationRail({
                     if (!isActive) switchAccount(account.id);
                   }}
                   className={cn(
-                    "relative flex items-center justify-center w-8 h-8 rounded-full text-white text-[11px] font-medium transition-all flex-shrink-0",
+                    "relative w-8 h-8 rounded-full transition-all flex-shrink-0",
                     isActive
                       ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                       : "opacity-70 hover:opacity-100"
                   )}
-                  style={{ backgroundColor: account.avatarColor }}
                   title={`${account.displayName || account.label} (${account.email || account.username})`}
                 >
-                  {initials}
+                  <Avatar
+                    name={account.displayName || account.label}
+                    email={account.email || account.username}
+                    size="sm"
+                    disableFavicon
+                    fallbackColor={account.avatarColor}
+                  />
                   {isActive && (
                     <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-primary flex items-center justify-center">
                       <Check className="w-2 h-2 text-primary-foreground" />

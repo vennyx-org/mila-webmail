@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
-import { readFileEnv } from '@/lib/read-file-env';
+import { getSessionSecret } from '@/lib/auth/session-secret';
 import { ADMIN_SESSION_COOKIE, DEFAULT_ADMIN_SESSION_TTL } from './types';
 import type { AdminSessionPayload } from './types';
 
@@ -12,7 +12,7 @@ const TAG_LENGTH = 16;
 const MIN_SECRET_LENGTH = 32;
 
 function getKey(): Buffer {
-  const secret = process.env.SESSION_SECRET || readFileEnv(process.env.SESSION_SECRET_FILE);
+  const secret = getSessionSecret();
   if (!secret) throw new Error('SESSION_SECRET not configured');
   if (secret.length < MIN_SECRET_LENGTH) {
     throw new Error(
@@ -81,9 +81,52 @@ export function verifyAdminSession(token: string): AdminSessionPayload | null {
 }
 
 /**
- * Validate the admin session from cookies. Returns the payload or a 401 response.
+ * CSRF gate for cookie-authed admin requests.
+ *
+ * The admin session cookie is `SameSite=Lax`, which still allows top-level
+ * cross-site POST navigations (e.g. a form auto-submitted by an attacker
+ * page the admin is tricked into visiting). Without a CSRF check, any such
+ * page can trigger arbitrary state changes carrying the admin cookie.
+ *
+ * Strategy: state-changing requests must come from the same origin. Modern
+ * browsers (since 2020) always send `Sec-Fetch-Site` and that header
+ * cannot be set by JS, so it is the authoritative signal. Older browsers
+ * fall back to `Origin`. Non-browser clients (curl, scripts) send neither
+ * header and cannot ride a victim's cookie cross-origin, so the absence
+ * of both headers is allowed.
  */
-export async function requireAdminAuth(): Promise<{ payload: AdminSessionPayload } | { error: NextResponse }> {
+export function isSameOriginRequest(request: Request): boolean {
+  const method = request.method.toUpperCase();
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return true;
+
+  const fetchSite = request.headers.get('sec-fetch-site');
+  if (fetchSite !== null) {
+    return fetchSite === 'same-origin';
+  }
+
+  const origin = request.headers.get('origin');
+  if (!origin) return true;
+
+  try {
+    const originHost = new URL(origin).host;
+    const requestHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+    return !!requestHost && originHost === requestHost;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validate the admin session from cookies. Returns the payload or a 401 response.
+ *
+ * Also rejects cross-origin state-changing requests with 403 to prevent CSRF
+ * against cookie-authenticated admin actions.
+ */
+export async function requireAdminAuth(request: Request): Promise<{ payload: AdminSessionPayload } | { error: NextResponse }> {
+  if (!isSameOriginRequest(request)) {
+    return { error: NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 }) };
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 

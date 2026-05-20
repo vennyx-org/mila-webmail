@@ -7,8 +7,9 @@ import { JmapServersSection } from './_jmap-servers-section';
 import type { JmapServerEntry } from '@/lib/admin/jmap-servers';
 
 interface ConfigEntry {
-  value: unknown;
+  value?: unknown;
   source: 'admin' | 'env' | 'default';
+  hasValue?: boolean;
 }
 
 export function SettingsTab() {

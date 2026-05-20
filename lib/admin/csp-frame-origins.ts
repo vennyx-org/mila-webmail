@@ -60,6 +60,36 @@ export function sanitizeFrameOrigins(input: unknown): string[] {
 export const sanitizeHttpOrigins = sanitizeFrameOrigins;
 export const isValidHttpOrigin = isValidFrameOrigin;
 
+// ─── apiPostPaths (manifest field) ────────────────────────────
+
+/**
+ * Validates an `/api/...` path entry. Must start with `/api/`, contain only
+ * URL-path-safe characters, and have no `..` segment. The trailing slash is
+ * meaningful (treated as a prefix at enforcement time).
+ */
+export function isValidApiPostPath(path: unknown): path is string {
+  if (typeof path !== 'string') return false;
+  if (path.length === 0 || path.length > 200) return false;
+  if (!path.startsWith('/api/')) return false;
+  if (path.includes('..')) return false;
+  if (/[\s'"`;,()?#]/.test(path)) return false;
+  if (!/^[/A-Za-z0-9._-]+$/.test(path)) return false;
+  return true;
+}
+
+export function sanitizeApiPostPaths(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of input) {
+    if (!isValidApiPostPath(value)) continue;
+    if (seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
+}
+
 // In-memory cache. The proxy fires on every page navigation; reading the
 // registry JSON every time is fine but cheap to skip when nothing has
 // changed. Five seconds is short enough to make plugin install/uninstall
