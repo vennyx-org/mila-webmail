@@ -1854,6 +1854,8 @@
       "expand_collapse": "대화 펼치기/접기"
     },
     "composer": {
+      "send": "이메일 보내기",
+      "schedule_send": "보내기 예약",
       "template_picker": "템플릿 선택기 열기"
     }
   },

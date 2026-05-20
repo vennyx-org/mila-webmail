@@ -1854,6 +1854,8 @@
       "expand_collapse": "Rozbalit/sbalit vlákno"
     },
     "composer": {
+      "send": "Odeslat e-mail",
+      "schedule_send": "Naplánovat odeslání",
       "template_picker": "Otevřít výběr šablon"
     }
   },

@@ -1854,6 +1854,8 @@
       "expand_collapse": "Espandi/comprimi conversazione"
     },
     "composer": {
+      "send": "Invia email",
+      "schedule_send": "Programma invio",
       "template_picker": "Apri selettore modelli"
     }
   },

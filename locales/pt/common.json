@@ -1854,6 +1854,8 @@
       "expand_collapse": "Expandir/recolher conversa"
     },
     "composer": {
+      "send": "Enviar e-mail",
+      "schedule_send": "Agendar envio",
       "template_picker": "Abrir seletor de modelos"
     }
   },

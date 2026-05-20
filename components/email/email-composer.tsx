@@ -5,7 +5,7 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, ShieldCheck, Lock, CalendarClock } from "lucide-react";
+import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, ShieldCheck, Lock, CalendarClock, ChevronDown } from "lucide-react";
 import { cn, formatFileSize, formatDateTime, generateUUID } from "@/lib/utils";
 import { debug } from "@/lib/debug";
 import { toast } from "@/stores/toast-store";
@@ -158,6 +158,18 @@ function buildEmbeddedSignatureHtml(
     return `${startMarker}<p>${escaped}</p>${endMarker}`;
   }
   return '';
+}
+
+function formatLocalDateTimeInput(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getDefaultScheduleValue(): string {
+  const tomorrowAtEight = new Date();
+  tomorrowAtEight.setDate(tomorrowAtEight.getDate() + 1);
+  tomorrowAtEight.setHours(8, 0, 0, 0);
+  return formatLocalDateTimeInput(tomorrowAtEight);
 }
 
 export function EmailComposer({
@@ -373,6 +385,8 @@ export function EmailComposer({
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleValue, setScheduleValue] = useState('');
   const [scheduleError, setScheduleError] = useState('');
+  const [showSendMenu, setShowSendMenu] = useState(false);
+  const sendMenuRef = useRef<HTMLDivElement>(null);
 
   const saveTemplateModalRef = useFocusTrap({
     isActive: showSaveAsTemplate,
@@ -464,6 +478,23 @@ export function EmailComposer({
       editor.commands.setContent(nextHtml, { emitUpdate: true });
     }
   }, [signatureIdentity?.id, signatureIdentity?.htmlSignature, signatureIdentity?.textSignature, signatureSeparatorEnabled, signaturePosition, mode, plainTextMode]);
+
+  useEffect(() => {
+    const handleClickOutsideSendMenu = (event: MouseEvent) => {
+      if (!sendMenuRef.current?.contains(event.target as Node)) {
+        setShowSendMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutsideSendMenu);
+    return () => document.removeEventListener('mousedown', handleClickOutsideSendMenu);
+  }, []);
+
+  const openScheduleDialog = useCallback(() => {
+    setScheduleError('');
+    setScheduleValue(getDefaultScheduleValue());
+    setShowScheduleDialog(true);
+    setShowSendMenu(false);
+  }, []);
 
   useEffect(() => {
     if (!autoSelectReplyIdentity) return;
@@ -1550,8 +1581,10 @@ export function EmailComposer({
     if (e.defaultPrevented) return;
 
     const isPlainEscape = e.key === 'Escape' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
-    const isSendShortcut = e.key === 'Enter' && e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
-    if (!isPlainEscape && !isSendShortcut) return;
+    const hasPrimaryModifier = e.ctrlKey || e.metaKey;
+    const isSendShortcut = e.key === 'Enter' && hasPrimaryModifier && !e.altKey && !e.shiftKey;
+    const isScheduleShortcut = e.key === 'Enter' && hasPrimaryModifier && !e.altKey && e.shiftKey;
+    if (!isPlainEscape && !isSendShortcut && !isScheduleShortcut) return;
 
     if (
       showTemplatePicker ||
@@ -1577,6 +1610,12 @@ export function EmailComposer({
 
       e.preventDefault();
       handleSend();
+      return;
+    }
+
+    if (isScheduleShortcut) {
+      e.preventDefault();
+      if (!e.repeat && client?.hasDelayedSend()) openScheduleDialog();
     }
   };
 
@@ -2007,22 +2046,6 @@ export function EmailComposer({
             >
               <BookmarkPlus className="w-4 h-4" />
             </Button>
-            {client?.hasDelayedSend() && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setScheduleError('');
-                  setScheduleValue('');
-                  setShowScheduleDialog(true);
-                }}
-                title={t('schedule_send')}
-                className="h-9 w-9"
-              >
-                <CalendarClock className="w-4 h-4" />
-              </Button>
-            )}
-
             {/* S/MIME toggles */}
             {canSmimeSign && (
               <>
@@ -2060,15 +2083,56 @@ export function EmailComposer({
             >
               {t('discard')}
             </button>
-            <Button
-              onClick={() => handleSend()}
-              disabled={!canSend}
-              title={getSendTooltip()}
-              className="hidden md:inline-flex"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {t('send')}
-            </Button>
+            {client?.hasDelayedSend() ? (
+              <div ref={sendMenuRef} className="relative hidden md:inline-flex">
+                <Button
+                  onClick={() => handleSend()}
+                  disabled={!canSend}
+                  title={getSendTooltip()}
+                  className="rounded-r-none border-r border-primary-foreground/20"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {t('send')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setShowSendMenu((open) => !open)}
+                  disabled={!canSend}
+                  title={t('schedule_send')}
+                  className="rounded-l-none px-2"
+                  aria-haspopup="menu"
+                  aria-expanded={showSendMenu}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                {showSendMenu && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 bottom-full z-50 mb-2 min-w-44 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={openScheduleDialog}
+                      className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <CalendarClock className="w-4 h-4" />
+                      {t('schedule_send')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={() => handleSend()}
+                disabled={!canSend}
+                title={getSendTooltip()}
+                className="hidden md:inline-flex"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {t('send')}
+              </Button>
+            )}
           </div>
         </div>
 

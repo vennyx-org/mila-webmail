@@ -2213,7 +2213,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       const result = await client.rescheduleEmailSubmission(submissionId, emailId, identityId, delayedUntil);
       const pendingUndoSend = get().pendingUndoSend;
       if (pendingUndoSend?.submissionId === submissionId) {
-        set({ pendingUndoSend: { ...pendingUndoSend, sendAt: result.sendAt || delayedUntil } });
+        set({ pendingUndoSend: { ...pendingUndoSend, submissionId: result.emailSubmissionId || submissionId, sendAt: result.sendAt || delayedUntil } });
       }
       return result;
     } finally {

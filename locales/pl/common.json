@@ -1854,6 +1854,8 @@
       "expand_collapse": "Rozwiń/zwiń wątek"
     },
     "composer": {
+      "send": "Wyślij e-mail",
+      "schedule_send": "Zaplanuj wysyłkę",
       "template_picker": "Otwórz wybór szablonu"
     }
   },

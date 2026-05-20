@@ -1811,6 +1811,8 @@
       "expand_collapse": "Udvid/skjul tråd"
     },
     "composer": {
+      "send": "Send e-mail",
+      "schedule_send": "Planlæg afsendelse",
       "template_picker": "Åbn skabelonvælger"
     }
   },

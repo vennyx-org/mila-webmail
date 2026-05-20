@@ -1854,6 +1854,8 @@
       "expand_collapse": "Gesprek uitklappen/inklappen"
     },
     "composer": {
+      "send": "E-mail verzenden",
+      "schedule_send": "Verzenden plannen",
       "template_picker": "Sjabloonkiezer openen"
     }
   },

@@ -3,8 +3,8 @@
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { ThreadListItem } from "./thread-list-item";
 import { EmailContextMenu } from "./email-context-menu";
-import { cn } from "@/lib/utils";
-import { Trash2, Mail, MailX, MailOpen, Loader2, SearchX, AlertTriangle, CalendarClock, XCircle, Edit3 } from "lucide-react";
+import { cn, formatDateTime } from "@/lib/utils";
+import { Trash2, Mail, MailX, MailOpen, Loader2, SearchX, AlertTriangle, CalendarClock } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -18,7 +18,6 @@ import { useTranslations } from "next-intl";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SearchChips } from "@/components/search/search-chips";
 import { isFilterEmpty, DEFAULT_SEARCH_FILTERS } from "@/lib/jmap/search-utils";
-import { toast } from "@/stores/toast-store";
 
 interface EmailListProps {
   emails: Email[];
@@ -44,7 +43,6 @@ interface EmailListProps {
   onLoadMoreScheduled?: () => void;
   onCancelScheduled?: (email: Email) => void | Promise<void>;
   onCancelScheduledForEdit?: (email: Email) => void | Promise<void>;
-  onRescheduleScheduled?: (email: Email, delayedUntil: string) => void | Promise<void>;
 }
 
 export function EmailList({
@@ -71,10 +69,8 @@ export function EmailList({
   onLoadMoreScheduled,
   onCancelScheduled,
   onCancelScheduledForEdit,
-  onRescheduleScheduled,
 }: EmailListProps) {
   const t = useTranslations('email_list');
-  const tComposer = useTranslations('email_composer');
   const { client } = useAuthStore();
   const {
     selectedEmailIds,
@@ -119,6 +115,7 @@ export function EmailList({
   const density = useSettingsStore((state) => state.density);
   const showPreview = useSettingsStore((state) => state.showPreview);
   const mailLayout = useSettingsStore((state) => state.mailLayout);
+  const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
 
   const estimateSize = useCallback(() => {
@@ -237,30 +234,6 @@ export function EmailList({
     }
   }, [client, hasMoreEmails, isLoadingMore, isLoading, isScheduledView, loadMoreEmails, onLoadMoreScheduled]);
 
-  const promptForRescheduleDelayedUntil = useCallback((): string | null => {
-    const value = window.prompt(t('reschedule_prompt'));
-    if (!value) return null;
-    const time = new Date(value).getTime();
-    if (!Number.isFinite(time)) {
-      toast.error(tComposer('schedule_send_invalid'));
-      return null;
-    }
-    if (time <= Date.now()) {
-      toast.error(tComposer('schedule_send_future'));
-      return null;
-    }
-    if (!client?.hasDelayedSend()) {
-      toast.error(tComposer('schedule_send_unsupported'));
-      return null;
-    }
-    const maxDelayedSend = client.getMaxDelayedSend();
-    if (maxDelayedSend > 0 && time > Date.now() + maxDelayedSend * 1000) {
-      toast.error(tComposer('schedule_send_too_late'));
-      return null;
-    }
-    return new Date(time).toISOString();
-  }, [client, t, tComposer]);
-
   const handleToggleThreadExpansion = useCallback(async (threadId: string) => {
     const isExpanded = expandedThreadIds.has(threadId);
 
@@ -316,11 +289,6 @@ export function EmailList({
   return (
     <div className={cn("flex flex-col min-h-0", className)}>
       {/* Batch Actions Toolbar */}
-      {isScheduledView && emails.length > 0 && (
-        <div className="border-b border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground">
-          {t('scheduled_actions_hint')}
-        </div>
-      )}
       <div
         className={cn(
           "transition-all duration-300 ease-in-out overflow-hidden",
@@ -497,7 +465,7 @@ export function EmailList({
                       onToggleExpand={() => handleToggleThreadExpansion(thread.threadId)}
                       onEmailSelect={(email) => onEmailSelect?.(email)}
                       onEmailDoubleClick={onEmailDoubleClick ? (email) => onEmailDoubleClick(email) : undefined}
-                      onContextMenu={openContextMenu}
+                      onContextMenu={isScheduledView ? undefined : openContextMenu}
                       onOpenConversation={onOpenConversation}
                       onToggleStar={onToggleStar ? (email) => onToggleStar(email) : undefined}
                       onMarkAsRead={onMarkAsRead ? (email, read) => onMarkAsRead(email, read) : undefined}
@@ -508,39 +476,10 @@ export function EmailList({
                     />
                     {isScheduledView && thread.latestEmail.isScheduled && (
                       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/10 px-4 py-2 text-xs">
-                        {thread.latestEmail.scheduledUndoStatus && thread.latestEmail.scheduledUndoStatus !== 'pending' && (
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                            {thread.latestEmail.scheduledUndoStatus}
-                          </span>
-                        )}
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <CalendarClock className="w-3.5 h-3.5" />
-                          {new Date(thread.latestEmail.scheduledSendAt || '').toLocaleString()}
+                          {thread.latestEmail.scheduledSendAt ? formatDateTime(thread.latestEmail.scheduledSendAt, timeFormat) : ''}
                         </span>
-                        {thread.latestEmail.scheduledUndoStatus === 'pending' && (
-                          <>
-                            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onCancelScheduled?.(thread.latestEmail)}>
-                              <XCircle className="w-3.5 h-3.5 mr-1" />
-                              {t('cancel_scheduled_send')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2"
-                              onClick={() => {
-                                const delayedUntil = promptForRescheduleDelayedUntil();
-                                if (delayedUntil) onRescheduleScheduled?.(thread.latestEmail, delayedUntil);
-                              }}
-                            >
-                              <CalendarClock className="w-3.5 h-3.5 mr-1" />
-                              {t('reschedule_send')}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => onCancelScheduledForEdit?.(thread.latestEmail)}>
-                              <Edit3 className="w-3.5 h-3.5 mr-1" />
-                              {thread.latestEmail.isSmimeScheduled ? t('cancel_and_compose_again') : t('cancel_and_edit')}
-                            </Button>
-                          </>
-                        )}
                       </div>
                     )}
                   </div>
@@ -590,12 +529,9 @@ export function EmailList({
           onMarkAsSpam={() => onMarkAsSpam?.(contextMenu.data!)}
           onUndoSpam={() => onUndoSpam?.(contextMenu.data!)}
           onEditDraft={() => onEditDraft?.(contextMenu.data!)}
-          onCancelScheduled={() => onCancelScheduled?.(contextMenu.data!)}
-          onCancelScheduledForEdit={() => onCancelScheduledForEdit?.(contextMenu.data!)}
-          onRescheduleScheduled={() => {
-            const delayedUntil = promptForRescheduleDelayedUntil();
-            if (delayedUntil) onRescheduleScheduled?.(contextMenu.data!, delayedUntil);
-          }}
+          onCancelScheduled={isScheduledView ? undefined : () => onCancelScheduled?.(contextMenu.data!)}
+          onCancelScheduledForEdit={isScheduledView ? undefined : () => onCancelScheduledForEdit?.(contextMenu.data!)}
+          onRescheduleScheduled={undefined}
           onBatchMarkAsRead={(read) => client && batchMarkAsRead(client, read)}
           onBatchDelete={() => client && batchDelete(client)}
           onBatchArchive={async () => {

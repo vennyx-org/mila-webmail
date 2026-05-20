@@ -1854,6 +1854,8 @@
       "expand_collapse": "Izvērst/sairt sarunu"
     },
     "composer": {
+      "send": "Nosūtīt e-pastu",
+      "schedule_send": "Ieplānot nosūtīšanu",
       "template_picker": "Atvērt veidņu izvēli"
     }
   },

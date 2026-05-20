@@ -108,6 +108,7 @@ export default function Home() {
   const [pendingMailtoAccountChoice, setPendingMailtoAccountChoice] = useState<ParsedMailto | null>(null);
   const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUndoToastSubmissionRef = useRef<string | null>(null);
   const { isAuthenticated, client, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
   const { identities } = useIdentityStore();
   useIdentitySync();
@@ -1255,6 +1256,44 @@ export default function Home() {
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
   };
+
+  useEffect(() => {
+    if (!pendingUndoSend || !client) return;
+    if (lastUndoToastSubmissionRef.current === pendingUndoSend.submissionId) return;
+
+    lastUndoToastSubmissionRef.current = pendingUndoSend.submissionId;
+    const pending = pendingUndoSend;
+
+    toast.info(t('email_viewer.undo_send_scheduled'), {
+      duration: 8000,
+      action: {
+        label: t('email_viewer.undo_send'),
+        onClick: () => {
+          void (async () => {
+            try {
+              const restored = await cancelUndoSend(client, pending);
+              if (restored && !pending.isSmime) {
+                await handleEditDraft(restored);
+              }
+              if (isScheduledView) await fetchScheduledEmails(client);
+            } catch (error) {
+              console.error('Failed to undo scheduled send:', error);
+            }
+          })();
+        },
+      },
+    });
+
+    const timer = setTimeout(() => {
+      const current = useEmailStore.getState().pendingUndoSend;
+      if (current?.submissionId === pending.submissionId) {
+        clearPendingUndoSend();
+      }
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cancelUndoSend, clearPendingUndoSend, client, fetchScheduledEmails, isScheduledView, pendingUndoSend?.submissionId, t]);
 
   const handleReplyAll = async () => {
     if (selectedEmail) {
@@ -2608,11 +2647,6 @@ export default function Home() {
                   setShowComposer(true);
                   if (isMobile) setActiveView('viewer');
                 }}
-                onRescheduleScheduled={async (email, delayedUntil) => {
-                  if (client && email.emailSubmissionId && email.scheduledIdentityId) {
-                    await rescheduleScheduledEmail(client, email.emailSubmissionId, email.id, email.scheduledIdentityId, delayedUntil);
-                  }
-                }}
                 onEmailSelect={handleEmailSelect}
                 onEmailDoubleClick={isEmbedded ? ((email) => {
                   useProTabStore.getState().openEmailTab({
@@ -2964,24 +2998,6 @@ export default function Home() {
         )}
         <ConfirmDialog {...confirmDialogProps} />
         <PromptDialog {...promptDialogProps} />
-        {pendingUndoSend && (
-          <div className="fixed bottom-4 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
-            <span className="text-sm text-foreground">{t('email_viewer.undo_send_scheduled')}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                if (!client) return;
-                const restored = await cancelUndoSend(client, pendingUndoSend);
-                if (restored && !pendingUndoSend.isSmime) {
-                  await handleEditDraft(restored);
-                }
-              }}
-            >
-              {t('email_viewer.undo_send')}
-            </Button>
-          </div>
-        )}
         <TotpReauthDialog />
       </div>
     </DragDropProvider>

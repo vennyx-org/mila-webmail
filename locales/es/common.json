@@ -1854,6 +1854,8 @@
       "expand_collapse": "Expandir/contraer conversación"
     },
     "composer": {
+      "send": "Enviar correo",
+      "schedule_send": "Programar envío",
       "template_picker": "Abrir selector de plantillas"
     }
   },

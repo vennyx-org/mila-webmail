@@ -1854,6 +1854,8 @@
       "expand_collapse": "展开/折叠会话"
     },
     "composer": {
+      "send": "发送邮件",
+      "schedule_send": "定时发送",
       "template_picker": "打开模板选择器"
     }
   },

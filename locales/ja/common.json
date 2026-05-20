@@ -1854,6 +1854,8 @@
       "expand_collapse": "スレッドの展開/折りたたみ"
     },
     "composer": {
+      "send": "メールを送信",
+      "schedule_send": "送信を予約",
       "template_picker": "テンプレートピッカーを開く"
     }
   },
