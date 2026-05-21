@@ -236,6 +236,10 @@ export class SandboxInstance {
       }
 
       case 'slot-resize':
+        // The iframe has no intrinsic height — sync it to the content height
+        // the sandbox reported, otherwise the wrapper reserves space but the
+        // iframe stays at 0px and the slot appears blank.
+        this.iframe.style.height = `${msg.height}px`;
         this.slotResizeCb?.(msg.height);
         return;
     }
