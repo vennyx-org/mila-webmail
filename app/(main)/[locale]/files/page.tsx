@@ -401,7 +401,7 @@ export default function FilesPage() {
         )}
         <div className={cn("flex flex-1 min-h-0", inlineApp && "hidden")}>
           <div className="flex-1 min-w-0 flex flex-col">
-            {folderLayout !== "sidebar" && (
+            {folderLayout !== "sidebar" && !isEmbedded && (
               <div className={cn("p-4 border-b border-border", isMobile && "px-3 py-3")}>
                 <div className="flex items-center justify-between">
                   <Button
