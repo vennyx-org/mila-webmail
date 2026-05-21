@@ -458,7 +458,7 @@ export function FileBrowser({
     const segments = currentPath.split('/').filter(Boolean);
     segments.pop();
     const parentPath = segments.length === 0 ? '/' : '/' + segments.join('/');
-    onNavigate(parentPath, null);
+    onNavigate(parentPath);
   }, [currentPath, onNavigate]);
 
   const handleResourceClick = (resource: FileResource, e: React.MouseEvent) => {
