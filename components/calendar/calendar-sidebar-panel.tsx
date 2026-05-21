@@ -16,6 +16,35 @@ import { ContextMenu, ContextMenuItem, ContextMenuSeparator, ContextMenuSubMenu 
 import { useContextMenu } from "@/hooks/use-context-menu";
 import type { IJMAPClient } from '@/lib/jmap/client-interface';
 
+/**
+ * Split a per-account calendar list into "owned" (the user's own) and
+ * "shared" sub-buckets, then group shared by the owning principal so each
+ * delegator gets its own sub-section.
+ */
+type AccountCalendarSplit = {
+  owned: Calendar[];
+  sharedGroups: { label: string; calendars: Calendar[] }[];
+};
+
+function splitAccountCalendars(list: Calendar[]): AccountCalendarSplit {
+  const owned: Calendar[] = [];
+  const sharedBuckets = new Map<string, { label: string; calendars: Calendar[] }>();
+  for (const cal of list) {
+    if (cal.isShared) {
+      const key = cal.accountId || cal.accountName || cal.id;
+      const bucket = sharedBuckets.get(key);
+      if (bucket) {
+        bucket.calendars.push(cal);
+      } else {
+        sharedBuckets.set(key, { label: cal.accountName || key, calendars: [cal] });
+      }
+    } else {
+      owned.push(cal);
+    }
+  }
+  return { owned, sharedGroups: Array.from(sharedBuckets.values()) };
+}
+
 interface CalendarSidebarPanelProps {
   calendars: Calendar[];
   selectedCalendarIds: string[];
@@ -128,14 +157,14 @@ export function CalendarSidebarPanel({
       list.push(cal);
       byAccount.set(key, list);
     }
-    const ordered: { key: string; label: string; calendars: Calendar[] }[] = [];
+    const ordered: { key: string; label: string; split: AccountCalendarSplit }[] = [];
     // Active account first.
     if (activeLocalAccountId && byAccount.has(activeLocalAccountId)) {
       const acct = localAccounts.find(a => a.id === activeLocalAccountId);
       ordered.push({
         key: activeLocalAccountId,
         label: acct?.label || acct?.email || acct?.username || activeLocalAccountId,
-        calendars: byAccount.get(activeLocalAccountId)!,
+        split: splitAccountCalendars(byAccount.get(activeLocalAccountId)!),
       });
       byAccount.delete(activeLocalAccountId);
     }
@@ -145,7 +174,7 @@ export function CalendarSidebarPanel({
       ordered.push({
         key: acct.id,
         label: acct.label || acct.email || acct.username,
-        calendars: byAccount.get(acct.id)!,
+        split: splitAccountCalendars(byAccount.get(acct.id)!),
       });
       byAccount.delete(acct.id);
     }
@@ -154,7 +183,7 @@ export function CalendarSidebarPanel({
       const fallbackLabel = key === '__other__'
         ? t('my_calendars')
         : list[0]?.accountName || key;
-      ordered.push({ key, label: fallbackLabel, calendars: list });
+      ordered.push({ key, label: fallbackLabel, split: splitAccountCalendars(list) });
     }
     return ordered;
   }, [multiAccountMode, calendars, localAccounts, activeLocalAccountId, t]);
@@ -348,6 +377,7 @@ export function CalendarSidebarPanel({
           {localAccountGroups.map((group, idx) => {
             const expanded = !collapsedAccountGroups.has(group.key);
             const isActive = group.key === activeLocalAccountId;
+            const { owned, sharedGroups } = group.split;
             return (
               <div key={group.key} className={cn(idx === 0 ? "" : "mt-3")}>
                 <button
@@ -383,8 +413,28 @@ export function CalendarSidebarPanel({
                   )}
                 </button>
                 {expanded && (
-                  <div className="space-y-0.5 mt-1">
-                    {group.calendars.map(renderCalendarItem)}
+                  <div className="mt-1 pl-3">
+                    {owned.length > 0 && (
+                      <div>
+                        <div className="px-1 mb-1 text-[10px] font-medium text-muted-foreground/80 uppercase tracking-wider">
+                          {t('my_calendars')}
+                        </div>
+                        <div className="space-y-0.5">
+                          {owned.map(renderCalendarItem)}
+                        </div>
+                      </div>
+                    )}
+                    {sharedGroups.map((sg) => (
+                      <div key={`${group.key}-shared-${sg.label}`} className="mt-2">
+                        <div className="px-1 mb-1 text-[10px] font-medium text-muted-foreground/80 uppercase tracking-wider flex items-center gap-1">
+                          <Share2 className="w-3 h-3" />
+                          {sg.label}
+                        </div>
+                        <div className="space-y-0.5">
+                          {sg.calendars.map(renderCalendarItem)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

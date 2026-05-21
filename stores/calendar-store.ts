@@ -71,15 +71,14 @@ function prefixCalendarsWithLocalAccount(
     return calendars.map((cal) => ({ ...cal, localAccountId }));
   }
   const prefix = buildCrossAccountIdPrefix(localAccountId);
+  // Preserve each calendar's original `isShared` flag — it distinguishes
+  // the user's own calendars on the other account from calendars shared
+  // *into* that account by yet another user. The sidebar uses this split
+  // to render "My Calendars" vs "Shared" sub-sections per account.
   return calendars.map((cal) => ({
     ...cal,
     id: `${prefix}${cal.id}`,
     localAccountId,
-    // Make sure other accounts' calendars surface under their own section in
-    // the sidebar. The sidebar groups "shared" calendars by account label;
-    // promoting them keeps them visually separate from the active account's
-    // own calendars without inventing new grouping logic.
-    isShared: true,
   }));
 }
 
@@ -96,7 +95,6 @@ function prefixEventsWithLocalAccount(
     ...event,
     id: `${prefix}${event.id}`,
     localAccountId,
-    isShared: true,
     calendarIds: event.calendarIds
       ? Object.fromEntries(
           Object.entries(event.calendarIds).map(([calId, v]) => [`${prefix}${calId}`, v]),
