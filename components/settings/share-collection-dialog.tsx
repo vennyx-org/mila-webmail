@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { X, Loader2, UserPlus, Trash2, Users, ChevronDown } from "lucide-react";
 import type { IJMAPClient } from "@/lib/jmap/client-interface";
 import type { Principal, CalendarRights, AddressBookRights } from "@/lib/jmap/types";
@@ -230,6 +231,12 @@ export function ShareCollectionDialog({
                   : detectAddressBookPreset(rights as AddressBookRights);
                 return (
                   <li key={principalId} className="flex items-center gap-3 px-3 py-2.5">
+                    <Avatar
+                      name={principal?.name}
+                      email={principal?.email ?? undefined}
+                      size="sm"
+                      className="shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">
                         {principal?.name || principal?.email || principalId}
@@ -314,6 +321,12 @@ export function ShareCollectionDialog({
                     className="w-full text-left px-3 py-2 rounded-md hover:bg-muted disabled:opacity-50 transition-colors"
                   >
                     <div className="flex items-center gap-2">
+                      <Avatar
+                        name={p.name}
+                        email={p.email ?? undefined}
+                        size="sm"
+                        className="shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate flex items-center gap-2">
                           {p.name}
