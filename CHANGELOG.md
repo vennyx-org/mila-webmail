@@ -21,6 +21,7 @@
 - **Pro**: Multi-account contacts and a cross-account file picker
 - **Pro**: Composer From dropdown grouped by account
 - **Plugins**: Per-plugin admin approval workflow with Ed25519 bundle signing verified on load
+- **Plugins**: Marketplace update flow for installed plugins and themes
 - **Setup**: Allow the setup wizard over plain HTTP with a dismissable warning gate
 - **Setup**: Warn when the JMAP URL points at a local-only host
 - **Account**: List and reorder logged-in accounts from settings (#282)
@@ -62,6 +63,7 @@
 - **Plugins**: Load `globals.css` and Geist font in the plugin sandbox iframe
 - **Plugins**: Sync plugin slot iframe height with reported content height
 - **Plugins**: Use plugin slot offer snapshots for `useSyncExternalStore`
+- **Plugins**: Trust the directory version on marketplace install and update
 - **Filters**: Prevent duplication of Bulwark rules with literal braces in values
 - **Setup**: Defer setup wizard HTTP detection to avoid hydration mismatch
 - **Routing**: Anchor unmatched URLs into `main` so 404 renders
