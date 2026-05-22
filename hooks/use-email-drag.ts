@@ -48,13 +48,34 @@ function createDragPreview(count: number): HTMLElement {
   return preview;
 }
 
-function sanitizeFilenamePart(s: string): string {
+function sanitizeFilenamePart(s: string, maxLen = 80): string {
   // eslint-disable-next-line no-control-regex
-  return s.replace(/[<>:"/\\|?*\x00-\x1F]+/g, "_").trim().slice(0, 80) || "email";
+  const cleaned = s.replace(/[<>:"/\\|?*\x00-\x1F]+/g, "_").replace(/\s+/g, " ").trim();
+  return cleaned.slice(0, maxLen) || "";
 }
 
-function emlFilename(subject: string | null | undefined): string {
-  return `${sanitizeFilenamePart(subject || "email")}.eml`;
+function formatEmlDate(iso: string | null | undefined): string {
+  const d = iso ? new Date(iso) : new Date();
+  if (Number.isNaN(d.getTime())) return "0000-00-00 00.00.00";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`
+  );
+}
+
+function addressLabel(addr: { name?: string | null; email: string } | undefined, maxLen = 30): string {
+  if (!addr) return "";
+  const label = (addr.name && addr.name.trim()) || addr.email.split("@")[0] || addr.email;
+  return sanitizeFilenamePart(label, maxLen);
+}
+
+function emlFilename(email: Email): string {
+  const date = formatEmlDate(email.receivedAt || email.sentAt);
+  const from = addressLabel(email.from?.[0]);
+  const to = addressLabel(email.to?.[0]);
+  const subject = sanitizeFilenamePart(email.subject || "no subject");
+  return `${date} (${from}-${to}) ${subject}.eml`;
 }
 
 function bundleFilename(count: number): string {
@@ -84,13 +105,11 @@ async function buildEmailZip(client: IJMAPClient, emails: Email[]): Promise<stri
   const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
   const used = new Set<string>();
-  const pad = String(eligible.length).length;
   await Promise.all(
-    eligible.map(async (em, i) => {
-      const base = sanitizeFilenamePart(em.subject || "email");
-      const indexStr = String(i + 1).padStart(pad, "0");
-      let name = `${indexStr}-${base}.eml`;
-      while (used.has(name)) name = `${indexStr}-${base}-${em.id.slice(0, 6)}.eml`;
+    eligible.map(async (em) => {
+      const base = emlFilename(em).replace(/\.eml$/, "");
+      let name = `${base}.eml`;
+      while (used.has(name)) name = `${base} [${em.id.slice(0, 6)}].eml`;
       used.add(name);
       try {
         const blob = await client.fetchBlob(em.blobId!, name, "message/rfc822");
@@ -160,7 +179,7 @@ export function useEmailDrag({ email, sourceMailboxId, threadEmails }: UseEmailD
   const prefetchSingle = useCallback(() => {
     if (!dragOutEnabled || !client || !email.blobId) return;
     if (singleBlobUrlRef.current || inFlightRef.current) return;
-    const name = emlFilename(email.subject);
+    const name = emlFilename(email);
     inFlightRef.current = client
       .fetchBlobAsObjectUrl(email.blobId, name, "message/rfc822")
       .then((url) => {
@@ -171,7 +190,7 @@ export function useEmailDrag({ email, sourceMailboxId, threadEmails }: UseEmailD
       .finally(() => {
         inFlightRef.current = null;
       });
-  }, [dragOutEnabled, client, email.blobId, email.subject]);
+  }, [dragOutEnabled, client, email]);
 
   const handlePointerEnter = useCallback(() => {
     if (!dragOutEnabled || !client) return;
@@ -213,7 +232,7 @@ export function useEmailDrag({ email, sourceMailboxId, threadEmails }: UseEmailD
       if (emailsToDrag.length === 1 && emailsToDrag[0].blobId) {
         const url = singleBlobUrlRef.current;
         if (url) {
-          const name = emlFilename(emailsToDrag[0].subject);
+          const name = emlFilename(emailsToDrag[0]);
           // `DownloadURL` format: <mime>:<filename>:<url>. Chromium reads this
           // on drop and writes a real file; Firefox/Safari ignore it.
           e.dataTransfer.setData(
