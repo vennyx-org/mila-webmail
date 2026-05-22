@@ -406,6 +406,7 @@ export function EmailComposer({
   const [smimePassphraseError, setSmimePassphraseError] = useState('');
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachmentWarningKeyword, setAttachmentWarningKeyword] = useState('');
+  const [attachmentWarningDelayedUntil, setAttachmentWarningDelayedUntil] = useState<string | undefined>();
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleValue, setScheduleValue] = useState('');
   const [scheduleError, setScheduleError] = useState('');
@@ -1227,8 +1228,8 @@ export function EmailComposer({
     const time = new Date(value).getTime();
     if (!Number.isFinite(time)) return t('schedule_send_invalid');
     if (time <= Date.now()) return t('schedule_send_future');
-    if (client) {
-      const maxDelayedSend = client.getMaxDelayedSend();
+    if (composerClient) {
+      const maxDelayedSend = composerClient.getMaxDelayedSend();
       if (maxDelayedSend > 0 && time > Date.now() + maxDelayedSend * 1000) {
         return t('schedule_send_too_late');
       }
@@ -1239,7 +1240,7 @@ export function EmailComposer({
   const resolveDelayedUntil = async (requestedDelayedUntil?: string): Promise<string | undefined> => {
     if (requestedDelayedUntil) return requestedDelayedUntil;
     if (sendDelaySeconds === 0) return undefined;
-    if (client?.hasDelayedSend()) {
+    if (composerClient?.hasDelayedSend()) {
       return new Date(Date.now() + sendDelaySeconds * 1000).toISOString();
     }
     const confirmed = window.confirm(t('send_delay_unsupported_confirm'));
@@ -1320,6 +1321,7 @@ export function EmailComposer({
         const matched = attachmentReminderKeywords.find(kw => searchText.includes(kw.toLowerCase()));
         if (matched) {
           setAttachmentWarningKeyword(matched);
+          setAttachmentWarningDelayedUntil(delayedUntil);
           setShowAttachmentWarning(true);
           return;
         }
@@ -1654,7 +1656,7 @@ export function EmailComposer({
   };
 
   const handleScheduleSend = () => {
-    if (!client?.hasDelayedSend()) {
+    if (!composerClient?.hasDelayedSend()) {
       setScheduleError(t('schedule_send_unsupported'));
       return;
     }
@@ -1742,7 +1744,7 @@ export function EmailComposer({
 
     if (isScheduleShortcut) {
       e.preventDefault();
-      if (!e.repeat && client?.hasDelayedSend()) openScheduleDialog();
+      if (!e.repeat && composerClient?.hasDelayedSend()) openScheduleDialog();
     }
   };
 
@@ -2225,7 +2227,7 @@ export function EmailComposer({
             >
               {t('discard')}
             </button>
-            {client?.hasDelayedSend() ? (
+            {composerClient?.hasDelayedSend() ? (
               <div ref={sendMenuRef} className="relative hidden md:inline-flex">
                 <Button
                   onClick={() => handleSend()}
@@ -2412,7 +2414,7 @@ export function EmailComposer({
               <Button variant="outline" onClick={() => setShowAttachmentWarning(false)}>
                 {t('forgot_attachment.back')}
               </Button>
-              <Button onClick={() => { setShowAttachmentWarning(false); handleSend(true); }}>
+              <Button onClick={() => { setShowAttachmentWarning(false); handleSend(true, attachmentWarningDelayedUntil); setAttachmentWarningDelayedUntil(undefined); }}>
                 {t('forgot_attachment.send_anyway')}
               </Button>
             </div>

@@ -39,7 +39,7 @@ export function ProComposeTabBody({ tabId, data }: ProComposeTabBodyProps) {
   const handleSend = useCallback(async (sendData: Parameters<NonNullable<React.ComponentProps<typeof EmailComposer>['onSend']>>[0]) => {
     if (!client) return;
     try {
-      await sendEmail(
+      const result = await sendEmail(
         client,
         sendData.to,
         sendData.subject,
@@ -57,6 +57,11 @@ export function ProComposeTabBody({ tabId, data }: ProComposeTabBodyProps) {
         sendData.delayedUntil,
         sendData.envelopeMailFrom,
       );
+
+      if (result.scheduled) {
+        closeTab(tabIdRef.current);
+        return;
+      }
 
       // Mark the original message as $answered / $forwarded so the standard
       // viewer and list reflect the action (same behaviour as inline compose).

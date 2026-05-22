@@ -471,7 +471,7 @@ export function EmailList({
                       onToggleExpand={() => handleToggleThreadExpansion(thread.threadId)}
                       onEmailSelect={(email) => onEmailSelect?.(email)}
                       onEmailDoubleClick={onEmailDoubleClick ? (email) => onEmailDoubleClick(email) : undefined}
-                      onContextMenu={isScheduledView ? undefined : openContextMenu}
+                      onContextMenu={openContextMenu}
                       onOpenConversation={onOpenConversation}
                       onToggleStar={onToggleStar ? (email) => onToggleStar(email) : undefined}
                       onMarkAsRead={onMarkAsRead ? (email, read) => onMarkAsRead(email, read) : undefined}
@@ -535,8 +535,8 @@ export function EmailList({
           onMarkAsSpam={() => onMarkAsSpam?.(contextMenu.data!)}
           onUndoSpam={() => onUndoSpam?.(contextMenu.data!)}
           onEditDraft={() => onEditDraft?.(contextMenu.data!)}
-          onCancelScheduled={isScheduledView ? undefined : () => onCancelScheduled?.(contextMenu.data!)}
-          onCancelScheduledForEdit={isScheduledView ? undefined : () => onCancelScheduledForEdit?.(contextMenu.data!)}
+          onCancelScheduled={() => onCancelScheduled?.(contextMenu.data!)}
+          onCancelScheduledForEdit={() => onCancelScheduledForEdit?.(contextMenu.data!)}
           onRescheduleScheduled={undefined}
           onBatchMarkAsRead={(read) => client && batchMarkAsRead(client, read)}
           onBatchDelete={() => client && batchDelete(client)}

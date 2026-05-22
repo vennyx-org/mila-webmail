@@ -2606,7 +2606,13 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 
   cancelUndoSend: async (client, pending) => {
     await client.cancelEmailSubmission(pending.submissionId);
-    if (pending.emailId && !pending.isSmime) {
+    if (pending.emailId && pending.isSmime) {
+      await client.deleteEmail(pending.emailId);
+      set(state => ({
+        selectedEmail: state.selectedEmail?.id === pending.emailId ? null : state.selectedEmail,
+        selectedEmailIds: new Set(Array.from(state.selectedEmailIds).filter(id => id !== pending.emailId)),
+      }));
+    } else if (pending.emailId) {
       const mailboxes = get().mailboxes.length > 0 ? get().mailboxes : await client.getMailboxes();
       const draftsMailbox = mailboxes.find(mb => mb.role === 'drafts');
       const sentMailbox = mailboxes.find(mb => mb.role === 'sent');
@@ -2616,7 +2622,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
     await get().refreshScheduledMetadata(client);
     set({ pendingUndoSend: null });
-    return pending.emailId ? client.getEmail(pending.emailId) : null;
+    return pending.emailId && !pending.isSmime ? client.getEmail(pending.emailId) : null;
   },
 
   loadMockData: () => {
