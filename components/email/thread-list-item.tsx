@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { formatDate, stripInvisibleLeading } from "@/lib/utils";
+import { formatDate, formatDateTime, stripInvisibleLeading } from "@/lib/utils";
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
-import { Paperclip, Star, Circle, ChevronRight, ChevronDown, Loader2, MessageSquare, CheckSquare, Square, Reply, Forward } from "lucide-react";
+import { Paperclip, Star, Circle, ChevronRight, ChevronDown, Loader2, MessageSquare, CheckSquare, Square, Reply, Forward, CalendarClock } from "lucide-react";
 import { useSettingsStore, KEYWORD_PALETTE } from "@/stores/settings-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useEmailStore } from "@/stores/email-store";
@@ -67,6 +67,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const emailKeywords = useSettingsStore((state) => state.emailKeywords);
     const density = useSettingsStore((state) => state.density);
     const mailLayout = useSettingsStore((state) => state.mailLayout);
+    const timeFormat = useSettingsStore((state) => state.timeFormat);
     const showAvatarsInJunk = useSettingsStore((state) => state.showAvatarsInJunk);
     const hideJunkAvatarImages = currentMailboxRole === 'junk' && !showAvatarsInJunk;
     const isUnifiedView = useEmailStore((state) => state.isUnifiedView);
@@ -76,6 +77,9 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const isFocusedMailLayout = mailLayout === 'focus';
     const trimmedPreview = stripInvisibleLeading(email.preview ?? '');
     const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
+    const scheduledSendLabel = email.isScheduled && email.scheduledSendAt
+      ? formatDateTime(email.scheduledSendAt, timeFormat)
+      : null;
 
     // Resolve color tags using keyword definitions; unknown tags fall back to gray
     const tagIds = getEmailColorTags(email.keywords);
@@ -241,12 +245,22 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                   {resolvedKeywordDefs.map((kd) => (
                     <span key={kd.id} className={cn('h-2.5 w-2.5 rounded-full', KEYWORD_PALETTE[kd.color]?.dot || 'bg-gray-400')} />
                   ))}
-                  <span className={cn(
-                    'text-xs tabular-nums',
-                    isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'
-                  )}>
-                    {formatDate(email.receivedAt)}
-                  </span>
+                  {scheduledSendLabel ? (
+                    <span
+                      className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-sky-700 dark:text-sky-300"
+                      title={scheduledSendLabel}
+                    >
+                      <CalendarClock className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{scheduledSendLabel}</span>
+                    </span>
+                  ) : (
+                    <span className={cn(
+                      'text-xs tabular-nums',
+                      isUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                    )}>
+                      {formatDate(email.receivedAt)}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -299,14 +313,24 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                         {kd.label}
                       </span>
                     ))}
-                    <span className={cn(
-                      "text-xs tabular-nums",
-                      isUnread
-                        ? "text-foreground font-semibold"
-                        : "text-muted-foreground"
-                    )}>
-                      {formatDate(email.receivedAt)}
-                    </span>
+                    {scheduledSendLabel ? (
+                      <span
+                        className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-sky-700 dark:text-sky-300"
+                        title={scheduledSendLabel}
+                      >
+                        <CalendarClock className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{scheduledSendLabel}</span>
+                      </span>
+                    ) : (
+                      <span className={cn(
+                        "text-xs tabular-nums",
+                        isUnread
+                          ? "text-foreground font-semibold"
+                          : "text-muted-foreground"
+                      )}>
+                        {formatDate(email.receivedAt)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -376,12 +400,16 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     const showPreview = useSettingsStore((state) => state.showPreview);
     const density = useSettingsStore((state) => state.density);
     const mailLayout = useSettingsStore((state) => state.mailLayout);
+    const timeFormat = useSettingsStore((state) => state.timeFormat);
     const showAvatarsInJunk = useSettingsStore((state) => state.showAvatarsInJunk);
     const isMobile = useUIStore((state) => state.isMobile);
     const { latestEmail, participantNames, hasUnread, hasStarred, hasAttachment, hasAnswered, hasForwarded, emailCount } = thread;
     const isFocusedMailLayout = mailLayout === 'focus';
     const trimmedPreview = stripInvisibleLeading(latestEmail.preview ?? '');
     const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
+    const scheduledSendLabel = latestEmail.isScheduled && latestEmail.scheduledSendAt
+      ? formatDateTime(latestEmail.scheduledSendAt, timeFormat)
+      : null;
 
     const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView } = useEmailStore();
     const getAccountById = useAccountStore((state) => state.getAccountById);
@@ -647,12 +675,22 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                     {keywordDef && (
                       <span className={cn('h-2.5 w-2.5 rounded-full', KEYWORD_PALETTE[keywordDef.color]?.dot || 'bg-gray-400')} />
                     )}
-                    <span className={cn(
-                      'text-xs tabular-nums',
-                      hasUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'
-                    )}>
-                      {formatDate(latestEmail.receivedAt)}
-                    </span>
+                    {scheduledSendLabel ? (
+                      <span
+                        className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-sky-700 dark:text-sky-300"
+                        title={scheduledSendLabel}
+                      >
+                        <CalendarClock className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{scheduledSendLabel}</span>
+                      </span>
+                    ) : (
+                      <span className={cn(
+                        'text-xs tabular-nums',
+                        hasUnread ? 'text-foreground font-semibold' : 'text-muted-foreground'
+                      )}>
+                        {formatDate(latestEmail.receivedAt)}
+                      </span>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -717,14 +755,24 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                           {keywordDef.label}
                         </span>
                       )}
-                      <span className={cn(
-                        "text-xs tabular-nums",
-                        hasUnread
-                          ? "text-foreground font-semibold"
-                          : "text-muted-foreground"
-                      )}>
-                        {formatDate(latestEmail.receivedAt)}
-                      </span>
+                      {scheduledSendLabel ? (
+                        <span
+                          className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-sky-700 dark:text-sky-300"
+                          title={scheduledSendLabel}
+                        >
+                          <CalendarClock className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{scheduledSendLabel}</span>
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "text-xs tabular-nums",
+                          hasUnread
+                            ? "text-foreground font-semibold"
+                            : "text-muted-foreground"
+                        )}>
+                          {formatDate(latestEmail.receivedAt)}
+                        </span>
+                      )}
                     </div>
                   </div>
 

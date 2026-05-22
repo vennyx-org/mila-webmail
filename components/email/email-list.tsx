@@ -3,7 +3,7 @@
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { ThreadListItem } from "./thread-list-item";
 import { EmailContextMenu } from "./email-context-menu";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Trash2, Mail, MailX, MailOpen, Loader2, SearchX, AlertTriangle, CalendarClock } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -121,7 +121,6 @@ export function EmailList({
   const density = useSettingsStore((state) => state.density);
   const showPreview = useSettingsStore((state) => state.showPreview);
   const mailLayout = useSettingsStore((state) => state.mailLayout);
-  const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
   const footerHasMore = hasMore ?? hasMoreEmails;
   const footerIsLoadingMore = isLoadingMoreItems ?? isLoadingMore;
@@ -482,14 +481,6 @@ export function EmailList({
                       onSetColorTag={onSetColorTag}
                       onMarkAsSpam={onMarkAsSpam ? (email) => onMarkAsSpam(email) : undefined}
                     />
-                    {isScheduledView && thread.latestEmail.isScheduled && (
-                      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/10 px-4 py-2 text-xs">
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <CalendarClock className="w-3.5 h-3.5" />
-                          {thread.latestEmail.scheduledSendAt ? formatDateTime(thread.latestEmail.scheduledSendAt, timeFormat) : ''}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}
