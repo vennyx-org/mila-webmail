@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ACCOUNT_ID = 'dev-account-001';
 const scheduledSubmissions: Array<{ id: string; emailId: string; identityId: string; sendAt: string; undoStatus: 'pending' | 'final' | 'canceled' }> = [];
+const emailCreationIds = new Map<string, string>();
 
 // ---------------------------------------------------------------------------
 // Mailboxes
@@ -1534,6 +1535,7 @@ function handleEmailSet(args: MethodArgs, callId: string): MethodResult {
         bodyValues: {},
       };
       emails.unshift(newEmail);
+      emailCreationIds.set(key, newId);
       created[key] = { id: newId };
     }
   }
@@ -1592,7 +1594,7 @@ function handleEmailSubmissionSet(args: MethodArgs, callId: string): MethodResul
       const delayedUntil = Number.isFinite(holdUntilTime) ? new Date(holdUntilTime).toISOString() : undefined;
       created[key] = { id, ...(delayedUntil ? { sendAt: delayedUntil } : {}) };
       if (delayedUntil && value.emailId && value.identityId) {
-        const emailId = value.emailId.startsWith('#') ? emails[emails.length - 1]?.id || value.emailId : value.emailId;
+        const emailId = value.emailId.startsWith('#') ? emailCreationIds.get(value.emailId.slice(1)) || value.emailId : value.emailId;
         scheduledSubmissions.push({ id, emailId, identityId: value.identityId, sendAt: delayedUntil, undoStatus: 'pending' });
       }
     }

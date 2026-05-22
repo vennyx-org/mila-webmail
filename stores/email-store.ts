@@ -101,7 +101,7 @@ interface EmailStore {
   fetchEmailContent: (client: IJMAPClient, emailId: string) => Promise<Email | null>;
   fetchQuota: (client: IJMAPClient) => Promise<void>;
   sendEmail: (client: IJMAPClient, to: string[], subject: string, body: string, cc?: string[], bcc?: string[], identityId?: string, fromEmail?: string, draftId?: string, fromName?: string, htmlBody?: string, attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>, inReplyTo?: string[], references?: string[], delayedUntil?: string, envelopeMailFrom?: string) => Promise<SendEmailResult>;
-  sendRawEmail: (client: IJMAPClient, rawMimeBlob: Blob, identityId: string, delayedUntil?: string) => Promise<SendEmailResult>;
+  sendRawEmail: (client: IJMAPClient, rawMimeBlob: Blob, identityId: string, delayedUntil?: string, envelopeRecipients?: string[]) => Promise<SendEmailResult>;
   deleteEmail: (client: IJMAPClient, emailId: string, forceDelete?: boolean) => Promise<void>;
   markAsRead: (client: IJMAPClient, emailId: string, read: boolean) => Promise<void>;
   moveToMailbox: (client: IJMAPClient, emailId: string, mailboxId: string) => Promise<void>;
@@ -673,14 +673,14 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
-  sendRawEmail: async (client, rawMimeBlob, identityId, delayedUntil) => {
+  sendRawEmail: async (client, rawMimeBlob, identityId, delayedUntil, envelopeRecipients) => {
     set({ isLoading: true, error: null });
     try {
       const mailboxes = await client.getMailboxes();
       const sentMailbox = mailboxes.find(mb => mb.role === 'sent');
       if (!sentMailbox) throw new Error('No sent mailbox found');
       const draftsMailbox = mailboxes.find(mb => mb.role === 'drafts');
-      const result = await client.sendRawEmail(rawMimeBlob, identityId, sentMailbox.id, draftsMailbox?.id, delayedUntil);
+      const result = await client.sendRawEmail(rawMimeBlob, identityId, sentMailbox.id, draftsMailbox?.id, delayedUntil, envelopeRecipients);
       set({
         isLoading: false,
         pendingUndoSend: result.scheduled && result.emailSubmissionId && result.sendAt
@@ -2095,10 +2095,15 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     });
   },
 
-  setScheduledView: (isScheduledView) => set(state => ({
-    isScheduledView,
-    selectedMailbox: isScheduledView ? VIRTUAL_SCHEDULED_MAILBOX_ID : state.selectedMailbox,
-  })),
+  setScheduledView: (isScheduledView) => set(state => {
+    const leavingScheduled = !isScheduledView && state.selectedMailbox === VIRTUAL_SCHEDULED_MAILBOX_ID;
+    return {
+      isScheduledView,
+      selectedMailbox: isScheduledView ? VIRTUAL_SCHEDULED_MAILBOX_ID : leavingScheduled ? "" : state.selectedMailbox,
+      selectedEmail: leavingScheduled ? null : state.selectedEmail,
+      selectedEmailIds: leavingScheduled ? new Set<string>() : state.selectedEmailIds,
+    };
+  }),
   clearPendingUndoSend: () => set({ pendingUndoSend: null }),
 
   fetchScheduledEmails: async (client) => {
@@ -2191,6 +2196,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     await client.cancelEmailSubmission(submissionId);
     if (emailId) {
       await client.deleteEmail(emailId);
+      set(state => ({
+        selectedEmail: state.selectedEmail?.id === emailId ? null : state.selectedEmail,
+        selectedEmailIds: new Set(Array.from(state.selectedEmailIds).filter(id => id !== emailId)),
+      }));
     }
     if (get().pendingUndoSend?.submissionId === submissionId) {
       set({ pendingUndoSend: null });
@@ -2214,8 +2223,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   rescheduleScheduledEmail: async (client, submissionId, emailId, identityId, delayedUntil) => {
+    let result: SendEmailResult | undefined;
     try {
-      const result = await client.rescheduleEmailSubmission(submissionId, emailId, identityId, delayedUntil);
+      result = await client.rescheduleEmailSubmission(submissionId, emailId, identityId, delayedUntil);
       const pendingUndoSend = get().pendingUndoSend;
       if (pendingUndoSend?.submissionId === submissionId) {
         set({ pendingUndoSend: { ...pendingUndoSend, submissionId: result.emailSubmissionId || submissionId, sendAt: result.sendAt || delayedUntil } });
@@ -2223,6 +2233,19 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       return result;
     } finally {
       await get().fetchScheduledEmails(client);
+      if (result && get().selectedEmail?.id === emailId) {
+        const refreshed = get().scheduledEmails.find(email => email.id === emailId);
+        set(state => ({
+          selectedEmail: refreshed || (state.selectedEmail ? {
+            ...state.selectedEmail,
+            emailSubmissionId: result?.emailSubmissionId || submissionId,
+            scheduledSendAt: result?.sendAt || delayedUntil,
+            scheduledIdentityId: identityId,
+            scheduledUndoStatus: 'pending' as const,
+            isScheduled: true,
+          } : state.selectedEmail),
+        }));
+      }
     }
   },
 

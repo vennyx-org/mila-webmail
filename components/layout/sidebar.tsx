@@ -74,6 +74,7 @@ interface SidebarProps {
   onImportEmail?: (mailboxId: string) => void;
   onRefreshMailboxes?: () => void;
   scheduledTotal?: number;
+  showScheduledMailbox?: boolean;
   className?: string;
 }
 
@@ -661,6 +662,7 @@ export function Sidebar({
   onImportEmail,
   onRefreshMailboxes,
   scheduledTotal = 0,
+  showScheduledMailbox = false,
   className,
 }: SidebarProps) {
   const router = useRouter();
@@ -966,15 +968,17 @@ export function Sidebar({
                       onContextMenu={handleMailboxContextMenu}
                     />
                   ))}
-                  <SidebarRow
-                    icon={<CalendarClock className={cn("w-4 h-4 flex-shrink-0", selectedMailbox === '__scheduled__' ? "text-foreground" : "text-muted-foreground")} />}
-                    label={t('scheduled')}
-                    depth={0}
-                    isSelected={!selectedKeyword && selectedMailbox === '__scheduled__'}
-                    total={scheduledTotal}
-                    onClick={() => onMailboxSelect?.('__scheduled__')}
-                    isCollapsed={isCollapsed}
-                  />
+                  {showScheduledMailbox && (
+                    <SidebarRow
+                      icon={<CalendarClock className={cn("w-4 h-4 flex-shrink-0", selectedMailbox === '__scheduled__' ? "text-foreground" : "text-muted-foreground")} />}
+                      label={t('scheduled')}
+                      depth={0}
+                      isSelected={!selectedKeyword && selectedMailbox === '__scheduled__'}
+                      total={scheduledTotal}
+                      onClick={() => onMailboxSelect?.('__scheduled__')}
+                      isCollapsed={isCollapsed}
+                    />
+                  )}
                 </>
               )}
             </>

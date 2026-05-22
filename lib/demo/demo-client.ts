@@ -925,7 +925,7 @@ export class DemoJMAPClient implements IJMAPClient {
 
   async importRawEmail(): Promise<string> { return generateDemoId('email'); }
   async submitEmail(): Promise<void> { /* no-op */ }
-  async sendRawEmail(_blob?: Blob, identityId = 'demo-identity', _sentMailboxId?: string, _draftMailboxId?: string, delayedUntil?: string): Promise<SendEmailResult> {
+  async sendRawEmail(_blob?: Blob, identityId = 'demo-identity', _sentMailboxId?: string, _draftMailboxId?: string, delayedUntil?: string, _envelopeRecipients?: string[]): Promise<SendEmailResult> {
     const emailId = generateDemoId('email');
     const draftsMailbox = this.data.mailboxes.find(m => m.role === 'drafts');
     const sentMailbox = this.data.mailboxes.find(m => m.role === 'sent');

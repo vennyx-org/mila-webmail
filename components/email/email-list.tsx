@@ -26,6 +26,8 @@ interface EmailListProps {
   onEmailDoubleClick?: (email: Email) => void;
   className?: string;
   isLoading?: boolean;
+  hasMore?: boolean;
+  isLoadingMoreItems?: boolean;
   onOpenConversation?: (thread: ThreadGroup) => void;
   onReply?: (email: Email) => void;
   onReplyAll?: (email: Email) => void;
@@ -52,6 +54,8 @@ export function EmailList({
   onEmailDoubleClick,
   className,
   isLoading = false,
+  hasMore,
+  isLoadingMoreItems,
   onOpenConversation,
   onReply,
   onReplyAll,
@@ -117,6 +121,8 @@ export function EmailList({
   const mailLayout = useSettingsStore((state) => state.mailLayout);
   const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
+  const footerHasMore = hasMore ?? hasMoreEmails;
+  const footerIsLoadingMore = isLoadingMoreItems ?? isLoadingMore;
 
   const estimateSize = useCallback(() => {
     if (isFocusedMailLayout) {
@@ -488,13 +494,13 @@ export function EmailList({
             </div>
 
             <div className="py-4 flex justify-center">
-              {isLoadingMore && hasMoreEmails && (
+              {footerIsLoadingMore && footerHasMore && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>{t('loading_more')}</span>
                 </div>
               )}
-              {!hasMoreEmails && emails.length > 0 && (
+              {!footerHasMore && emails.length > 0 && (
                 <div className="text-sm text-muted-foreground border-t border-border pt-6">
                   {t('no_more_emails')}
                 </div>

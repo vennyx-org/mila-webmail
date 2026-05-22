@@ -1441,7 +1441,7 @@ export function EmailComposer({
         }
 
         // 7. Send via raw email path
-        const result = await sendRawEmail(client, payload, currentIdentity.id, effectiveDelayedUntil);
+        const result = await sendRawEmail(client, payload, currentIdentity.id, effectiveDelayedUntil, [...toAddresses, ...ccAddresses, ...bccAddresses]);
         if (effectiveDelayedUntil && finalDraftId) {
           client.deleteEmail(finalDraftId).catch(err => {
             debug.warn('email', 'Scheduled S/MIME send created, but plaintext draft cleanup failed:', err);

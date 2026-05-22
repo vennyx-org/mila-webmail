@@ -372,8 +372,17 @@ function sanitizeIdentityDisplayName(name: string | undefined | null): string {
   return name.replace(/\s*<[^>]*>\s*$/, '').trim();
 }
 
-function createDelayedSubmissionEnvelope(fromEmail: string, holdForSeconds?: number): Record<string, unknown> | undefined {
+function normalizeEnvelopeRecipients(recipients?: Array<string | EmailAddress>): Array<{ email: string }> {
+  return (recipients || [])
+    .map((recipient) => typeof recipient === 'string' ? recipient : recipient.email)
+    .map((email) => email.trim())
+    .filter(Boolean)
+    .map((email) => ({ email }));
+}
+
+function createDelayedSubmissionEnvelope(fromEmail: string, holdForSeconds?: number, recipients?: Array<string | EmailAddress>): Record<string, unknown> | undefined {
   if (!holdForSeconds) return undefined;
+  const rcptTo = normalizeEnvelopeRecipients(recipients);
   return {
     mailFrom: {
       email: fromEmail,
@@ -381,6 +390,7 @@ function createDelayedSubmissionEnvelope(fromEmail: string, holdForSeconds?: num
         HOLDFOR: String(holdForSeconds),
       },
     },
+    rcptTo,
   };
 }
 
@@ -3012,6 +3022,18 @@ export class JMAPClient implements IJMAPClient {
     return submission?.sendAt;
   }
 
+  private async getEmailSubmissionEnvelope(submissionId: string): Promise<{ rcptTo?: Array<{ email: string }> } | undefined> {
+    const response = await this.request([
+      ['EmailSubmission/get', {
+        accountId: this.getSubmissionAccountId(),
+        ids: [submissionId],
+        properties: ['envelope'],
+      }, '0'],
+    ]);
+    const submission = response.methodResponses?.[0]?.[1]?.list?.[0] as { envelope?: { rcptTo?: Array<{ email: string }> } } | undefined;
+    return submission?.envelope;
+  }
+
   private getSubmissionAccountId(accountId?: string): string {
     return accountId || this.session?.primaryAccounts?.['urn:ietf:params:jmap:submission'] || this.accountId;
   }
@@ -5500,6 +5522,7 @@ export class JMAPClient implements IJMAPClient {
     sentMailboxId: string,
     draftMailboxId?: string,
     delayedUntil?: string,
+    envelopeRecipients?: string[],
   ): Promise<SendEmailResult> {
     const holdForSeconds = delayedUntil ? this.validateDelayedUntil(delayedUntil) : undefined;
     // Upload the raw message
@@ -5511,7 +5534,7 @@ export class JMAPClient implements IJMAPClient {
     const importMailboxId = draftMailboxId || sentMailboxId;
     const identities = await this.getIdentities();
     const identity = identities.find(item => item.id === identityId);
-    const envelope = createDelayedSubmissionEnvelope(identity?.email || this.username, holdForSeconds);
+    const envelope = createDelayedSubmissionEnvelope(identity?.email || this.username, holdForSeconds, envelopeRecipients);
 
     const methodCalls: [string, Record<string, unknown>, string][] = [
       ['Email/import', {
@@ -5690,7 +5713,12 @@ export class JMAPClient implements IJMAPClient {
     const sentMailbox = mailboxes.find(mb => mb.role === 'sent');
     const identities = await this.getIdentities();
     const identity = identities.find(item => item.id === identityId);
-    const envelope = createDelayedSubmissionEnvelope(identity?.email || this.username, holdForSeconds);
+    const existingEnvelope = await this.getEmailSubmissionEnvelope(submissionId);
+    const email = existingEnvelope?.rcptTo?.length ? undefined : await this.getEmail(emailId);
+    const envelopeRecipients = existingEnvelope?.rcptTo?.length
+      ? existingEnvelope.rcptTo
+      : [...(email?.to || []), ...(email?.cc || []), ...(email?.bcc || [])];
+    const envelope = createDelayedSubmissionEnvelope(identity?.email || this.username, holdForSeconds, envelopeRecipients);
     const response = await this.request([
       ['EmailSubmission/set', {
         accountId: this.getSubmissionAccountId(),

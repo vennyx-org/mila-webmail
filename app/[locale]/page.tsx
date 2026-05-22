@@ -303,6 +303,7 @@ export default function Home() {
   } = useEmailStore();
 
   const enableUnifiedMailbox = useSettingsStore((s) => s.enableUnifiedMailbox);
+  const delayedSendSupported = client?.hasDelayedSend() ?? true;
   const activeEmails = isScheduledView ? scheduledEmails : emails;
   const activeHasMore = isScheduledView ? scheduledHasMore : hasMoreEmails;
   const activeIsLoading = isScheduledView ? isLoadingScheduled : isLoading;
@@ -393,6 +394,11 @@ export default function Home() {
     // Restore mailbox selection. selectMailbox clears the current email,
     // which is fine because we re-apply the saved email below.
     if (state.mailboxId === SCHEDULED_MAILBOX_ID) {
+      if (!ctx.client?.hasDelayedSend()) {
+        setScheduledView(false);
+        selectEmail(null);
+        return;
+      }
       setScheduledView(true);
       selectMailbox(SCHEDULED_MAILBOX_ID);
       selectEmail(null);
@@ -654,6 +660,12 @@ export default function Home() {
       }
     },
   });
+
+  useEffect(() => {
+    if (!delayedSendSupported && isScheduledView) {
+      setScheduledView(false);
+    }
+  }, [delayedSendSupported, isScheduledView, setScheduledView]);
 
   useEffect(() => {
     if (!pendingUndoSend) return;
@@ -1534,6 +1546,10 @@ export default function Home() {
 
   const handleMailboxSelect = async (mailboxId: string) => {
     if (mailboxId === SCHEDULED_MAILBOX_ID) {
+      if (!delayedSendSupported) {
+        setScheduledView(false);
+        return;
+      }
       if (isUnifiedView) exitUnifiedView();
       setScheduledView(true);
       selectMailbox(mailboxId);
@@ -2326,6 +2342,7 @@ export default function Home() {
               selectedMailbox={selectedMailbox}
               selectedKeyword={selectedKeyword}
               scheduledTotal={scheduledTotal}
+              showScheduledMailbox={delayedSendSupported}
               onMailboxSelect={handleMailboxSelect}
               onTagSelect={handleTagSelect}
               onUnreadFilterClick={handleUnreadFilterClick}
@@ -2630,6 +2647,8 @@ export default function Home() {
                 emails={activeEmails}
                 selectedEmailId={selectedEmail?.id}
                 isLoading={activeIsLoading}
+                hasMore={activeHasMore}
+                isLoadingMoreItems={isScheduledView ? isLoadingScheduled && activeEmails.length > 0 : undefined}
                 isScheduledView={isScheduledView}
                 onLoadMoreScheduled={() => client && loadMoreScheduledEmails(client)}
                 onCancelScheduled={async (email) => {
