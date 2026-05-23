@@ -280,7 +280,7 @@
     "print": "Stampa",
     "view_source": "Visualizza sorgente",
     "export_email": "Esporta come .eml",
-    "import_email": "Importa .eml",
+    "import_email": "Importa .eml o .zip",
     "keyboard_shortcuts": "Scorciatoie da tastiera (?)",
     "email_source": "Sorgente del messaggio",
     "draft_banner": "Questo messaggio è una bozza",
@@ -807,6 +807,7 @@
       "layout": "Layout",
       "reading": "Lettura",
       "composing": "Composizione",
+      "downloads": "Download",
       "content_senders": "Contenuto e mittenti",
       "about_data": "Informazioni e dati",
       "debug": "Debug"
@@ -1534,6 +1535,50 @@
       "group_by_letter_description": "Mostra intestazioni alfabetiche nell'elenco dei contatti",
       "group_by_letter_label": "Raggruppa per prima lettera"
     },
+    "downloads": {
+      "title": "Download",
+      "description": "Personalizza come vengono nominati gli email e gli allegati scaricati.",
+      "reset": "Ripristina predefinito",
+      "preview": "Anteprima:",
+      "email_template": {
+        "label": "Nome file email (.eml)",
+        "description": "Modello usato quando esporti un'email o la trascini sul file system. L'estensione .eml viene aggiunta automaticamente."
+      },
+      "attachment_template": {
+        "label": "Nome file dell’allegato",
+        "description": "Modello usato quando scarichi o trascini un allegato. Se ometti '{filename}' e '{ext}', l'estensione originale viene mantenuta."
+      },
+      "bundle_template": {
+        "label": "Nome del file .zip multi-email",
+        "description": "Modello usato quando trascini o scarichi più email selezionate come un singolo archivio .zip. L'estensione .zip viene aggiunta automaticamente."
+      },
+      "spaces": {
+        "label": "Spazi",
+        "description": "Sostituisci gli spazi nel nome file risultante con un altro carattere.",
+        "keep": "Mantieni gli spazi",
+        "underscore": "Sostituisci con _",
+        "dash": "Sostituisci con -"
+      },
+      "lowercase": {
+        "label": "Minuscolo",
+        "description": "Forza l'intero nome file in minuscolo."
+      },
+      "strip_diacritics": {
+        "label": "Rimuovi i segni diacritici",
+        "description": "Converti le lettere accentate nei loro equivalenti ASCII (ä → a, é → e). Utile per strumenti che gestiscono male i nomi Unicode."
+      },
+      "collapse_separators": {
+        "label": "Riduci i separatori ripetuti",
+        "description": "Riduci sequenze di spazi, underscore o trattini a un solo carattere."
+      },
+      "after_export": {
+        "label": "Dopo l’esportazione",
+        "description": "Sposta facoltativamente l’email dopo averla esportata come .eml.",
+        "keep": "Mantieni nella casella",
+        "archive": "Sposta nell’archivio",
+        "trash": "Sposta nel cestino"
+      }
+    },
     "filters": {
       "title": "Filtri email",
       "description": "Crea regole per ordinare, etichettare e gestire automaticamente le email in arrivo",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Nuova sottocartella...",
     "new_folder": "Nuova cartella...",
     "rename": "Rinomina...",
-    "import_email": "Importa .eml...",
+    "import_email": "Importa .eml o .zip...",
     "empty_folder": "Svuota cartella",
     "empty_folder_generic": "Svuota cartella",
     "delete_folder": "Elimina cartella",

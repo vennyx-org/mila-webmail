@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth-store";
-import { getPathPrefix } from "@/lib/browser-navigation";
+import { apiFetch, getPathPrefix } from "@/lib/browser-navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useParams } from "next/navigation";
@@ -96,7 +96,7 @@ function OAuthCallbackInner() {
         // the refresh-token cookie write for the same reason.
         (async () => {
           try {
-            const res = await fetch("/api/auth/sso/complete", {
+            const res = await apiFetch("/api/auth/sso/complete", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",

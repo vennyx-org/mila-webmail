@@ -99,6 +99,8 @@ const EMAIL_LIST_PROPERTIES = [
   "subject",
   "preview",
   "hasAttachment",
+  // Needed so list rows can serve drag-out to the file system as .eml.
+  "blobId",
 ] as const;
 
 // Stalwart's default property list for Calendar/get omits shareWith, isVisible,
@@ -1278,16 +1280,14 @@ export class JMAPClient implements IJMAPClient {
     ]);
   }
 
-  async moveToTrash(emailId: string, trashMailboxId: string, accountId?: string): Promise<void> {
+  async moveToTrash(emailId: string, trashMailboxId: string, accountId?: string, markAsRead?: boolean): Promise<void> {
     const targetAccountId = accountId || this.accountId;
+    const patch: Record<string, unknown> = { mailboxIds: { [trashMailboxId]: true } };
+    if (markAsRead) patch["keywords/$seen"] = true;
     await this.request([
       ["Email/set", {
         accountId: targetAccountId,
-        update: {
-          [emailId]: {
-            mailboxIds: { [trashMailboxId]: true },
-          },
-        },
+        update: { [emailId]: patch },
       }, "0"],
     ]);
   }
@@ -1303,10 +1303,15 @@ export class JMAPClient implements IJMAPClient {
     ]);
   }
 
-  async batchMoveEmails(emailIds: string[], toMailboxId: string, accountId?: string): Promise<void> {
+  async batchMoveEmails(emailIds: string[], toMailboxId: string, accountId?: string, markAsRead?: boolean): Promise<void> {
     if (emailIds.length === 0) return;
 
-    const updates = Object.fromEntries(emailIds.map(id => [id, { mailboxIds: { [toMailboxId]: true } }]));
+    const buildPatch = () => {
+      const patch: Record<string, unknown> = { mailboxIds: { [toMailboxId]: true } };
+      if (markAsRead) patch["keywords/$seen"] = true;
+      return patch;
+    };
+    const updates = Object.fromEntries(emailIds.map(id => [id, buildPatch()]));
     await this.request([
       ["Email/set", { accountId: accountId || this.accountId, update: updates }, "0"],
     ]);
@@ -1559,7 +1564,7 @@ export class JMAPClient implements IJMAPClient {
     return totalMarked;
   }
 
-  async markAsSpam(emailId: string, accountId?: string): Promise<void> {
+  async markAsSpam(emailId: string, accountId?: string, markAsRead?: boolean): Promise<void> {
     const targetAccountId = accountId || this.accountId;
 
     const mailboxes = await this.getMailboxes();
@@ -1578,14 +1583,13 @@ export class JMAPClient implements IJMAPClient {
       ? junkMailbox.originalId
       : junkMailbox.id;
 
+    const patch: Record<string, unknown> = { mailboxIds: { [mailboxId]: true } };
+    if (markAsRead) patch["keywords/$seen"] = true;
+
     await this.request([
       ["Email/set", {
         accountId: targetAccountId,
-        update: {
-          [emailId]: {
-            mailboxIds: { [mailboxId]: true },
-          },
-        },
+        update: { [emailId]: patch },
       }, "0"],
     ]);
   }
@@ -4279,6 +4283,7 @@ export class JMAPClient implements IJMAPClient {
     const createMap: Record<string, Partial<CalendarEvent>> = {};
     for (let i = 0; i < events.length; i++) {
       const { originalId: _oi, originalCalendarIds: _oc, accountId: _ai, accountName: _an, isShared: _is, ...clean } = events[i] as CalendarEvent;
+      cleanRecurrenceRules(clean as unknown as Record<string, unknown>);
       createMap[`new-${i}`] = clean;
     }
 

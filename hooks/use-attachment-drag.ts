@@ -92,9 +92,11 @@ export function useAttachmentDrag(
         return;
       }
 
-      // `DownloadURL` format: <mime>:<filename>:<url>. Chromium reads this on
-      // drop and writes a real file at the destination.
-      e.dataTransfer.setData("DownloadURL", `${type}:${encodeURIComponent(name)}:${url}`);
+      // `DownloadURL` format: <mime>:<filename>:<url>. The filename must be
+      // raw - URL-encoding it lands literally on disk (`%20` instead of a
+      // space). Callers are expected to sanitise reserved chars (`:` etc.)
+      // beforehand.
+      e.dataTransfer.setData("DownloadURL", `${type}:${name}:${url}`);
       e.dataTransfer.effectAllowed = "copyMove";
     },
     [source.name, source.type, prefetch],

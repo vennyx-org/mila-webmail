@@ -3,9 +3,8 @@ import { cookies } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { encryptPayload } from '@/lib/auth/crypto';
 import { generateCodeVerifierServer, generateCodeChallengeServer, generateStateServer } from '@/lib/oauth/pkce-server';
-import { getRequiredConfig } from '@/lib/oauth/token-exchange';
+import { getRequiredConfig, getDiscoveryValidator } from '@/lib/oauth/token-exchange';
 import { discoverOAuth } from '@/lib/oauth/discovery';
-import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { getOauthScopes } from '@/lib/oauth/tokens';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
 import { hasSessionSecret } from '@/lib/auth/session-secret';
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { clientId, discoveryUrl } = getRequiredConfig(serverId);
-    const metadata = await discoverOAuth(discoveryUrl, { validateEndpoint: isPublicHttpUrl });
+    const metadata = await discoverOAuth(discoveryUrl, { validateEndpoint: getDiscoveryValidator() });
 
     if (!metadata?.authorization_endpoint) {
       return NextResponse.json({ error: 'OAuth discovery failed' }, { status: 502 });

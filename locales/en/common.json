@@ -280,7 +280,7 @@
     "print": "Print",
     "view_source": "View source",
     "export_email": "Export as .eml",
-    "import_email": "Import .eml",
+    "import_email": "Import .eml or .zip",
     "keyboard_shortcuts": "Keyboard shortcuts (?)",
     "email_source": "Email Source",
     "draft_banner": "This message is a draft",
@@ -808,6 +808,7 @@
       "layout": "Layout",
       "reading": "Reading",
       "composing": "Composing",
+      "downloads": "Downloads",
       "content_senders": "Content & Senders",
       "about_data": "About & Data",
       "debug": "Debug"
@@ -1003,6 +1004,7 @@
         "label": "Delete Action",
         "description": "What happens when you delete an email",
         "trash": "Move to Trash",
+        "trash_and_read": "Move to Trash and mark as read",
         "permanent": "Delete Permanently",
         "warning": "Emails will be permanently deleted and cannot be recovered. This action is irreversible."
       },
@@ -1535,6 +1537,50 @@
       "categories_description": "Rename contact categories",
       "no_categories": "No categories found"
     },
+    "downloads": {
+      "title": "Downloads",
+      "description": "Customize how downloaded emails and attachments are named.",
+      "reset": "Restore default",
+      "preview": "Preview:",
+      "email_template": {
+        "label": "Email (.eml) filename",
+        "description": "Template used when you export an email or drag one out to the file system. The .eml extension is added automatically."
+      },
+      "attachment_template": {
+        "label": "Attachment filename",
+        "description": "Template used when downloading or dragging out an attachment. If you omit '{filename}' and '{ext}', the original extension is preserved."
+      },
+      "bundle_template": {
+        "label": "Multi-email .zip filename",
+        "description": "Template used when you drag out or download several selected emails as a single .zip archive. The .zip extension is added automatically."
+      },
+      "spaces": {
+        "label": "Spaces",
+        "description": "Replace spaces in the resulting filename with another character.",
+        "keep": "Keep spaces",
+        "underscore": "Replace with _",
+        "dash": "Replace with -"
+      },
+      "lowercase": {
+        "label": "Lowercase",
+        "description": "Force the entire filename to lowercase."
+      },
+      "strip_diacritics": {
+        "label": "Strip diacritics",
+        "description": "Convert accented letters to their ASCII equivalents (ä → a, é → e). Useful for tools that mangle Unicode filenames."
+      },
+      "collapse_separators": {
+        "label": "Collapse repeated separators",
+        "description": "Collapse runs of spaces, underscores, or dashes to a single character."
+      },
+      "after_export": {
+        "label": "After export",
+        "description": "Optionally move the email after exporting it as .eml.",
+        "keep": "Keep in mailbox",
+        "archive": "Move to archive",
+        "trash": "Move to trash"
+      }
+    },
     "filters": {
       "title": "Email Filters",
       "description": "Create rules to automatically sort, label, and manage incoming emails",
@@ -1801,7 +1847,7 @@
     "new_subfolder": "New subfolder...",
     "new_folder": "New folder...",
     "rename": "Rename...",
-    "import_email": "Import .eml...",
+    "import_email": "Import .eml or .zip...",
     "empty_folder": "Empty folder",
     "empty_folder_generic": "Empty folder",
     "delete_folder": "Delete folder",

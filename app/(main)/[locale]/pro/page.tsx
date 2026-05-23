@@ -16,6 +16,7 @@ import { PaneSizeContext } from "@/hooks/use-pane-size";
 import { ProTabBar, PRO_TAB_DRAG_MIME } from "@/components/pro/pro-tab-bar";
 import { useProTabStore, type ProTab, type ProTabKind, type ProPaneId } from "@/stores/pro-tab-store";
 import { cn } from "@/lib/utils";
+import { getPathPrefix } from "@/lib/browser-navigation";
 
 import MailPage from "@/app/(main)/[locale]/page";
 import CalendarPage from "@/app/(main)/[locale]/calendar/page";
@@ -172,7 +173,7 @@ export default function ProHome() {
     // enabled it. If either precondition stops holding, hand the user back
     // to the standard shell.
     if (isMobile || isTablet || !proInterface) {
-      window.location.replace("/");
+      window.location.replace(`${getPathPrefix()}/`);
     }
   }, [initialCheckDone, isMobile, isTablet, proInterface]);
 

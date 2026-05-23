@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.7.1 (2026-05-22)
+
+### Features
+
+- **Admin**: Expose PWA branding fields in the admin Branding tab
+- **Pro**: Hide empty-state placeholder and collapse the viewer pane in Pro mode so the mail list fills the space
+
+### Fixes
+
+- **Mail**: Preserve inline images when replying (#163)
+- **Filters**: Use the canonical `INBOX` mailbox in Sieve filter paths (#313)
+- **Mail**: Resolve destination account id to the local namespace on cross-account mailbox drop
+
 ## 1.7.0 (2026-05-21)
 
 > **New: Pro mode (experimental).** Opt-in tabbed multi-pane interface for power users. Open multiple mail, calendar, contacts, and file views side-by-side, drag tabs to reorder or split panes at the edges, and work across all logged-in accounts in one shell - cross-account email moves, a unified inbox with search, account-split calendar/contacts/files sidebars, and a per-account "From" dropdown in the composer. Enable from Settings → Appearance; the `proInterface` preference is per-device and not synced.

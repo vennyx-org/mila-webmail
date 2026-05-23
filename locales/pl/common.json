@@ -280,7 +280,7 @@
     "print": "Drukuj",
     "view_source": "Pokaż źródło",
     "export_email": "Eksportuj jako .eml",
-    "import_email": "Importuj .eml",
+    "import_email": "Importuj .eml lub .zip",
     "keyboard_shortcuts": "Skróty klawiszowe (?)",
     "email_source": "Źródło wiadomości",
     "draft_banner": "Ta wiadomość jest szkicem",
@@ -807,6 +807,7 @@
       "layout": "Układ",
       "reading": "Czytanie",
       "composing": "Tworzenie",
+      "downloads": "Pobrane",
       "content_senders": "Treść i nadawcy",
       "about_data": "O programie i dane",
       "debug": "Debugowanie"
@@ -1534,6 +1535,50 @@
       "group_by_letter_description": "Pokaż alfabetyczne nagłówki sekcji na liście kontaktów",
       "group_by_letter_label": "Grupuj według pierwszej litery"
     },
+    "downloads": {
+      "title": "Pobrane",
+      "description": "Dostosuj sposób nazywania pobranych wiadomości i załączników.",
+      "reset": "Przywróć domyślne",
+      "preview": "Podgląd:",
+      "email_template": {
+        "label": "Nazwa pliku wiadomości (.eml)",
+        "description": "Szablon używany przy eksporcie wiadomości lub jej przeciąganiu do systemu plików. Rozszerzenie .eml jest dodawane automatycznie."
+      },
+      "attachment_template": {
+        "label": "Nazwa pliku załącznika",
+        "description": "Szablon używany przy pobieraniu lub przeciąganiu załącznika. Jeśli pominiesz '{filename}' i '{ext}', oryginalne rozszerzenie zostanie zachowane."
+      },
+      "bundle_template": {
+        "label": "Nazwa pliku .zip wielu wiadomości",
+        "description": "Szablon używany przy przeciąganiu lub pobieraniu kilku wybranych wiadomości jako jednego archiwum .zip. Rozszerzenie .zip jest dodawane automatycznie."
+      },
+      "spaces": {
+        "label": "Spacje",
+        "description": "Zastąp spacje w nazwie pliku innym znakiem.",
+        "keep": "Zachowaj spacje",
+        "underscore": "Zamień na _",
+        "dash": "Zamień na -"
+      },
+      "lowercase": {
+        "label": "Małe litery",
+        "description": "Wymuś małe litery w całej nazwie pliku."
+      },
+      "strip_diacritics": {
+        "label": "Usuń znaki diakrytyczne",
+        "description": "Zamień litery z akcentami na ich odpowiedniki ASCII (ą → a, é → e). Przydatne dla narzędzi, które źle obsługują nazwy Unicode."
+      },
+      "collapse_separators": {
+        "label": "Łącz powtórzone separatory",
+        "description": "Połącz ciągi spacji, podkreśleń lub myślników w jeden znak."
+      },
+      "after_export": {
+        "label": "Po eksporcie",
+        "description": "Opcjonalnie przenieś wiadomość po wyeksportowaniu jako .eml.",
+        "keep": "Zachowaj w skrzynce",
+        "archive": "Przenieś do archiwum",
+        "trash": "Przenieś do kosza"
+      }
+    },
     "filters": {
       "title": "Filtry wiadomości e-mail",
       "description": "Twórz reguły, aby automatycznie sortować, etykietować i zarządzać przychodzącymi wiadomościami e-mail",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Nowy podfolder...",
     "new_folder": "Nowy folder...",
     "rename": "Zmień nazwę...",
-    "import_email": "Importuj .eml...",
+    "import_email": "Importuj .eml lub .zip...",
     "empty_folder": "Opróżnij folder",
     "empty_folder_generic": "Opróżnij folder",
     "delete_folder": "Usuń folder",

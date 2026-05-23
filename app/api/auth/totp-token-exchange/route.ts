@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { discoverOAuth } from '@/lib/oauth/discovery';
+import { getDiscoveryValidator } from '@/lib/oauth/token-exchange';
 import { refreshTokenCookieName, refreshTokenServerCookieName } from '@/lib/oauth/tokens';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
 import { readFileEnv } from '@/lib/read-file-env';
@@ -52,9 +53,13 @@ async function tryTokenRequest(
   }
 }
 
-async function findTokenEndpoint(serverUrl: string): Promise<string | null> {
+async function findTokenEndpoint(serverUrl: string, adminTrusted: boolean): Promise<string | null> {
+  // Admin-trusted callers (matched server entry or configured JMAP server URL)
+  // honor the `oauthAllowPrivateEndpoints` opt-in. User-supplied URLs always
+  // go through the SSRF validator regardless of the setting.
+  const validateEndpoint = adminTrusted ? getDiscoveryValidator() : isPublicHttpUrl;
   // 1. Try OAuth discovery
-  const metadata = await discoverOAuth(serverUrl, { validateEndpoint: isPublicHttpUrl });
+  const metadata = await discoverOAuth(serverUrl, { validateEndpoint });
   if (metadata?.token_endpoint) return metadata.token_endpoint;
 
   // 2. Try common Stalwart token endpoint paths directly
@@ -105,14 +110,17 @@ export async function POST(request: NextRequest) {
 
     let upstreamUrl: string;
     let resolvedServerId: string | null = null;
+    let adminTrusted = false;
     const requestedEntry = findServerById(serverList, requestedServerId);
     const matchedEntry = requestedEntry || findServerByUrl(serverList, serverUrl);
 
     if (matchedEntry) {
       upstreamUrl = matchedEntry.url;
       resolvedServerId = matchedEntry.id;
+      adminTrusted = true;
     } else if (configuredServerUrl) {
       upstreamUrl = configuredServerUrl;
+      adminTrusted = true;
     } else if (allowCustomEndpoint) {
       if (!(await isPublicHttpUrl(serverUrl))) {
         logger.warn('TOTP token exchange: rejected non-public server URL');
@@ -123,7 +131,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'jmap_server_not_configured' }, { status: 500 });
     }
 
-    const tokenEndpoint = await findTokenEndpoint(upstreamUrl);
+    const tokenEndpoint = await findTokenEndpoint(upstreamUrl, adminTrusted);
     if (!tokenEndpoint) {
       logger.warn('TOTP token exchange: no token endpoint found');
       return NextResponse.json({ error: 'no_token_endpoint', detail: 'Could not discover OAuth token endpoint on the mail server' }, { status: 404 });

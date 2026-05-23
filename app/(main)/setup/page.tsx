@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, AlertTriangle, AlertCircle, Server, ShieldCheck, KeyRound, FileText, Palette, Lock, ShieldAlert } from 'lucide-react';
-import { apiFetch } from '@/lib/browser-navigation';
+import { apiFetch, getPathPrefix } from '@/lib/browser-navigation';
 
 type State = 'bootstrap' | 'configured' | 'env-managed';
 
@@ -258,7 +258,7 @@ export default function SetupWizardPage() {
                 // edge cases that swallow client-side replaces after the
                 // setupComplete flag flips.
                 setTimeout(() => {
-                  window.location.assign('/admin/login');
+                  window.location.assign(`${getPathPrefix()}/admin/login`);
                 }, 1500);
               }}
             />
@@ -340,13 +340,13 @@ function CompletedScreen() {
       </div>
       <div className="mt-6 space-y-2">
         <a
-          href="/admin/login"
+          href={`${getPathPrefix()}/admin/login`}
           className="block w-full rounded-md bg-primary text-primary-foreground text-center px-4 py-2.5 text-sm font-medium hover:bg-primary/90"
         >
           Sign in to admin dashboard
         </a>
         <a
-          href="/"
+          href={`${getPathPrefix()}/`}
           className="block w-full rounded-md border border-border text-center px-4 py-2.5 text-sm font-medium hover:bg-muted"
         >
           Open webmail login
@@ -422,13 +422,13 @@ function AlreadyConfiguredScreen() {
       </div>
       <div className="mt-6 space-y-2">
         <a
-          href="/admin/login"
+          href={`${getPathPrefix()}/admin/login`}
           className="block w-full rounded-md bg-primary text-primary-foreground text-center px-4 py-2.5 text-sm font-medium hover:bg-primary/90"
         >
           Sign in to admin dashboard
         </a>
         <a
-          href="/"
+          href={`${getPathPrefix()}/`}
           className="block w-full rounded-md border border-border text-center px-4 py-2.5 text-sm font-medium hover:bg-muted"
         >
           Open webmail login

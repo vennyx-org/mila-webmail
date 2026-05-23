@@ -78,7 +78,11 @@ export function EventCard({ event, calendar, variant, onClick, onMouseEnter, onM
   const calendarName = calendar?.name || "";
   const durationMinutes = parseDuration(event.duration);
   const endTime = getEventEndDate(event);
-  const timeString = `${format(startDate, timeFmt)} – ${format(endTime, timeFmt)}`;
+  const safeFormat = (d: Date, fmt: string) => {
+    if (isNaN(d.getTime())) return "--:--";
+    try { return format(d, fmt); } catch { return "--:--"; }
+  };
+  const timeString = `${safeFormat(startDate, timeFmt)} – ${safeFormat(endTime, timeFmt)}`;
   const ariaLabel = `${event.title || t("events.no_title")}, ${timeString}${calendarName ? `, ${calendarName}` : ""}`;
 
   const handleDragStart = useCallback((e: DragEvent) => {

@@ -10,6 +10,7 @@ import { usePolicyStore } from '@/stores/policy-store';
 import { useUpdateStore } from '@/stores/update-store';
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getPathPrefix } from '@/lib/browser-navigation';
 import { SpamSiegeGame } from './spam-siege-game';
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
@@ -123,12 +124,12 @@ export function AboutDataSettings() {
           <button onClick={handleLogoClick} className="flex items-center gap-4 flex-1 text-left focus:outline-none group/about cursor-pointer" aria-label="About">
             <div className="shrink-0">
               <img
-                src="/branding/Bulwark_Logo_Color.svg"
+                src={`${getPathPrefix()}/branding/Bulwark_Logo_Color.svg`}
                 alt="Bulwark"
                 className="w-12 h-12 object-contain dark:hidden group-hover/about:scale-105 group-active/about:scale-95 transition-transform"
               />
               <img
-                src="/branding/Bulwark_Logo_White.svg"
+                src={`${getPathPrefix()}/branding/Bulwark_Logo_White.svg`}
                 alt="Bulwark"
                 className="w-12 h-12 object-contain hidden dark:block group-hover/about:scale-105 group-active/about:scale-95 transition-transform"
               />

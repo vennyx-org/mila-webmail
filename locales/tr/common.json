@@ -280,7 +280,7 @@
     "print": "Yazdır",
     "view_source": "Kaynağı görüntüle",
     "export_email": ".eml olarak dışa aktar",
-    "import_email": ".eml içe aktar",
+    "import_email": ".eml veya .zip içe aktar",
     "keyboard_shortcuts": "Klavye kısayolları (?)",
     "email_source": "E-posta Kaynağı",
     "draft_banner": "Bu ileti bir taslaktır",
@@ -807,6 +807,7 @@
       "layout": "Düzen",
       "reading": "Okuma",
       "composing": "Yazma",
+      "downloads": "İndirilenler",
       "content_senders": "İçerik ve Göndericiler",
       "about_data": "Hakkında ve Veriler",
       "debug": "Hata Ayıklama"
@@ -1534,6 +1535,50 @@
       "categories_description": "Kişi kategorilerini yeniden adlandırın",
       "no_categories": "Kategori bulunamadı"
     },
+    "downloads": {
+      "title": "İndirilenler",
+      "description": "İndirilen e-postaların ve eklerin nasıl adlandırılacağını özelleştirin.",
+      "reset": "Varsayılana sıfırla",
+      "preview": "Önizleme:",
+      "email_template": {
+        "label": "E-posta dosya adı (.eml)",
+        "description": "Bir e-postayı dışa aktarırken veya dosya sistemine sürüklediğinizde kullanılan şablon. .eml uzantısı otomatik olarak eklenir."
+      },
+      "attachment_template": {
+        "label": "Ek dosyası adı",
+        "description": "Bir eki indirirken veya sürüklerken kullanılan şablon. '{filename}' ve '{ext}' yazılmazsa orijinal uzantı korunur."
+      },
+      "bundle_template": {
+        "label": "Çoklu e-posta .zip dosya adı",
+        "description": "Birden çok seçili e-postayı tek bir .zip arşivi olarak sürüklediğinizde veya indirdiğinizde kullanılan şablon. .zip uzantısı otomatik olarak eklenir."
+      },
+      "spaces": {
+        "label": "Boşluklar",
+        "description": "Sonuçtaki dosya adındaki boşlukları başka bir karakterle değiştirin.",
+        "keep": "Boşlukları koru",
+        "underscore": "_ ile değiştir",
+        "dash": "- ile değiştir"
+      },
+      "lowercase": {
+        "label": "Küçük harf",
+        "description": "Tüm dosya adını küçük harfe zorla."
+      },
+      "strip_diacritics": {
+        "label": "Aksanları kaldır",
+        "description": "Aksanlı harfleri ASCII karşılıklarına dönüştür (ä → a, é → e). Unicode dosya adlarıyla sorun yaşayan araçlar için yararlıdır."
+      },
+      "collapse_separators": {
+        "label": "Tekrarlanan ayırıcıları birleştir",
+        "description": "Art arda gelen boşluk, alt çizgi veya tireleri tek bir karaktere indir."
+      },
+      "after_export": {
+        "label": "Dışa aktarmadan sonra",
+        "description": "E-postayı .eml olarak dışa aktardıktan sonra isteğe bağlı olarak taşı.",
+        "keep": "Posta kutusunda tut",
+        "archive": "Arşive taşı",
+        "trash": "Çöp kutusuna taşı"
+      }
+    },
     "filters": {
       "title": "E-posta Filtreleri",
       "description": "Gelen e-postaları otomatik olarak sıralamak, etiketlemek ve yönetmek için kurallar oluşturun",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Yeni alt klasör...",
     "new_folder": "Yeni klasör...",
     "rename": "Yeniden adlandır...",
-    "import_email": ".eml içe aktar...",
+    "import_email": ".eml veya .zip içe aktar...",
     "empty_folder": "Klasörü boşalt",
     "empty_folder_generic": "Klasörü boşalt",
     "delete_folder": "Klasörü sil",

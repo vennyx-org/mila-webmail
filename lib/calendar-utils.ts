@@ -24,8 +24,14 @@ export interface TimedEventLayout {
 export function getEventStartDate(
   event: Pick<CalendarEvent, 'start' | 'utcStart' | 'showWithoutTime'>,
 ): Date {
-  const source = !event.showWithoutTime && event.utcStart ? event.utcStart : event.start;
-  return parseISO(source);
+  // Prefer utcStart for timed events but fall back to start if utcStart is
+  // missing or unparseable - a malformed utcStart used to surface as an
+  // Invalid Date that crashed downstream format() calls (#316).
+  if (!event.showWithoutTime && event.utcStart) {
+    const utc = parseISO(event.utcStart);
+    if (!isNaN(utc.getTime())) return utc;
+  }
+  return parseISO(event.start);
 }
 
 export function packWeekSegments(rawSegments: CalendarWeekSegment[]): CalendarWeekSegment[] {
@@ -56,7 +62,8 @@ export function packWeekSegments(rawSegments: CalendarWeekSegment[]): CalendarWe
 
 export function getEventEndDate(event: CalendarEvent): Date {
   if (!event.showWithoutTime && event.utcEnd) {
-    return parseISO(event.utcEnd);
+    const utc = parseISO(event.utcEnd);
+    if (!isNaN(utc.getTime())) return utc;
   }
 
   const start = getEventStartDate(event);

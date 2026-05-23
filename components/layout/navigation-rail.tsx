@@ -21,7 +21,7 @@ import { getMaxAccounts } from "@/lib/account-utils";
 import { cn, formatFileSize } from "@/lib/utils";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
-import { apiFetch } from "@/lib/browser-navigation";
+import { apiFetch, getPathPrefix } from "@/lib/browser-navigation";
 import { Avatar } from "@/components/ui/avatar";
 
 interface NavItem {
@@ -385,7 +385,7 @@ export function NavigationRail({
         {/* Admin (Stalwart admins) - hard nav because /admin lives outside the [locale] tree */}
         {isStalwartAdmin && (
           <a
-            href="/admin"
+            href={`${getPathPrefix()}/admin`}
             className={cn(
               "flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px]",
               "transition-colors duration-150",
@@ -572,7 +572,7 @@ export function NavigationRail({
       <div className="mt-auto flex flex-col items-center gap-2 pb-3 px-1">
         {isStalwartAdmin && (
           <a
-            href="/admin"
+            href={`${getPathPrefix()}/admin`}
             className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted relative"
             title={t("admin") || "Admin"}
           >

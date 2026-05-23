@@ -57,6 +57,7 @@ import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import { isFilePreviewable } from "@/lib/file-preview";
 import { appendPlainTextSignature } from "@/lib/signature-utils";
 import { computeReplyThreadingHeaders } from "@/lib/email-threading";
+import { EML_IMPORT_ACCEPT, expandImportableEmails } from "@/lib/eml-import";
 import { resolveReplyFrom } from "@/lib/reply-identity";
 import { Search, Filter, ChevronDown, X, Paperclip, Star, Mail, MailOpen, RotateCcw, PenSquare, PenLine, CheckSquare, Square, AlertTriangle } from "lucide-react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -1936,17 +1937,24 @@ export default function Home() {
 
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.eml,message/rfc822';
+    input.accept = EML_IMPORT_ACCEPT;
     input.multiple = true;
     input.onchange = async (e) => {
       const files = Array.from((e.target as HTMLInputElement).files ?? []);
       if (files.length === 0) return;
 
+      let emails;
+      try {
+        emails = await expandImportableEmails(files);
+      } catch {
+        toast.error(t('notifications.import_email_error'));
+        return;
+      }
+
       let imported = 0;
       let failed = 0;
-      for (const file of files) {
+      for (const { blob } of emails) {
         try {
-          const blob = new Blob([await file.arrayBuffer()], { type: 'message/rfc822' });
           await client.importRawEmail(blob, { [targetMailboxId]: true }, { '$seen': true });
           imported++;
         } catch {
@@ -1958,7 +1966,7 @@ export default function Home() {
         toast.success(t('notifications.import_email_success'));
         if (selectedMailbox) await fetchEmails(client, selectedMailbox);
       }
-      if (failed > 0) {
+      if (failed > 0 || (imported === 0 && emails.length === 0)) {
         toast.error(t('notifications.import_email_error'));
       }
     };

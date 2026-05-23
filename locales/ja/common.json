@@ -280,7 +280,7 @@
     "print": "印刷",
     "view_source": "ソースを表示",
     "export_email": ".emlとしてエクスポート",
-    "import_email": ".emlをインポート",
+    "import_email": ".eml または .zip をインポート",
     "keyboard_shortcuts": "キーボードショートカット (?)",
     "email_source": "メールソース",
     "draft_banner": "このメッセージは下書きです",
@@ -807,6 +807,7 @@
       "layout": "レイアウト",
       "reading": "閲覧",
       "composing": "作成",
+      "downloads": "ダウンロード",
       "content_senders": "コンテンツと送信者",
       "about_data": "情報とデータ",
       "debug": "デバッグ"
@@ -1534,6 +1535,50 @@
       "group_by_letter_description": "連絡先リストにアルファベット順のセクション見出しを表示",
       "group_by_letter_label": "頭文字でグループ化"
     },
+    "downloads": {
+      "title": "ダウンロード",
+      "description": "ダウンロードしたメールや添付ファイルの名前の付け方をカスタマイズします。",
+      "reset": "既定に戻す",
+      "preview": "プレビュー:",
+      "email_template": {
+        "label": "メールのファイル名 (.eml)",
+        "description": "メールをエクスポートするか、ファイルシステムにドラッグしたときに使用するテンプレートです。.eml 拡張子は自動的に付加されます。"
+      },
+      "attachment_template": {
+        "label": "添付ファイルのファイル名",
+        "description": "添付ファイルをダウンロードまたはドラッグするときに使用するテンプレートです。'{filename}' と '{ext}' を省略すると、元の拡張子が保持されます。"
+      },
+      "bundle_template": {
+        "label": "複数メールの .zip ファイル名",
+        "description": "複数の選択したメールを 1 つの .zip としてドラッグまたはダウンロードするときに使用するテンプレートです。拡張子 .zip は自動的に付加されます。"
+      },
+      "spaces": {
+        "label": "スペース",
+        "description": "最終的なファイル名のスペースを別の文字に置き換えます。",
+        "keep": "スペースを残す",
+        "underscore": "_ に置換",
+        "dash": "- に置換"
+      },
+      "lowercase": {
+        "label": "小文字",
+        "description": "ファイル名全体を小文字に強制します。"
+      },
+      "strip_diacritics": {
+        "label": "ダイアクリティカルマークを除去",
+        "description": "アクセント付き文字を ASCII の同等の文字に変換します (ä → a, é → e)。Unicode のファイル名を正しく扱えないツールで便利です。"
+      },
+      "collapse_separators": {
+        "label": "連続した区切り文字をまとめる",
+        "description": "連続するスペース、アンダースコア、ハイフンを 1 文字にまとめます。"
+      },
+      "after_export": {
+        "label": "エクスポート後",
+        "description": "メールを .eml としてエクスポートした後、必要に応じて移動します。",
+        "keep": "メールボックスに残す",
+        "archive": "アーカイブへ移動",
+        "trash": "ごみ箱へ移動"
+      }
+    },
     "filters": {
       "title": "メールフィルター",
       "description": "受信メールを自動で振り分け、ラベル付け、管理するルールを作成します",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "新しいサブフォルダー...",
     "new_folder": "新しいフォルダー...",
     "rename": "名前を変更...",
-    "import_email": ".eml をインポート...",
+    "import_email": ".eml または .zip をインポート...",
     "empty_folder": "フォルダーを空にする",
     "empty_folder_generic": "フォルダーを空にする",
     "delete_folder": "フォルダーを削除",

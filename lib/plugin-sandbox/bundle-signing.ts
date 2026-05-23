@@ -10,6 +10,8 @@
 // installing their own code. Verification kicks in for server-managed
 // bundles only (the `managed: true` flag on `InstalledPlugin`).
 
+import { apiFetch } from '@/lib/browser-navigation';
+
 let cachedPubKey: CryptoKey | null = null;
 let pubKeyPromise: Promise<CryptoKey | null> | null = null;
 
@@ -26,7 +28,7 @@ async function importEd25519PublicKey(raw: Uint8Array): Promise<CryptoKey | null
 
 async function fetchPublicKey(): Promise<CryptoKey | null> {
   try {
-    const res = await fetch('/api/plugin-signing-pubkey', { credentials: 'same-origin' });
+    const res = await apiFetch('/api/plugin-signing-pubkey', { credentials: 'same-origin' });
     if (!res.ok) return null;
     const data = await res.json() as { algorithm?: string; publicKey?: string };
     if (data.algorithm !== 'ed25519' || typeof data.publicKey !== 'string') return null;

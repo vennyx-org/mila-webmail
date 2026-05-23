@@ -280,7 +280,7 @@
     "print": "Afdrukken",
     "view_source": "Bron bekijken",
     "export_email": "Exporteren als .eml",
-    "import_email": ".eml importeren",
+    "import_email": ".eml of .zip importeren",
     "keyboard_shortcuts": "Sneltoetsen (?)",
     "email_source": "E-mailbron",
     "draft_banner": "Dit bericht is een concept",
@@ -807,6 +807,7 @@
       "layout": "Indeling",
       "reading": "Lezen",
       "composing": "Opstellen",
+      "downloads": "Downloads",
       "content_senders": "Inhoud en afzenders",
       "about_data": "Over en gegevens",
       "debug": "Debuggen"
@@ -1534,6 +1535,50 @@
       "group_by_letter_description": "Toon alfabetische sectiekoppen in de contactenlijst",
       "group_by_letter_label": "Groeperen op eerste letter"
     },
+    "downloads": {
+      "title": "Downloads",
+      "description": "Pas aan hoe gedownloade e-mails en bijlagen worden genoemd.",
+      "reset": "Standaard herstellen",
+      "preview": "Voorbeeld:",
+      "email_template": {
+        "label": "E-mailbestandsnaam (.eml)",
+        "description": "Sjabloon dat wordt gebruikt bij het exporteren of slepen van een e-mail naar het bestandssysteem. De extensie .eml wordt automatisch toegevoegd."
+      },
+      "attachment_template": {
+        "label": "Bestandsnaam van bijlage",
+        "description": "Sjabloon bij het downloaden of slepen van een bijlage. Als je '{filename}' en '{ext}' weglaat, blijft de oorspronkelijke extensie behouden."
+      },
+      "bundle_template": {
+        "label": "Bestandsnaam .zip met meerdere e-mails",
+        "description": "Sjabloon dat wordt gebruikt wanneer je meerdere geselecteerde e-mails als één .zip-archief sleept of downloadt. De extensie .zip wordt automatisch toegevoegd."
+      },
+      "spaces": {
+        "label": "Spaties",
+        "description": "Vervang spaties in de uiteindelijke bestandsnaam door een ander teken.",
+        "keep": "Spaties behouden",
+        "underscore": "Vervangen door _",
+        "dash": "Vervangen door -"
+      },
+      "lowercase": {
+        "label": "Kleine letters",
+        "description": "Forceer de hele bestandsnaam in kleine letters."
+      },
+      "strip_diacritics": {
+        "label": "Diakritische tekens verwijderen",
+        "description": "Zet letters met accenten om naar hun ASCII-equivalent (ä → a, é → e). Handig voor tools die Unicode-namen niet goed verwerken."
+      },
+      "collapse_separators": {
+        "label": "Herhaalde scheidingstekens samenvoegen",
+        "description": "Voeg reeksen spaties, underscores of streepjes samen tot één teken."
+      },
+      "after_export": {
+        "label": "Na exporteren",
+        "description": "Verplaats de e-mail eventueel nadat deze als .eml is geëxporteerd.",
+        "keep": "In postvak houden",
+        "archive": "Naar archief verplaatsen",
+        "trash": "Naar prullenbak verplaatsen"
+      }
+    },
     "filters": {
       "title": "E-mailfilters",
       "description": "Maak regels om inkomende e-mails automatisch te sorteren, labelen en beheren",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Nieuwe submap...",
     "new_folder": "Nieuwe map...",
     "rename": "Hernoemen...",
-    "import_email": ".eml importeren...",
+    "import_email": ".eml of .zip importeren...",
     "empty_folder": "Map leegmaken",
     "empty_folder_generic": "Map leegmaken",
     "delete_folder": "Map verwijderen",

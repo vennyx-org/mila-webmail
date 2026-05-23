@@ -7,6 +7,7 @@ import { normalizeAllDayDuration } from '@/lib/calendar-utils';
 import { parseDuration } from '@/components/calendar/event-card';
 import { sanitizeOutgoingCalendarEventData } from '@/lib/calendar-event-normalization';
 import { expandRecurringEvents } from '@/lib/recurrence-expansion';
+import { parseISO } from 'date-fns';
 import { generateUUID } from '@/lib/utils';
 import { apiFetch } from '@/lib/browser-navigation';
 import { BIRTHDAY_CALENDAR_ID } from '@/lib/birthday-calendar';
@@ -302,8 +303,12 @@ export const useCalendarStore = create<CalendarStore>()(
             after: start,
             before: end,
           });
-          // Filter out malformed events missing required 'start' field
-          const validEvents = rawEvents.filter(e => typeof e.start === 'string' && e.start);
+          // Filter out malformed events missing required 'start' field, or
+          // whose start string fails to parse (would otherwise crash format()
+          // calls in the rendering path - #316).
+          const validEvents = rawEvents.filter(e =>
+            typeof e.start === 'string' && e.start && !isNaN(parseISO(e.start).getTime())
+          );
           const droppedEvents = rawEvents.length - validEvents.length;
           // Expand recurring events client-side (Stalwart doesn't support
           // mutations on synthetic IDs from server-side expandRecurrences)
@@ -366,7 +371,9 @@ export const useCalendarStore = create<CalendarStore>()(
             accounts.map(async ({ client, localAccountId }) => {
               try {
                 const raw = await client.queryAllCalendarEvents({ after: start, before: end });
-                const valid = raw.filter(e => typeof e.start === 'string' && e.start);
+                const valid = raw.filter(e =>
+                  typeof e.start === 'string' && e.start && !isNaN(parseISO(e.start).getTime())
+                );
                 const expanded = expandRecurringEvents(valid, start, end);
                 return prefixEventsWithLocalAccount(
                   expanded,

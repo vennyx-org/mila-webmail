@@ -280,7 +280,7 @@
     "print": "Tisk",
     "view_source": "Zobrazit zdrojový kód",
     "export_email": "Exportovat jako .eml",
-    "import_email": "Importovat .eml",
+    "import_email": "Importovat .eml nebo .zip",
     "keyboard_shortcuts": "Klávesové zkratky (?)",
     "email_source": "Zdrojový kód zprávy",
     "draft_banner": "Tato zpráva je koncept",
@@ -807,6 +807,7 @@
       "layout": "Vzhled",
       "reading": "Čtení",
       "composing": "Psaní",
+      "downloads": "Stažené",
       "content_senders": "Obsah a odesílatelé",
       "about_data": "Info a data",
       "debug": "Ladění"
@@ -1534,6 +1535,50 @@
       "categories_description": "Přejmenovat kategorie kontaktů",
       "no_categories": "Nenalezeny žádné kategorie"
     },
+    "downloads": {
+      "title": "Stažené",
+      "description": "Přizpůsobte si, jak se pojmenovávají stažené e-maily a přílohy.",
+      "reset": "Obnovit výchozí",
+      "preview": "Náhled:",
+      "email_template": {
+        "label": "Název souboru e-mailu (.eml)",
+        "description": "Šablona použitá při exportu e-mailu nebo jeho přetažení do souborového systému. Přípona .eml se přidává automaticky."
+      },
+      "attachment_template": {
+        "label": "Název souboru přílohy",
+        "description": "Šablona použitá při stahování nebo přetahování přílohy. Pokud vynecháte '{filename}' a '{ext}', původní přípona se zachová."
+      },
+      "bundle_template": {
+        "label": "Název .zip souboru s více e-maily",
+        "description": "Šablona použitá při přetažení nebo stažení několika vybraných e-mailů jako jediného .zip archivu. Přípona .zip se přidává automaticky."
+      },
+      "spaces": {
+        "label": "Mezery",
+        "description": "Nahradit mezery ve výsledném názvu souboru jiným znakem.",
+        "keep": "Zachovat mezery",
+        "underscore": "Nahradit za _",
+        "dash": "Nahradit za -"
+      },
+      "lowercase": {
+        "label": "Malá písmena",
+        "description": "Vynutit celý název souboru malými písmeny."
+      },
+      "strip_diacritics": {
+        "label": "Odstranit diakritiku",
+        "description": "Převést písmena s diakritikou na ASCII ekvivalenty (á → a, é → e). Užitečné pro nástroje, které špatně zpracovávají Unicode názvy."
+      },
+      "collapse_separators": {
+        "label": "Sloučit opakované oddělovače",
+        "description": "Sloučit posloupnosti mezer, podtržítek nebo pomlček do jednoho znaku."
+      },
+      "after_export": {
+        "label": "Po exportu",
+        "description": "Po exportu jako .eml lze e-mail volitelně přesunout.",
+        "keep": "Ponechat ve schránce",
+        "archive": "Přesunout do archivu",
+        "trash": "Přesunout do koše"
+      }
+    },
     "filters": {
       "title": "Filtry e-mailů",
       "description": "Vytvářejte pravidla pro automatické třídění, štítkování a správu příchozích e-mailů",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Nová podsložka...",
     "new_folder": "Nová složka...",
     "rename": "Přejmenovat...",
-    "import_email": "Importovat .eml...",
+    "import_email": "Importovat .eml nebo .zip...",
     "empty_folder": "Vyprázdnit složku",
     "empty_folder_generic": "Vyprázdnit složku",
     "delete_folder": "Smazat složku",

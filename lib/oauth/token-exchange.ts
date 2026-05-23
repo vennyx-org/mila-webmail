@@ -1,10 +1,20 @@
 import { logger } from '@/lib/logger';
 import { discoverOAuth } from '@/lib/oauth/discovery';
-import type { OAuthMetadata } from '@/lib/oauth/discovery';
+import type { EndpointValidator, OAuthMetadata } from '@/lib/oauth/discovery';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { readFileEnv } from '@/lib/read-file-env';
 import { configManager } from '@/lib/admin/config-manager';
 import { parseJmapServers, findServerById } from '@/lib/admin/jmap-servers';
+
+// SSRF guard for OAuth discovery. When `oauthAllowPrivateEndpoints` is set,
+// the admin opts in to discovery resolving to RFC-1918 / loopback hosts —
+// required for split-DNS deployments where the JMAP server's public hostname
+// resolves to an internal IP locally. The guard remains in force for any
+// caller that passes a user-supplied serverUrl (see totp-token-exchange).
+export function getDiscoveryValidator(): EndpointValidator | undefined {
+  const allowPrivate = configManager.get<boolean>('oauthAllowPrivateEndpoints', false);
+  return allowPrivate ? undefined : isPublicHttpUrl;
+}
 
 function getGlobalClientSecret(): string {
   const adminSecret = configManager.get<string>('oauthClientSecret', '');
@@ -47,7 +57,7 @@ function getClientSecret(serverId?: string | null): string {
 
 export async function getTokenEndpoint(serverId?: string | null): Promise<string> {
   const { discoveryUrl } = getRequiredConfig(serverId);
-  const metadata = await discoverOAuth(discoveryUrl, { validateEndpoint: isPublicHttpUrl });
+  const metadata = await discoverOAuth(discoveryUrl, { validateEndpoint: getDiscoveryValidator() });
   if (!metadata?.token_endpoint) {
     throw new Error('OAuth token endpoint not found');
   }
@@ -56,7 +66,7 @@ export async function getTokenEndpoint(serverId?: string | null): Promise<string
 
 export async function getMetadata(serverId?: string | null): Promise<OAuthMetadata | null> {
   const { discoveryUrl } = getRequiredConfig(serverId);
-  return discoverOAuth(discoveryUrl, { validateEndpoint: isPublicHttpUrl });
+  return discoverOAuth(discoveryUrl, { validateEndpoint: getDiscoveryValidator() });
 }
 
 export function buildOAuthParams(base: Record<string, string>, serverId?: string | null): URLSearchParams {

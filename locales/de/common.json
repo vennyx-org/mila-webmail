@@ -280,7 +280,7 @@
     "print": "Drucken",
     "view_source": "Quelltext anzeigen",
     "export_email": "Als .eml exportieren",
-    "import_email": ".eml importieren",
+    "import_email": ".eml oder .zip importieren",
     "keyboard_shortcuts": "Tastaturkürzel (?)",
     "email_source": "E-Mail-Quelltext",
     "draft_banner": "Diese Nachricht ist ein Entwurf",
@@ -807,6 +807,7 @@
       "layout": "Layout",
       "reading": "Lesen",
       "composing": "Verfassen",
+      "downloads": "Downloads",
       "content_senders": "Inhalte & Absender",
       "about_data": "Über & Daten",
       "debug": "Debug"
@@ -1534,6 +1535,50 @@
       "group_by_letter_description": "Alphabetische Abschnittsüberschriften in der Kontaktliste anzeigen",
       "group_by_letter_label": "Nach Anfangsbuchstaben gruppieren"
     },
+    "downloads": {
+      "title": "Downloads",
+      "description": "Lege fest, wie heruntergeladene E-Mails und Anhänge benannt werden.",
+      "reset": "Standard wiederherstellen",
+      "preview": "Vorschau:",
+      "email_template": {
+        "label": "E-Mail-Dateiname (.eml)",
+        "description": "Vorlage, die beim Exportieren oder Herausziehen einer E-Mail verwendet wird. Die Endung .eml wird automatisch ergänzt."
+      },
+      "attachment_template": {
+        "label": "Anhang-Dateiname",
+        "description": "Vorlage zum Herunterladen oder Herausziehen eines Anhangs. Wenn '{filename}' und '{ext}' fehlen, bleibt die ursprüngliche Endung erhalten."
+      },
+      "bundle_template": {
+        "label": "Mehrere E-Mails als .zip",
+        "description": "Vorlage, die beim Herausziehen oder Herunterladen mehrerer ausgewählter E-Mails als einzelnes .zip-Archiv verwendet wird. Die Endung .zip wird automatisch ergänzt."
+      },
+      "spaces": {
+        "label": "Leerzeichen",
+        "description": "Ersetze Leerzeichen im Dateinamen durch ein anderes Zeichen.",
+        "keep": "Leerzeichen behalten",
+        "underscore": "Durch _ ersetzen",
+        "dash": "Durch - ersetzen"
+      },
+      "lowercase": {
+        "label": "Kleinschreibung",
+        "description": "Wandle den gesamten Dateinamen in Kleinbuchstaben um."
+      },
+      "strip_diacritics": {
+        "label": "Diakritika entfernen",
+        "description": "Wandle Buchstaben mit Akzenten in ASCII-Äquivalente um (ä → a, é → e). Nützlich für Tools, die Unicode-Dateinamen verstümmeln."
+      },
+      "collapse_separators": {
+        "label": "Trennzeichen zusammenfassen",
+        "description": "Aufeinanderfolgende Leerzeichen, Unterstriche oder Bindestriche zu einem Zeichen zusammenfassen."
+      },
+      "after_export": {
+        "label": "Nach dem Export",
+        "description": "E-Mail nach dem Export als .eml optional verschieben.",
+        "keep": "Im Postfach behalten",
+        "archive": "Ins Archiv verschieben",
+        "trash": "In den Papierkorb verschieben"
+      }
+    },
     "filters": {
       "title": "E-Mail-Filter",
       "description": "Erstellen Sie Regeln, um eingehende E-Mails automatisch zu sortieren, zu kennzeichnen und zu verwalten",
@@ -1803,7 +1848,7 @@
     "new_subfolder": "Neuer Unterordner...",
     "new_folder": "Neuer Ordner...",
     "rename": "Umbenennen...",
-    "import_email": ".eml importieren...",
+    "import_email": ".eml oder .zip importieren...",
     "empty_folder": "Ordner leeren",
     "empty_folder_generic": "Ordner leeren",
     "delete_folder": "Ordner löschen",

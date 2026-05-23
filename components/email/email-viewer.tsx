@@ -3,6 +3,8 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Email, ContactCard, Mailbox } from "@/lib/jmap/types";
+import { emailExportFilename, attachmentDownloadFilename, DEFAULT_EMAIL_TEMPLATE, DEFAULT_ATTACHMENT_TEMPLATE } from "@/lib/download-filename";
+import { EML_IMPORT_ACCEPT, expandImportableEmails } from "@/lib/eml-import";
 import { EMAIL_IFRAME_SANITIZE_CONFIG, collapseBlockedImageContainers, escapeHtml, plainTextToSafeHtml, sanitizeEmailHtml, sanitizePlainTextRenderedHtml } from "@/lib/email-sanitization";
 import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
 import { Button } from "@/components/ui/button";
@@ -803,6 +805,7 @@ interface DraggableAttachmentChipProps {
   attachment: EffectiveAttachment;
   client: IJMAPClient | null;
   enabled: boolean;
+  downloadName?: string;
   children: (dragProps: {
     draggable: boolean;
     onPointerEnter: () => void;
@@ -811,9 +814,9 @@ interface DraggableAttachmentChipProps {
   }) => React.ReactNode;
 }
 
-function DraggableAttachmentChip({ attachment, client, enabled, children }: DraggableAttachmentChipProps) {
+function DraggableAttachmentChip({ attachment, client, enabled, downloadName, children }: DraggableAttachmentChipProps) {
   const source = useMemo<AttachmentDragSource>(() => ({
-    name: attachment.name || 'download',
+    name: downloadName || attachment.name || 'download',
     type: attachment.type || 'application/octet-stream',
     getBlobUrl: async () => {
       if (attachment.blobId && client) {
@@ -836,7 +839,7 @@ function DraggableAttachmentChip({ attachment, client, enabled, children }: Drag
       }
       return null;
     },
-  }), [attachment, client]);
+  }), [attachment, client, downloadName]);
   const drag = useAttachmentDrag(source, enabled);
   return <>{children(drag)}</>;
 }
@@ -909,6 +912,26 @@ export function EmailViewer({
   const hideInlineImageAttachments = useSettingsStore((state) => state.hideInlineImageAttachments);
   const attachmentImagePreviewsEnabled = useSettingsStore((state) => state.attachmentImagePreviewsEnabled);
   const dragOutActive = useMemo(() => isDragOutSupported(), []);
+  const emailDownloadTemplate = useSettingsStore((state) => state.emailDownloadTemplate) || DEFAULT_EMAIL_TEMPLATE;
+  const attachmentDownloadTemplate = useSettingsStore((state) => state.attachmentDownloadTemplate) || DEFAULT_ATTACHMENT_TEMPLATE;
+  const filenameSpaceReplacement = useSettingsStore((state) => state.filenameSpaceReplacement);
+  const filenameLowercase = useSettingsStore((state) => state.filenameLowercase);
+  const filenameStripDiacritics = useSettingsStore((state) => state.filenameStripDiacritics);
+  const filenameCollapseSeparators = useSettingsStore((state) => state.filenameCollapseSeparators);
+  const emailFilenameOptions = useMemo(() => ({
+    template: emailDownloadTemplate,
+    spaceReplacement: filenameSpaceReplacement,
+    lowercase: filenameLowercase,
+    stripDiacritics: filenameStripDiacritics,
+    collapseSeparators: filenameCollapseSeparators,
+  }), [emailDownloadTemplate, filenameSpaceReplacement, filenameLowercase, filenameStripDiacritics, filenameCollapseSeparators]);
+  const attachmentFilenameOptions = useMemo(() => ({
+    template: attachmentDownloadTemplate,
+    spaceReplacement: filenameSpaceReplacement,
+    lowercase: filenameLowercase,
+    stripDiacritics: filenameStripDiacritics,
+    collapseSeparators: filenameCollapseSeparators,
+  }), [attachmentDownloadTemplate, filenameSpaceReplacement, filenameLowercase, filenameStripDiacritics, filenameCollapseSeparators]);
   const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
 
@@ -2594,6 +2617,15 @@ export function EmailViewer({
     return emailContent;
   }, [cidBlobUrls, emailContent, smimeDecryptedHtml, smimeDecryptedText, tnefHtml, tnefText, embeddedEmailHtml, embeddedEmailText]);
 
+  const resolveAttachmentName = useCallback(
+    (attachment: EffectiveAttachment) => {
+      const fallback = attachment.name || 'download';
+      if (!email) return fallback;
+      return attachmentDownloadFilename(email, { name: attachment.name, type: attachment.type }, attachmentFilenameOptions) || fallback;
+    },
+    [email, attachmentFilenameOptions],
+  );
+
   const handleEffectiveAttachmentOpen = useCallback(async (attachment: EffectiveAttachment) => {
     const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
     // Blob URLs inherit our origin; script-bearing MIME types (text/html,
@@ -2602,6 +2634,8 @@ export function EmailViewer({
     const opensPreview = isPreviewable
       && mailAttachmentAction === 'preview'
       && isMimeTypeSafeForInlinePreview(attachment.type);
+
+    const downloadName = resolveAttachmentName(attachment);
 
     const info: AttachmentInfo = {
       name: attachment.name || '',
@@ -2613,7 +2647,7 @@ export function EmailViewer({
 
     if (attachment.blobId && onDownloadAttachment) {
       emailHooks.onAttachmentDownload.emit(info);
-      onDownloadAttachment(attachment.blobId, attachment.name || 'download', attachment.type);
+      onDownloadAttachment(attachment.blobId, downloadName, attachment.type);
       return;
     }
 
@@ -2633,7 +2667,7 @@ export function EmailViewer({
         emailHooks.onAttachmentDownload.emit(info);
         const anchor = document.createElement('a');
         anchor.href = objectUrl;
-        anchor.download = attachment.name || 'download';
+        anchor.download = downloadName;
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
@@ -2663,16 +2697,17 @@ export function EmailViewer({
       emailHooks.onAttachmentDownload.emit(info);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
-      anchor.download = attachment.name || 'download';
+      anchor.download = downloadName;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
     }
 
     setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  }, [mailAttachmentAction, onDownloadAttachment, email?.id]);
+  }, [mailAttachmentAction, onDownloadAttachment, email, resolveAttachmentName]);
 
   const handleEffectiveAttachmentDownload = useCallback((attachment: EffectiveAttachment) => {
+    const downloadName = resolveAttachmentName(attachment);
     const info: AttachmentInfo = {
       name: attachment.name || '',
       type: attachment.type,
@@ -2682,7 +2717,7 @@ export function EmailViewer({
     };
     emailHooks.onAttachmentDownload.emit(info);
     if (attachment.blobId && onDownloadAttachment) {
-      onDownloadAttachment(attachment.blobId, attachment.name || 'download', attachment.type, true);
+      onDownloadAttachment(attachment.blobId, downloadName, attachment.type, true);
       return;
     }
 
@@ -2695,7 +2730,7 @@ export function EmailViewer({
       const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = objectUrl;
-      anchor.download = attachment.name || 'download';
+      anchor.download = downloadName;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -2711,12 +2746,12 @@ export function EmailViewer({
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = attachment.name || 'download';
+    anchor.download = downloadName;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  }, [onDownloadAttachment, email?.id]);
+  }, [onDownloadAttachment, email?.id, resolveAttachmentName]);
 
   // Pre-fetch object URLs for image attachments so their actual contents can be
   // rendered as thumbnails inside the chip. Skips images larger than 10 MB.
@@ -2832,7 +2867,9 @@ export function EmailViewer({
     // Word/Outlook HTML emails ship a <style> block but put their gutter in
     // @page margins (print-only), so they need a fallback body padding too.
     const isWordHtml = /class=["']?(?:Mso|WordSection)|<o:p[\s>/]|urn:schemas-microsoft-com:office:office/i.test(effectiveEmailContent.html);
-    const bodyPadding = (effectiveEmailContent.hasStyleTag && !isWordHtml) ? '0' : '1rem 1.25rem';
+    const hasOwnLayout = effectiveEmailContent.hasStyleTag && !isWordHtml;
+    const bodyPadding = hasOwnLayout ? '0' : '1rem 1.25rem';
+    const mobileBodyPaddingX = hasOwnLayout ? '0' : '0.75rem';
 
     // Word emails rely on empty <p class=MsoNormal>&nbsp;</p> spacers for vertical
     // rhythm. With our default line-height: 1.6 these stack into oversized gaps;
@@ -2855,7 +2892,7 @@ export function EmailViewer({
 <style>
   html, body { overflow: hidden; }
   body { margin: 0; padding: ${bodyPadding}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
-  @media (max-width: 640px) { body { padding-left: 0; padding-right: 0; } }
+  @media (max-width: 640px) { body { padding-left: ${mobileBodyPaddingX}; padding-right: ${mobileBodyPaddingX}; } }
   img { max-width: 100% !important; height: auto !important; }
   a { color: #1a73e8; }
   table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
@@ -3089,35 +3126,58 @@ export function EmailViewer({
   const handleExportEmail = async () => {
     if (!email?.blobId || !client) return;
     try {
-      const subject = (email.subject || 'email').replace(/[<>:"/\\|?*]+/g, '_').slice(0, 100);
-      await client.downloadBlob(email.blobId, `${subject}.eml`, 'message/rfc822');
+      await client.downloadBlob(email.blobId, emailExportFilename(email, emailFilenameOptions), 'message/rfc822');
     } catch {
       toast.error(tNotifications('export_email_error'));
+      return;
     }
+    const action = useSettingsStore.getState().postExportAction;
+    if (action === 'archive') onArchive?.();
+    else if (action === 'trash') onDelete?.();
   };
 
-  // Import email from .eml file
+  // Import email from .eml file or .zip archive containing .eml files
   const handleImportEmail = () => {
     if (!client) return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.eml,message/rfc822';
+    input.accept = EML_IMPORT_ACCEPT;
+    input.multiple = true;
     input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      const files = Array.from((e.target as HTMLInputElement).files ?? []);
+      if (files.length === 0) return;
+      const { selectedMailbox, mailboxes, fetchEmails } = useEmailStore.getState();
+      const mailbox = mailboxes.find(mb => mb.id === selectedMailbox);
+      const mailboxId = mailbox?.originalId || selectedMailbox;
+      if (!mailboxId) {
+        toast.error(tNotifications('import_email_error'));
+        return;
+      }
+
+      let emails;
       try {
-        const { selectedMailbox, mailboxes, fetchEmails } = useEmailStore.getState();
-        const mailbox = mailboxes.find(mb => mb.id === selectedMailbox);
-        const mailboxId = mailbox?.originalId || selectedMailbox;
-        if (!mailboxId) {
-          toast.error(tNotifications('import_email_error'));
-          return;
+        emails = await expandImportableEmails(files);
+      } catch {
+        toast.error(tNotifications('import_email_error'));
+        return;
+      }
+
+      let imported = 0;
+      let failed = 0;
+      for (const { blob } of emails) {
+        try {
+          await client.importRawEmail(blob, { [mailboxId]: true }, { '$seen': true });
+          imported++;
+        } catch {
+          failed++;
         }
-        const blob = new Blob([await file.arrayBuffer()], { type: 'message/rfc822' });
-        await client.importRawEmail(blob, { [mailboxId]: true }, { '$seen': true });
+      }
+
+      if (imported > 0) {
         toast.success(tNotifications('import_email_success'));
         await fetchEmails(client);
-      } catch {
+      }
+      if (failed > 0 || emails.length === 0) {
         toast.error(tNotifications('import_email_error'));
       }
     };
@@ -4269,7 +4329,7 @@ export function EmailViewer({
                     const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                     const thumbUrl = imageThumbUrls[attachment.id];
                     return (
-                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                         {(dragProps) => (
                       <div
                         className={cn(
@@ -4349,7 +4409,7 @@ export function EmailViewer({
                           const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                           const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                           return (
-                            <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                            <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                               {(dragProps) => (
                             <div
                               className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
@@ -5002,7 +5062,7 @@ export function EmailViewer({
               const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
               const thumbUrl = imageThumbUrls[attachment.id];
               return (
-                <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                   {(dragProps) => (
                 <div
                   className={cn(
@@ -5087,7 +5147,7 @@ export function EmailViewer({
                     const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                     const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                     return (
-                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                         {(dragProps) => (
                       <div
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
@@ -5145,7 +5205,7 @@ export function EmailViewer({
                 const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                 const thumbUrl = imageThumbUrls[attachment.id];
                 return (
-                  <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                  <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                     {(dragProps) => (
                   <div
                     className={cn(
@@ -5224,7 +5284,7 @@ export function EmailViewer({
                       const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                       const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                       return (
-                        <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                        <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive} downloadName={resolveAttachmentName(attachment)}>
                           {(dragProps) => (
                         <div
                           className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"

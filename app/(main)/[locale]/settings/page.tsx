@@ -33,6 +33,7 @@ import {
   Languages,
   Info,
   Bug,
+  Download,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -59,6 +60,7 @@ import { FolderSettings } from '@/components/settings/folder-settings';
 import { KeywordSettings } from '@/components/settings/keyword-settings';
 import { AccountSecuritySettings } from '@/components/settings/account-security-settings';
 import { FilesSettingsComponent } from '@/components/settings/files-settings';
+import { DownloadsSettings } from '@/components/settings/downloads-settings';
 import { ContactsSettings } from '@/components/settings/contacts-settings';
 import { SmimeSettings } from '@/components/settings/smime-settings';
 import { SidebarAppsSettings } from '@/components/settings/sidebar-apps-settings';
@@ -90,6 +92,7 @@ type Tab =
   | 'layout'
   | 'reading'
   | 'composing'
+  | 'downloads'
   | 'identities'
   | 'vacation'
   | 'filters'
@@ -126,6 +129,7 @@ const tabIcons: Record<Tab, LucideIcon> = {
   layout: LayoutGrid,
   reading: BookOpen,
   composing: PenLine,
+  downloads: Download,
   identities: UserPen,
   vacation: PalmtreeIcon,
   filters: Filter,
@@ -202,6 +206,7 @@ const tabSearchPaths: Record<Tab, string[]> = {
     'settings.email_behavior.signature_position',
     'settings.email_behavior.sub_address_delimiter',
   ],
+  downloads: ['settings.downloads'],
   identities: ['settings.identities'],
   vacation: ['settings.vacation'],
   filters: ['settings.filters'],
@@ -236,6 +241,7 @@ const tabKeywords: Record<Tab, string> = {
   layout: 'toolbar sidebar account switcher unified mailbox icons rail',
   reading: 'mark read preview thread conversation archive delete attachment open',
   composing: 'editor signature plain text reply forward draft compose',
+  downloads: 'download filename template eml attachment save export',
   identities: 'from address signature email',
   vacation: 'auto reply away out of office holiday responder',
   filters: 'sieve rules block junk forward',
@@ -580,6 +586,7 @@ export default function SettingsPage() {
     // Mail
     { id: 'reading', label: t('tabs.reading'), icon: tabIcons.reading, group: 'mail' },
     { id: 'composing', label: t('tabs.composing'), icon: tabIcons.composing, group: 'mail' },
+    { id: 'downloads', label: t('tabs.downloads'), icon: tabIcons.downloads, group: 'mail' },
     { id: 'identities', label: t('tabs.identities'), icon: tabIcons.identities, group: 'mail' },
     ...(supportsVacation ? [{ id: 'vacation' as Tab, label: t('tabs.vacation'), icon: tabIcons.vacation, group: 'mail' as TabGroup }] : []),
     ...(supportsSieve ? [{ id: 'filters' as Tab, label: t('tabs.filters'), icon: tabIcons.filters, group: 'mail' as TabGroup }] : []),
@@ -666,6 +673,7 @@ export default function SettingsPage() {
       {effectiveActiveTab === 'layout' && <LayoutSettings />}
       {effectiveActiveTab === 'reading' && <ReadingSettings />}
       {effectiveActiveTab === 'composing' && <ComposingSettings />}
+      {effectiveActiveTab === 'downloads' && <DownloadsSettings />}
       {effectiveActiveTab === 'identities' && <IdentitySettings />}
       {effectiveActiveTab === 'vacation' && <VacationSettings />}
       {effectiveActiveTab === 'filters' && <FilterSettings />}

@@ -146,6 +146,23 @@ describe('oauth/discovery', () => {
     expect(consoleSpy).toHaveBeenCalled();
   });
 
+  it('accepts private/loopback endpoints when validateEndpoint is omitted (admin opted in)', async () => {
+    // Split-DNS deployments: mail.example.com resolves to an RFC-1918 address
+    // locally. With the SSRF validator off, discovery must succeed.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        issuer: 'https://mail.example.com',
+        authorization_endpoint: 'http://10.0.0.5/authorize',
+        token_endpoint: 'http://10.0.0.5/token',
+      }),
+    }));
+
+    const result = await discoverOAuth('https://mail.example.com');
+
+    expect(result?.token_endpoint).toBe('http://10.0.0.5/token');
+  });
+
   it('caches results - second call for same server URL does not re-fetch', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
       ok: true,

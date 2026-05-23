@@ -28,7 +28,7 @@ export type FontSize = 'small' | 'medium' | 'large';
 export type Density = 'extra-compact' | 'compact' | 'regular' | 'comfortable';
 /** @deprecated Use Density instead */
 export type ListDensity = Density;
-export type DeleteAction = 'trash' | 'permanent';
+export type DeleteAction = 'trash' | 'trash-and-read' | 'permanent';
 export type ReplyMode = 'reply' | 'replyAll';
 export type SignaturePosition = 'above_quote' | 'below_quote';
 export type DateFormat = 'regional' | 'iso' | 'custom';
@@ -241,6 +241,16 @@ interface SettingsState {
   tourCompleted: boolean; // Interactive tour completed
   showOnboardingOnNewDevices: boolean; // When true, onboarding shows again on each new device
 
+  // Downloads
+  emailDownloadTemplate: string;
+  attachmentDownloadTemplate: string;
+  bundleDownloadTemplate: string;
+  filenameSpaceReplacement: 'keep' | 'underscore' | 'dash';
+  filenameLowercase: boolean;
+  filenameStripDiacritics: boolean;
+  filenameCollapseSeparators: boolean;
+  postExportAction: 'keep' | 'archive' | 'trash';
+
   // Advanced
   debugMode: boolean;
   debugCategories: Record<DebugCategory, boolean>;
@@ -426,6 +436,16 @@ const DEFAULT_SETTINGS = {
   onboardingCompleted: false,
   tourCompleted: false,
   showOnboardingOnNewDevices: false,
+
+  // Downloads
+  emailDownloadTemplate: '{date} ({from}-{to}) {subject}',
+  attachmentDownloadTemplate: '{filename}',
+  bundleDownloadTemplate: 'emails-{count}',
+  filenameSpaceReplacement: 'keep' as 'keep' | 'underscore' | 'dash',
+  filenameLowercase: false,
+  filenameStripDiacritics: false,
+  filenameCollapseSeparators: true,
+  postExportAction: 'keep' as 'keep' | 'archive' | 'trash',
 
   // Advanced
   debugMode: false,
