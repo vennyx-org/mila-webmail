@@ -169,7 +169,16 @@ export interface IJMAPClient {
   sendImipCancellation(event: CalendarEvent): Promise<void>;
 
   // ── Blobs ─────────────────────────────────────────────────────
-  uploadBlob(file: File): Promise<{ blobId: string; size: number; type: string }>;
+  uploadBlob(
+    file: File,
+    optsOrAccountId?:
+      | string
+      | {
+          accountId?: string;
+          onProgress?: (loaded: number, total: number) => void;
+          signal?: AbortSignal;
+        },
+  ): Promise<{ blobId: string; size: number; type: string }>;
   getBlobDownloadUrl(blobId: string, name?: string, type?: string): string;
   fetchBlob(blobId: string, name?: string, type?: string): Promise<Blob>;
   fetchBlobAsObjectUrl(blobId: string, name?: string, type?: string): Promise<string>;

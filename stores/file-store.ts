@@ -333,7 +333,12 @@ export const useFileStore = create<FileState>((set, get) => ({
 
     try {
       if (abortController.signal.aborted) return;
-      const { blobId, type } = await client.uploadBlob(file);
+      const { blobId, type } = await client.uploadBlob(file, {
+        signal: abortController.signal,
+        onProgress: (loaded, total) => {
+          set({ uploadProgress: { name: file.name, loaded, total, current: 1, totalFiles: 1 } });
+        },
+      });
       if (abortController.signal.aborted) return;
       set({ uploadProgress: { name: file.name, loaded: file.size, total: file.size, current: 1, totalFiles: 1 } });
       await client.createFileNode(fullName, blobId, type || file.type || 'application/octet-stream', file.size, null);
@@ -361,7 +366,13 @@ export const useFileStore = create<FileState>((set, get) => ({
       set({ uploadProgress: { name: file.name, loaded: 0, total: file.size, current: i + 1, totalFiles } });
 
       try {
-        const { blobId, type } = await client.uploadBlob(file);
+        const idx = i;
+        const { blobId, type } = await client.uploadBlob(file, {
+          signal: abortController.signal,
+          onProgress: (loaded, total) => {
+            set({ uploadProgress: { name: file.name, loaded, total, current: idx + 1, totalFiles } });
+          },
+        });
         if (abortController.signal.aborted) break;
         set({ uploadProgress: { name: file.name, loaded: file.size, total: file.size, current: i + 1, totalFiles } });
         await client.createFileNode(fullName, blobId, type || file.type || 'application/octet-stream', file.size, null);

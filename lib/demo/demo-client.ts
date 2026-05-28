@@ -494,9 +494,17 @@ export class DemoJMAPClient implements IJMAPClient {
 
   // ── Blobs ─────────────────────────────────────────────────────
 
-  async uploadBlob(file: File): Promise<{ blobId: string; size: number; type: string }> {
+  async uploadBlob(
+    file: File,
+    opts?: { onProgress?: (loaded: number, total: number) => void; signal?: AbortSignal },
+  ): Promise<{ blobId: string; size: number; type: string }> {
+    if (opts?.signal?.aborted) {
+      throw new DOMException('Upload aborted', 'AbortError');
+    }
+    opts?.onProgress?.(0, file.size);
     const blobId = generateDemoId('blob');
     this.blobStore.set(blobId, file);
+    opts?.onProgress?.(file.size, file.size);
     return { blobId, size: file.size, type: file.type };
   }
 
