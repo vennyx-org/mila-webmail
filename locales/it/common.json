@@ -260,6 +260,15 @@
     "reschedule_prompt": "Inserisci una nuova data/ora, ad es. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Il mittente richiede una conferma di lettura:",
+      "send": "Invia conferma",
+      "ignore": "Ignora",
+      "sent": "Conferma di lettura inviata.",
+      "send_failed": "Impossibile inviare la conferma di lettura",
+      "mdn_subject": "Letto: {subject}",
+      "mdn_body": "Questa è una conferma di lettura del messaggio che hai inviato a {recipient}.\n\nNota: questa conferma attesta solo che il messaggio è stato visualizzato sul computer del destinatario. Non garantisce che il destinatario abbia letto o compreso il contenuto."
+    },
     "no_email_selected": "Nessun messaggio selezionato",
     "no_email_description": "Seleziona un messaggio dall'elenco per visualizzarlo qui",
     "no_conversation_selected": "Nessuna conversazione selezionata",
@@ -545,6 +554,8 @@
     "undo_send": "Annulla invio"
   },
   "email_composer": {
+    "read_receipt_on": "Conferma di lettura richiesta (clicca per disattivare)",
+    "read_receipt_off": "Richiedi una conferma di lettura",
     "new_message": "Nuovo messaggio",
     "reply": "Rispondi",
     "reply_all": "Rispondi a tutti",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Richiedi conferme di lettura per impostazione predefinita",
+        "description": "Attiva in anticipo la richiesta di conferma di lettura durante la composizione di un nuovo messaggio."
+      },
+      "read_receipt_response": {
+        "label": "Rispondi alle richieste di conferma di lettura",
+        "description": "Cosa fare quando un messaggio in arrivo richiede una conferma di lettura.",
+        "ask": "Chiedi ogni volta",
+        "always": "Invia sempre",
+        "never": "Non inviare mai"
+      },
       "title": "Comportamento email",
       "description": "Configura come vengono gestiti i messaggi",
       "mark_read": {

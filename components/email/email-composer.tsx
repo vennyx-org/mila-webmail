@@ -5,7 +5,7 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, ShieldCheck, Lock, CalendarClock, ChevronDown } from "lucide-react";
+import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, ShieldCheck, Lock, CalendarClock, ChevronDown, MailCheck } from "lucide-react";
 import { cn, formatFileSize, formatDateTime, generateUUID } from "@/lib/utils";
 import { debug } from "@/lib/debug";
 import { toast } from "@/stores/toast-store";
@@ -90,6 +90,7 @@ interface EmailComposerProps {
     inReplyTo?: string[];
     references?: string[];
     delayedUntil?: string;
+    requestReadReceipt?: boolean;
   }) => void | Promise<void>;
   onScheduledSendCreated?: () => void | Promise<void>;
   onClose?: () => void;
@@ -206,6 +207,7 @@ export function EmailComposer({
   const sendDelaySeconds = useSettingsStore((state) => state.sendDelaySeconds);
   const signaturePosition = useSettingsStore((state) => state.signaturePosition);
   const signatureSeparatorEnabled = useSettingsStore((state) => state.signatureSeparatorEnabled);
+  const requestReadReceiptDefault = useSettingsStore((state) => state.requestReadReceiptDefault);
   const activeIdentities = useIdentityStore((s) => s.identities);
   // Pro shell: surface identities from every connected account, grouped
   // for the From dropdown's <optgroup>s. Outside Pro this collapses to
@@ -384,6 +386,7 @@ export function EmailComposer({
   const [body, setBody] = useState(initialData?.body ?? getInitialBody());
   const [showCc, setShowCc] = useState(initialData?.showCc ?? !!getInitialCc());
   const [showBcc, setShowBcc] = useState(initialData?.showBcc ?? false);
+  const [requestReadReceipt, setRequestReadReceipt] = useState(requestReadReceiptDefault);
   const [draftId, setDraftId] = useState<string | null>(initialData?.draftId ?? null);
   // Mirror of draftId for synchronous reads inside chained saves; React's
   // setDraftId is async, so a queued saveDraft would otherwise see the old
@@ -1656,6 +1659,7 @@ export function EmailComposer({
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
           inReplyTo: threadingHeaders?.inReplyTo,
           references: threadingHeaders?.references,
+          requestReadReceipt,
           delayedUntil: effectiveDelayedUntil,
         });
 
@@ -2217,7 +2221,7 @@ export function EmailComposer({
         )}
 
         {/* Bottom toolbar */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t bg-background shrink-0 pb-[calc(env(safe-area-inset-bottom)/2)]">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t bg-background shrink-0 pb-[calc(0.625rem+env(safe-area-inset-bottom)/2)]">
           {/* Left side actions */}
           <div className="flex items-center gap-1">
             <input
@@ -2280,6 +2284,21 @@ export function EmailComposer({
                 </Button>
               </>
             )}
+
+            {/* Read-receipt request toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRequestReadReceipt(v => !v)}
+              className={cn(
+                "h-9 w-9",
+                requestReadReceipt && "bg-green-600 text-white hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
+              )}
+              title={requestReadReceipt ? t('read_receipt_on') : t('read_receipt_off')}
+              aria-pressed={requestReadReceipt}
+            >
+              <MailCheck className="w-4 h-4" />
+            </Button>
             <PluginSlot name="composer-toolbar" />
           </div>
 

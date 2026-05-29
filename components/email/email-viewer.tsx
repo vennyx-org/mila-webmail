@@ -83,6 +83,8 @@ import { useThemeStore } from "@/stores/theme-store";
 import { EmailIdentityBadge } from "./email-identity-badge";
 import { UnsubscribeBanner } from "./unsubscribe-banner";
 import { CalendarInvitationBanner } from "./calendar-invitation-banner";
+import { ReadReceiptBanner } from "./read-receipt-banner";
+import { stripCrossAccountIdentityPrefix } from "@/hooks/use-pro-multi-account-identities";
 import { useTour } from "@/components/tour/tour-provider";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { SmimePassphraseDialog } from "@/components/settings/smime-passphrase-dialog";
@@ -911,6 +913,7 @@ export function EmailViewer({
   const showToolbarLabels = useSettingsStore((state) => state.showToolbarLabels);
   const mailLayout = useSettingsStore((state) => state.mailLayout);
   const calendarInvitationParsingEnabled = useSettingsStore((state) => state.calendarInvitationParsingEnabled);
+  const readReceiptResponse = useSettingsStore((state) => state.readReceiptResponse);
   const hideInlineImageAttachments = useSettingsStore((state) => state.hideInlineImageAttachments);
   const attachmentImagePreviewsEnabled = useSettingsStore((state) => state.attachmentImagePreviewsEnabled);
   const dragOutActive = useMemo(() => isDragOutSupported(), []);
@@ -2193,6 +2196,9 @@ export function EmailViewer({
       // Hide inline cid-referenced images when the user has opted to keep them
       // out of the attachment list (default on): these are embedded in the body.
       .filter(att => !(hideInlineImageAttachments && att.cid && att.disposition === 'inline' && (att.type || '').startsWith('image/')))
+      // Hide machine-readable report parts (MDN read-receipts, DSN bounce
+      // reports). These are required MIME parts, not real user attachments.
+      .filter(att => att.type !== 'message/disposition-notification' && att.type !== 'message/delivery-status')
       .map((attachment, index) => ({
         id: attachment.blobId || `${attachment.name || 'attachment'}-${index}`,
         name: attachment.name || null,
@@ -3251,6 +3257,103 @@ export function EmailViewer({
   const hasCalendarInvitation = email
     ? calendarInvitationParsingEnabled && !!findCalendarAttachment(email)
     : false;
+
+  // ── Read receipt (MDN, RFC 8098) ──────────────────────────────
+  // Detect a Disposition-Notification-To request on the open message. The
+  // header is parsed into email.headers by the client; look it up
+  // case-insensitively and extract the bare address.
+  const readReceiptRequestedBy = useMemo(() => {
+    const headers = email?.headers as Record<string, string | string[]> | undefined;
+    if (!headers) return null;
+    let raw: string | undefined;
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === 'disposition-notification-to') {
+        const v = headers[key];
+        raw = Array.isArray(v) ? v[0] : v;
+        break;
+      }
+    }
+    if (!raw) return null;
+    const m = raw.match(/<([^>]+)>/);
+    const addr = (m ? m[1] : raw).trim();
+    return addr || null;
+  }, [email?.headers]);
+
+  // The identity whose address received the original message — the MDN is sent
+  // "from" that address. Falls back to the primary identity.
+  const receiptIdentity = useMemo(() => {
+    if (!identities?.length) return null;
+    const recipients = [...(email?.to || []), ...(email?.cc || [])]
+      .map(r => r.email?.toLowerCase())
+      .filter(Boolean);
+    return identities.find(i => recipients.includes(i.email?.toLowerCase())) || identities[0];
+  }, [identities, email?.to, email?.cc]);
+
+  const mdnAlreadyHandled = email?.keywords?.['$mdnsent'] === true;
+  const [mdnHandledLocally, setMdnHandledLocally] = useState(false);
+  useEffect(() => { setMdnHandledLocally(false); }, [email?.id]);
+
+  // Only offer the receipt for mail you're actually reading in a "received"
+  // location. Suppress your own copies (sent/drafts), discarded mail (trash),
+  // and spam (junk) - never confirm your address to spammers. Inbox, Archive
+  // and user folders all qualify.
+  const inReceiptEligibleFolder = !['sent', 'drafts', 'trash', 'junk'].includes(currentMailboxRole || '');
+
+  const shouldOfferReadReceipt =
+    !!readReceiptRequestedBy &&
+    !mdnAlreadyHandled &&
+    !mdnHandledLocally &&
+    readReceiptResponse !== 'never' &&
+    inReceiptEligibleFolder &&
+    !isDraft &&
+    !!receiptIdentity;
+
+  const sendReadReceiptNow = useCallback(async (automatic: boolean) => {
+    if (!client || !email || !readReceiptRequestedBy || !receiptIdentity) return;
+    const { rawId } = stripCrossAccountIdentityPrefix(receiptIdentity.id);
+    try {
+      await client.sendReadReceipt({
+        to: readReceiptRequestedBy,
+        fromEmail: receiptIdentity.email,
+        fromName: receiptIdentity.name,
+        identityId: rawId ?? receiptIdentity.id,
+        originalMessageId: email.messageId,
+        originalSubject: email.subject,
+        originalRecipient: receiptIdentity.email,
+        automatic,
+        subject: t('read_receipt.mdn_subject', { subject: email.subject || '' }),
+        humanText: t('read_receipt.mdn_body', { recipient: receiptIdentity.email }),
+      });
+      await client.setKeyword(email.id, '$mdnsent');
+    } catch (err) {
+      // Surface the failure instead of silently resetting the banner so we can
+      // see which step (upload / import / submission) failed.
+      console.error('Read-receipt (MDN) send failed:', err);
+      toast.error(t('read_receipt.send_failed'), {
+        message: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }, [client, email, readReceiptRequestedBy, receiptIdentity, t]);
+
+  const ignoreReadReceipt = useCallback(async () => {
+    setMdnHandledLocally(true);
+    if (client && email) {
+      // $MDNSent is the RFC 3503 flag every IMAP/JMAP client honours, so the
+      // request is suppressed everywhere - not just locally.
+      try { await client.setKeyword(email.id, '$mdnsent'); } catch { /* best effort */ }
+    }
+  }, [client, email]);
+
+  // "always" mode: auto-send the MDN once when the message is opened.
+  const autoMdnRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (readReceiptResponse !== 'always') return;
+    if (!shouldOfferReadReceipt || !email) return;
+    if (autoMdnRef.current === email.id) return;
+    autoMdnRef.current = email.id;
+    sendReadReceiptNow(true).catch(() => { autoMdnRef.current = null; });
+  }, [readReceiptResponse, shouldOfferReadReceipt, email?.id, sendReadReceiptNow]);
 
   // Show loading skeleton while email is being fetched
   if (isLoading && !email) {
@@ -4946,9 +5049,10 @@ export function EmailViewer({
           error={smimeUnlockError}
         />
 
-        {/* Unified Notification Banner - External Content + Calendar Invitation */}
+        {/* Unified Notification Banner - External Content + Calendar Invitation + Read Receipt */}
         {((hasBlockedContent && !allowExternalContent && externalContentPolicy !== 'allow') ||
-          hasCalendarInvitation) && (
+          hasCalendarInvitation ||
+          (readReceiptResponse === 'ask' && shouldOfferReadReceipt)) && (
           <div className="border-b border-border bg-muted/30 isolate">
             <div className="px-6 py-1.5">
               <div className="flex flex-col gap-3 isolate">
@@ -5002,6 +5106,17 @@ export function EmailViewer({
                 )}
 
 
+
+                {/* Read-receipt (MDN) request banner — only in "ask" mode */}
+                {readReceiptResponse === 'ask' && shouldOfferReadReceipt && readReceiptRequestedBy && (
+                  <div className="py-1">
+                    <ReadReceiptBanner
+                      requestedBy={readReceiptRequestedBy}
+                      onSend={() => sendReadReceiptNow(false)}
+                      onIgnore={ignoreReadReceipt}
+                    />
+                  </div>
+                )}
 
                 {/* Calendar Invitation Banner */}
                 {hasCalendarInvitation && (

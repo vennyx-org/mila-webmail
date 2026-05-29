@@ -260,6 +260,15 @@
     "reschedule_prompt": "Yeni tarih/saat girin, ör. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Gönderen bir okundu bilgisi istiyor:",
+      "send": "Bilgi gönder",
+      "ignore": "Yoksay",
+      "sent": "Okundu bilgisi gönderildi.",
+      "send_failed": "Okundu bilgisi gönderilemedi",
+      "mdn_subject": "Okundu: {subject}",
+      "mdn_body": "Bu, {recipient} adresine gönderdiğiniz iletinin okundu bilgisidir.\n\nNot: Bu bilgi yalnızca iletinin alıcının bilgisayarında görüntülendiğini belirtir. Alıcının içeriği okuduğunu veya anladığını garanti etmez."
+    },
     "no_email_selected": "E-posta seçilmedi",
     "no_email_description": "Burada görüntülemek için listeden bir e-posta seçin",
     "no_conversation_selected": "Konuşma seçilmedi",
@@ -545,6 +554,8 @@
     "undo_send": "Göndermeyi geri al"
   },
   "email_composer": {
+    "read_receipt_on": "Okundu bilgisi istendi (devre dışı bırakmak için tıklayın)",
+    "read_receipt_off": "Okundu bilgisi iste",
     "new_message": "Yeni İleti",
     "reply": "Yanıtla",
     "reply_all": "Tümünü Yanıtla",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Varsayılan olarak okundu bilgisi iste",
+        "description": "Yeni bir ileti yazarken okundu bilgisi isteğini önceden etkinleştir."
+      },
+      "read_receipt_response": {
+        "label": "Okundu bilgisi isteklerine yanıt ver",
+        "description": "Gelen bir ileti okundu bilgisi istediğinde ne yapılacağı.",
+        "ask": "Her seferinde sor",
+        "always": "Her zaman gönder",
+        "never": "Asla gönderme"
+      },
       "title": "E-posta Davranışı",
       "description": "E-postaların nasıl işleneceğini yapılandırın",
       "mark_read": {

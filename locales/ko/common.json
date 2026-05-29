@@ -260,6 +260,15 @@
     "reschedule_prompt": "새 날짜/시간을 입력하세요. 예: 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "보낸 사람이 읽음 확인을 요청합니다:",
+      "send": "확인 보내기",
+      "ignore": "무시",
+      "sent": "읽음 확인을 보냈습니다.",
+      "send_failed": "읽음 확인을 보낼 수 없습니다",
+      "mdn_subject": "읽음: {subject}",
+      "mdn_body": "이것은 {recipient}(으)로 보낸 메시지에 대한 읽음 확인입니다.\n\n참고: 이 확인은 메시지가 수신자의 컴퓨터에 표시되었음을 알릴 뿐입니다. 수신자가 내용을 읽거나 이해했다는 보장은 없습니다."
+    },
     "no_email_selected": "메일이 선택되지 않았어요",
     "no_email_description": "목록에서 메일을 선택하면 여기에 내용이 표시돼요",
     "no_conversation_selected": "대화가 선택되지 않았어요",
@@ -545,6 +554,8 @@
     "undo_send": "보내기 실행 취소"
   },
   "email_composer": {
+    "read_receipt_on": "읽음 확인 요청됨 (클릭하여 해제)",
+    "read_receipt_off": "읽음 확인 요청",
     "new_message": "새 메시지",
     "reply": "답장",
     "reply_all": "전체 답장",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "기본적으로 읽음 확인 요청",
+        "description": "새 메시지를 작성할 때 읽음 확인 요청을 미리 켭니다."
+      },
+      "read_receipt_response": {
+        "label": "읽음 확인 요청에 응답",
+        "description": "수신 메시지가 읽음 확인을 요청할 때의 동작.",
+        "ask": "매번 묻기",
+        "always": "항상 보내기",
+        "never": "보내지 않음"
+      },
       "title": "메일 동작",
       "description": "이메일 관련 동작 방식을 설정해 주세요",
       "mark_read": {

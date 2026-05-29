@@ -260,6 +260,15 @@
     "reschedule_prompt": "新しい日時を入力してください。例: 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "送信者が開封確認を求めています：",
+      "send": "確認を送信",
+      "ignore": "無視",
+      "sent": "開封確認を送信しました。",
+      "send_failed": "開封確認を送信できませんでした",
+      "mdn_subject": "開封済み: {subject}",
+      "mdn_body": "これは、あなたが {recipient} に送信したメッセージの開封確認です。\n\n注意: この確認は、メッセージが受信者のコンピューターに表示されたことを示すだけです。受信者が内容を読んだ、または理解したことを保証するものではありません。"
+    },
     "no_email_selected": "メールが選択されていません",
     "no_email_description": "リストからメールを選択して表示してください",
     "no_conversation_selected": "会話が選択されていません",
@@ -545,6 +554,8 @@
     "undo_send": "送信を取り消す"
   },
   "email_composer": {
+    "read_receipt_on": "開封確認を要求中（クリックで無効化）",
+    "read_receipt_off": "開封確認を要求する",
     "new_message": "新規メッセージ",
     "reply": "返信",
     "reply_all": "全員に返信",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "既定で開封確認を要求する",
+        "description": "新しいメッセージの作成時に、開封確認の要求をあらかじめ有効にします。"
+      },
+      "read_receipt_response": {
+        "label": "開封確認の要求に応答する",
+        "description": "受信メッセージが開封確認を求めたときの動作。",
+        "ask": "毎回確認する",
+        "always": "常に送信",
+        "never": "送信しない"
+      },
       "title": "メール動作",
       "description": "メールの処理方法を設定",
       "mark_read": {

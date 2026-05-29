@@ -260,6 +260,15 @@
     "reschedule_prompt": "Zadejte nové datum/čas, např. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Odesílatel žádá o potvrzení o přečtení:",
+      "send": "Odeslat potvrzení",
+      "ignore": "Ignorovat",
+      "sent": "Potvrzení o přečtení odesláno.",
+      "send_failed": "Potvrzení o přečtení se nepodařilo odeslat",
+      "mdn_subject": "Přečteno: {subject}",
+      "mdn_body": "Toto je potvrzení o přečtení zprávy, kterou jste odeslali na adresu {recipient}.\n\nPoznámka: Toto potvrzení pouze potvrzuje, že zpráva byla zobrazena na počítači příjemce. Nezaručuje, že příjemce obsah přečetl nebo mu porozuměl."
+    },
     "no_email_selected": "Není vybrána žádná zpráva",
     "no_email_description": "Vyberte zprávu ze seznamu pro její zobrazení",
     "no_conversation_selected": "Není vybrána žádná konverzace",
@@ -545,6 +554,8 @@
     "undo_send": "Vrátit odeslání"
   },
   "email_composer": {
+    "read_receipt_on": "Vyžádáno potvrzení o přečtení (kliknutím vypnete)",
+    "read_receipt_off": "Vyžádat potvrzení o přečtení",
     "new_message": "Nová zpráva",
     "reply": "Odpovědět",
     "reply_all": "Odpovědět všem",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Standardně vyžadovat potvrzení o přečtení",
+        "description": "Při psaní nové zprávy předem zapnout žádost o potvrzení o přečtení."
+      },
+      "read_receipt_response": {
+        "label": "Reagovat na žádosti o potvrzení o přečtení",
+        "description": "Co dělat, když příchozí zpráva žádá o potvrzení o přečtení.",
+        "ask": "Vždy se zeptat",
+        "always": "Vždy odeslat",
+        "never": "Nikdy neodesílat"
+      },
       "title": "Chování e-mailu",
       "description": "Nakonfigurujte způsob zpracování e-mailů",
       "mark_read": {

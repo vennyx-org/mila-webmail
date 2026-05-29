@@ -260,6 +260,15 @@
     "reschedule_prompt": "Indtast en ny dato/tid, f.eks. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Afsenderen anmoder om en læsekvittering:",
+      "send": "Send kvittering",
+      "ignore": "Ignorér",
+      "sent": "Læsekvittering sendt.",
+      "send_failed": "Læsekvittering kunne ikke sendes",
+      "mdn_subject": "Læst: {subject}",
+      "mdn_body": "Dette er en læsekvittering for den besked, du sendte til {recipient}.\n\nBemærk: Denne kvittering bekræfter kun, at beskeden blev vist på modtagerens computer. Der er ingen garanti for, at modtageren har læst eller forstået indholdet."
+    },
     "no_email_selected": "Ingen e-mail valgt",
     "no_email_description": "Vælg en e-mail fra listen for at se den her",
     "no_conversation_selected": "Ingen samtale valgt",
@@ -545,6 +554,8 @@
     "undo_send": "Fortryd afsendelse"
   },
   "email_composer": {
+    "read_receipt_on": "Læsekvittering anmodet (klik for at deaktivere)",
+    "read_receipt_off": "Anmod om læsekvittering",
     "new_message": "Ny besked",
     "reply": "Svar",
     "reply_all": "Svar alle",
@@ -1007,6 +1018,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Anmod om læsekvittering som standard",
+        "description": "Aktivér anmodningen om læsekvittering på forhånd, når du skriver en ny besked."
+      },
+      "read_receipt_response": {
+        "label": "Svar på anmodninger om læsekvittering",
+        "description": "Hvad der skal ske, når en indgående besked beder om en læsekvittering.",
+        "ask": "Spørg hver gang",
+        "always": "Send altid",
+        "never": "Send aldrig"
+      },
       "title": "E-mail-adfærd",
       "description": "Konfigurér hvordan e-mails håndteres",
       "mark_read": {

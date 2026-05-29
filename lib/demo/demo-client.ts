@@ -530,6 +530,14 @@ export class DemoJMAPClient implements IJMAPClient {
     return { blobId, size: file.size, type: file.type };
   }
 
+  async importEmail(): Promise<string | null> {
+    return generateDemoId('email');
+  }
+
+  async sendReadReceipt(): Promise<void> {
+    // Demo mode: no real network send.
+  }
+
   getBlobDownloadUrl(blobId: string): string {
     return `data:application/octet-stream;demo-blob=${blobId}`;
   }

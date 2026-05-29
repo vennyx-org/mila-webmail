@@ -28,6 +28,8 @@ export function ComposingSettings() {
     subAddressDelimiter,
     signaturePosition,
     signatureSeparatorEnabled,
+    requestReadReceiptDefault,
+    readReceiptResponse,
     updateSetting,
   } = useSettingsStore();
   const { client } = useAuthStore();
@@ -75,6 +77,25 @@ export function ComposingSettings() {
         <ToggleSwitch
           checked={signatureSeparatorEnabled}
           onChange={(checked) => updateSetting('signatureSeparatorEnabled', checked)}
+        />
+      </SettingItem>
+
+      <SettingItem label={t('request_read_receipt.label')} description={t('request_read_receipt.description')}>
+        <ToggleSwitch
+          checked={requestReadReceiptDefault}
+          onChange={(checked) => updateSetting('requestReadReceiptDefault', checked)}
+        />
+      </SettingItem>
+
+      <SettingItem label={t('read_receipt_response.label')} description={t('read_receipt_response.description')}>
+        <Select
+          value={readReceiptResponse}
+          onChange={(value) => updateSetting('readReceiptResponse', value as 'ask' | 'always' | 'never')}
+          options={[
+            { value: 'ask', label: t('read_receipt_response.ask') },
+            { value: 'always', label: t('read_receipt_response.always') },
+            { value: 'never', label: t('read_receipt_response.never') },
+          ]}
         />
       </SettingItem>
 

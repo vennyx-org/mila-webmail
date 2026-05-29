@@ -150,7 +150,29 @@ export interface IJMAPClient {
     references?: string[],
     delayedUntil?: string,
     envelopeMailFrom?: string,
+    options?: { requestReadReceipt?: boolean },
   ): Promise<SendEmailResult>;
+
+  importEmail(
+    blobId: string,
+    mailboxIds: Record<string, boolean>,
+    keywords?: Record<string, boolean>,
+    accountId?: string,
+  ): Promise<string | null>;
+
+  sendReadReceipt(params: {
+    to: string;
+    fromEmail: string;
+    fromName?: string;
+    identityId: string;
+    originalMessageId?: string | string[];
+    originalSubject?: string;
+    originalRecipient?: string;
+    automatic?: boolean;
+    accountId?: string;
+    subject?: string;
+    humanText?: string;
+  }): Promise<void>;
 
   sendRawEmail(blob: Blob, identityId: string, sentMailboxId: string, draftMailboxId?: string, delayedUntil?: string, envelopeRecipients?: string[]): Promise<SendEmailResult>;
   getScheduledEmails(limit?: number, position?: number): Promise<{ emails: ScheduledEmail[]; hasMore: boolean; total: number; nextPosition: number }>;

@@ -260,6 +260,15 @@
     "reschedule_prompt": "输入新的日期/时间，例如 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "发件人请求已读回执：",
+      "send": "发送回执",
+      "ignore": "忽略",
+      "sent": "已读回执已发送。",
+      "send_failed": "无法发送已读回执",
+      "mdn_subject": "已读：{subject}",
+      "mdn_body": "这是您发送给 {recipient} 的邮件的已读回执。\n\n注意：此回执仅表示邮件已在收件人的计算机上显示，并不保证收件人已阅读或理解邮件内容。"
+    },
     "no_email_selected": "未选择邮件",
     "no_email_description": "从列表中选择一封邮件以在此查看",
     "no_conversation_selected": "未选择会话",
@@ -545,6 +554,8 @@
     "undo_send": "撤销发送"
   },
   "email_composer": {
+    "read_receipt_on": "已请求已读回执（点击以关闭）",
+    "read_receipt_off": "请求已读回执",
     "new_message": "新邮件",
     "reply": "回复",
     "reply_all": "全部回复",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "默认请求已读回执",
+        "description": "撰写新邮件时预先启用已读回执请求。"
+      },
+      "read_receipt_response": {
+        "label": "响应已读回执请求",
+        "description": "当收到的邮件请求已读回执时的处理方式。",
+        "ask": "每次询问",
+        "always": "始终发送",
+        "never": "从不发送"
+      },
       "title": "邮件行为",
       "description": "配置邮件的处理方式",
       "mark_read": {

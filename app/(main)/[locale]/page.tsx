@@ -1130,6 +1130,7 @@ export default function Home() {
     inReplyTo?: string[];
     references?: string[];
     delayedUntil?: string;
+    requestReadReceipt?: boolean;
   }) => {
     if (!client) return;
 
@@ -1137,7 +1138,7 @@ export default function Home() {
       const effectiveMode = pendingDraft?.mode ?? composerMode;
       const originalEmailId = selectedEmail?.id;
 
-      const result = await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil, data.envelopeMailFrom);
+      const result = await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil, data.envelopeMailFrom, { requestReadReceipt: data.requestReadReceipt });
       setShowComposer(false);
       if (result.scheduled) {
         await refreshScheduledMetadata(client);

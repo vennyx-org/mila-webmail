@@ -260,6 +260,15 @@
     "reschedule_prompt": "Informe uma nova data/hora, ex. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "O remetente solicita uma confirmação de leitura:",
+      "send": "Enviar confirmação",
+      "ignore": "Ignorar",
+      "sent": "Confirmação de leitura enviada.",
+      "send_failed": "Não foi possível enviar a confirmação de leitura",
+      "mdn_subject": "Lido: {subject}",
+      "mdn_body": "Este é um aviso de leitura da mensagem que você enviou para {recipient}.\n\nObservação: este aviso apenas confirma que a mensagem foi exibida no computador do destinatário. Não há garantia de que o destinatário tenha lido ou compreendido o conteúdo."
+    },
     "no_email_selected": "Nenhum e-mail selecionado",
     "no_email_description": "Selecione um e-mail da lista para visualizá-lo aqui",
     "no_conversation_selected": "Nenhuma conversa selecionada",
@@ -545,6 +554,8 @@
     "undo_send": "Desfazer envio"
   },
   "email_composer": {
+    "read_receipt_on": "Confirmação de leitura solicitada (clique para desativar)",
+    "read_receipt_off": "Solicitar confirmação de leitura",
     "new_message": "Nova Mensagem",
     "reply": "Responder",
     "reply_all": "Responder a Todos",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Solicitar confirmações de leitura por padrão",
+        "description": "Ativar previamente a solicitação de confirmação de leitura ao redigir uma nova mensagem."
+      },
+      "read_receipt_response": {
+        "label": "Responder a solicitações de confirmação de leitura",
+        "description": "O que fazer quando uma mensagem recebida solicita uma confirmação de leitura.",
+        "ask": "Perguntar sempre",
+        "always": "Enviar sempre",
+        "never": "Nunca enviar"
+      },
       "title": "Comportamento de E-mail",
       "description": "Configure como os e-mails são manipulados",
       "mark_read": {

@@ -31,6 +31,8 @@ export type ListDensity = Density;
 export type DeleteAction = 'trash' | 'trash-and-read' | 'permanent';
 export type ReplyMode = 'reply' | 'replyAll';
 export type SignaturePosition = 'above_quote' | 'below_quote';
+/** How to handle an incoming Disposition-Notification-To (read-receipt) request. */
+export type ReadReceiptResponse = 'ask' | 'always' | 'never';
 export type DateFormat = 'smart' | 'relative' | 'full';
 export type TimeFormat = '12h' | '24h';
 export type FirstDayOfWeek = 0 | 1; // 0 = Sunday, 1 = Monday
@@ -157,6 +159,8 @@ interface SettingsState {
   sendDelaySeconds: SendDelaySeconds;
   signaturePosition: SignaturePosition; // Position of the signature relative to quoted text in replies/forwards
   signatureSeparatorEnabled: boolean; // Prefix the signature with the RFC 3676 "-- " delimiter
+  requestReadReceiptDefault: boolean; // Pre-check "request read receipt" in the composer
+  readReceiptResponse: ReadReceiptResponse; // How to respond to incoming read-receipt requests
 
   // Privacy & Security
   sessionTimeout: number; // minutes (0 = never)
@@ -332,6 +336,8 @@ const DEFAULT_SETTINGS = {
   sendDelaySeconds: 0 as SendDelaySeconds,
   signaturePosition: 'below_quote' as SignaturePosition,
   signatureSeparatorEnabled: true,
+  requestReadReceiptDefault: false,
+  readReceiptResponse: 'ask' as ReadReceiptResponse,
 
   // Privacy & Security
   sessionTimeout: 0, // Never
@@ -526,6 +532,8 @@ export const useSettingsStore = create<SettingsState>()(
           sendDelaySeconds: state.sendDelaySeconds,
           signaturePosition: state.signaturePosition,
           signatureSeparatorEnabled: state.signatureSeparatorEnabled,
+          requestReadReceiptDefault: state.requestReadReceiptDefault,
+          readReceiptResponse: state.readReceiptResponse,
           sessionTimeout: state.sessionTimeout,
           emailNotificationsEnabled: state.emailNotificationsEnabled,
           emailNotificationSound: state.emailNotificationSound,

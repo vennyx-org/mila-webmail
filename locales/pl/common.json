@@ -260,6 +260,15 @@
     "reschedule_prompt": "Wprowadź nową datę/godzinę, np. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Nadawca prosi o potwierdzenie przeczytania:",
+      "send": "Wyślij potwierdzenie",
+      "ignore": "Ignoruj",
+      "sent": "Wysłano potwierdzenie przeczytania.",
+      "send_failed": "Nie udało się wysłać potwierdzenia przeczytania",
+      "mdn_subject": "Przeczytano: {subject}",
+      "mdn_body": "To jest potwierdzenie przeczytania wiadomości wysłanej do {recipient}.\n\nUwaga: to potwierdzenie oznacza jedynie, że wiadomość została wyświetlona na komputerze odbiorcy. Nie gwarantuje, że odbiorca przeczytał lub zrozumiał treść."
+    },
     "no_email_selected": "Nie wybrano wiadomości",
     "no_email_description": "Wybierz wiadomość z listy, aby ją wyświetlić",
     "no_conversation_selected": "Nie wybrano konwersacji",
@@ -545,6 +554,8 @@
     "undo_send": "Cofnij wysyłkę"
   },
   "email_composer": {
+    "read_receipt_on": "Zażądano potwierdzenia przeczytania (kliknij, aby wyłączyć)",
+    "read_receipt_off": "Zażądaj potwierdzenia przeczytania",
     "new_message": "Nowa wiadomość",
     "reply": "Odpowiedz",
     "reply_all": "Odpowiedz wszystkim",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Domyślnie żądaj potwierdzeń przeczytania",
+        "description": "Włącz wcześniej żądanie potwierdzenia przeczytania podczas tworzenia nowej wiadomości."
+      },
+      "read_receipt_response": {
+        "label": "Odpowiadaj na żądania potwierdzenia przeczytania",
+        "description": "Co zrobić, gdy przychodząca wiadomość prosi o potwierdzenie przeczytania.",
+        "ask": "Pytaj za każdym razem",
+        "always": "Zawsze wysyłaj",
+        "never": "Nigdy nie wysyłaj"
+      },
       "title": "Zachowanie poczty e-mail",
       "description": "Skonfiguruj sposób obsługi wiadomości e-mail",
       "mark_read": {

@@ -260,6 +260,15 @@
     "reschedule_prompt": "Ievadiet jaunu datumu/laiku, piem. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Sūtītājs pieprasa lasīšanas apstiprinājumu:",
+      "send": "Sūtīt apstiprinājumu",
+      "ignore": "Ignorēt",
+      "sent": "Lasīšanas apstiprinājums nosūtīts.",
+      "send_failed": "Neizdevās nosūtīt lasīšanas apstiprinājumu",
+      "mdn_subject": "Izlasīts: {subject}",
+      "mdn_body": "Šis ir lasīšanas apstiprinājums ziņojumam, ko nosūtījāt uz {recipient}.\n\nPiezīme: šis apstiprinājums tikai apliecina, ka ziņojums tika parādīts saņēmēja datorā. Tas negarantē, ka saņēmējs ir izlasījis vai sapratis saturu."
+    },
     "no_email_selected": "Nav atlasīta neviena vēstule",
     "no_email_description": "Atlasiet vēstuli no saraksta, lai to skatītu šeit",
     "no_conversation_selected": "Nav atlasīta saruna",
@@ -545,6 +554,8 @@
     "undo_send": "Atsaukt sūtīšanu"
   },
   "email_composer": {
+    "read_receipt_on": "Pieprasīts lasīšanas apstiprinājums (noklikšķiniet, lai atspējotu)",
+    "read_receipt_off": "Pieprasīt lasīšanas apstiprinājumu",
     "new_message": "Jauns ziņojums",
     "reply": "Atbildēt",
     "reply_all": "Atbildēt visiem",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Pēc noklusējuma pieprasīt lasīšanas apstiprinājumus",
+        "description": "Sastādot jaunu ziņojumu, iepriekš ieslēgt lasīšanas apstiprinājuma pieprasījumu."
+      },
+      "read_receipt_response": {
+        "label": "Atbildēt uz lasīšanas apstiprinājuma pieprasījumiem",
+        "description": "Ko darīt, kad ienākošs ziņojums pieprasa lasīšanas apstiprinājumu.",
+        "ask": "Vaicāt katru reizi",
+        "always": "Vienmēr sūtīt",
+        "never": "Nekad nesūtīt"
+      },
       "title": "Pasta darbība",
       "description": "Pielāgojiet vēstuļu apstrādi",
       "mark_read": {

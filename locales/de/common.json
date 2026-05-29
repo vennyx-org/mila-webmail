@@ -260,6 +260,15 @@
     "reschedule_prompt": "Neues Datum/Uhrzeit eingeben, z. B. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "Der Absender bittet um eine Lesebestätigung:",
+      "send": "Bestätigung senden",
+      "ignore": "Ignorieren",
+      "sent": "Lesebestätigung gesendet.",
+      "send_failed": "Lesebestätigung konnte nicht gesendet werden",
+      "mdn_subject": "Gelesen: {subject}",
+      "mdn_body": "Dies ist eine Lesebestätigung für die Nachricht, die Sie an {recipient} gesendet haben.\n\nHinweis: Diese Bestätigung bestätigt lediglich, dass die Nachricht auf dem Computer des Empfängers angezeigt wurde. Es gibt keine Garantie, dass der Empfänger den Inhalt gelesen oder verstanden hat."
+    },
     "no_email_selected": "Keine E-Mail ausgewählt",
     "no_email_description": "Wählen Sie eine E-Mail aus der Liste aus, um sie hier anzuzeigen",
     "no_conversation_selected": "Keine Unterhaltung ausgewählt",
@@ -545,6 +554,8 @@
     "undo_send": "Senden rückgängig"
   },
   "email_composer": {
+    "read_receipt_on": "Lesebestätigung angefordert (klicken zum Deaktivieren)",
+    "read_receipt_off": "Lesebestätigung anfordern",
     "new_message": "Neue Nachricht",
     "reply": "Antworten",
     "reply_all": "Allen antworten",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Lesebestätigung standardmäßig anfordern",
+        "description": "Beim Verfassen einer neuen Nachricht die Anforderung einer Lesebestätigung vorab aktivieren."
+      },
+      "read_receipt_response": {
+        "label": "Auf Lesebestätigungs-Anfragen reagieren",
+        "description": "Verhalten, wenn eine eingehende Nachricht um eine Lesebestätigung bittet.",
+        "ask": "Jedes Mal fragen",
+        "always": "Immer senden",
+        "never": "Nie senden"
+      },
       "title": "E-Mail-Verhalten",
       "description": "Konfigurieren Sie, wie E-Mails verarbeitet werden",
       "mark_read": {

@@ -260,6 +260,15 @@
     "reschedule_prompt": "Saisissez une nouvelle date/heure, p. ex. 2026-05-04T15:30"
   },
   "email_viewer": {
+    "read_receipt": {
+      "prompt": "L''expéditeur demande un accusé de lecture :",
+      "send": "Envoyer l''accusé",
+      "ignore": "Ignorer",
+      "sent": "Accusé de lecture envoyé.",
+      "send_failed": "Impossible d''envoyer l''accusé de lecture",
+      "mdn_subject": "Lu : {subject}",
+      "mdn_body": "Ceci est un accusé de réception du message que vous avez envoyé à {recipient}.\n\nRemarque : cet accusé confirme uniquement que le message a été affiché sur l''ordinateur du destinataire. Il ne garantit pas que le destinataire a lu ou compris le contenu."
+    },
     "no_email_selected": "Aucun email sélectionné",
     "no_email_description": "Sélectionnez un email dans la liste pour le voir ici",
     "no_conversation_selected": "Aucune conversation sélectionnée",
@@ -545,6 +554,8 @@
     "undo_send": "Annuler l’envoi"
   },
   "email_composer": {
+    "read_receipt_on": "Accusé de lecture demandé (cliquez pour désactiver)",
+    "read_receipt_off": "Demander un accusé de lecture",
     "new_message": "Nouveau message",
     "reply": "Répondre",
     "reply_all": "Répondre à tous",
@@ -1006,6 +1017,17 @@
       }
     },
     "email_behavior": {
+      "request_read_receipt": {
+        "label": "Demander un accusé de lecture par défaut",
+        "description": "Activer au préalable la demande d''accusé de lecture lors de la rédaction d''un nouveau message."
+      },
+      "read_receipt_response": {
+        "label": "Répondre aux demandes d''accusé de lecture",
+        "description": "Que faire lorsqu''un message entrant demande un accusé de lecture.",
+        "ask": "Demander à chaque fois",
+        "always": "Toujours envoyer",
+        "never": "Ne jamais envoyer"
+      },
       "title": "Comportement email",
       "description": "Configurez la gestion des emails",
       "mark_read": {

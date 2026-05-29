@@ -2149,7 +2149,8 @@ export class JMAPClient implements IJMAPClient {
     inReplyTo?: string[],
     references?: string[],
     delayedUntil?: string,
-    envelopeMailFrom?: string
+    envelopeMailFrom?: string,
+    options?: { requestReadReceipt?: boolean }
   ): Promise<SendEmailResult> {
     const holdForSeconds = delayedUntil ? this.validateDelayedUntil(delayedUntil) : undefined;
     const emailId = `send-${Date.now()}`;
@@ -2218,6 +2219,13 @@ export class JMAPClient implements IJMAPClient {
       keywords: { "$seen": true, "$draft": true },
       mailboxIds: { [draftsMailbox.id]: true },
     };
+
+    if (options?.requestReadReceipt) {
+      // RFC 8098: ask the recipient's client to return a Message Disposition
+      // Notification to our address. JMAP lets us set the raw header on create
+      // via the "header:<Name>:asText" property form.
+      emailCreate["header:Disposition-Notification-To:asText"] = fromEmail || this.username;
+    }
 
     if (htmlBody) {
       // Send as multipart/alternative with both text and HTML
@@ -3005,6 +3013,108 @@ export class JMAPClient implements IJMAPClient {
     }
 
     throw new Error('Invalid upload response: blobId not found');
+  }
+
+  /**
+   * Import a raw RFC822 message (referenced by a previously-uploaded blob) into
+   * one or more mailboxes. Returns the new email id. Used for sending MDNs,
+   * where the exact MIME bytes must be preserved (Email/set can't express a
+   * multipart/report report-type parameter reliably).
+   */
+  async importEmail(
+    blobId: string,
+    mailboxIds: Record<string, boolean>,
+    keywords?: Record<string, boolean>,
+    accountId?: string
+  ): Promise<string | null> {
+    const targetAccountId = accountId || this.accountId;
+    const creationId = `imp-${Date.now()}`;
+    const response = await this.request([
+      ["Email/import", {
+        accountId: targetAccountId,
+        emails: {
+          [creationId]: { blobId, mailboxIds, keywords: keywords || { "$seen": true } },
+        },
+      }, "0"],
+    ]);
+    const res = response.methodResponses?.[0];
+    if (res?.[0] !== "Email/import") {
+      console.error('Email/import: unexpected response', res);
+      return null;
+    }
+    const payload = res[1] as {
+      created?: Record<string, { id: string }>;
+      notCreated?: Record<string, { type?: string; description?: string }>;
+    };
+    const created = payload?.created?.[creationId];
+    if (!created) {
+      const reason = payload?.notCreated?.[creationId];
+      console.error('Email/import failed:', reason || payload);
+      throw new Error(`Email/import: ${reason?.description || reason?.type || 'unknown error'}`);
+    }
+    return created.id;
+  }
+
+  /**
+   * Send an RFC 8098 Message Disposition Notification (read receipt) in reply
+   * to a message that carried a Disposition-Notification-To header. Builds the
+   * multipart/report, uploads it as a blob, imports it into Sent, then submits
+   * it with an explicit envelope (MAIL FROM = our identity, RCPT TO = the
+   * requesting address).
+   */
+  async sendReadReceipt(params: {
+    to: string;
+    fromEmail: string;
+    fromName?: string;
+    identityId: string;
+    originalMessageId?: string | string[];
+    originalSubject?: string;
+    originalRecipient?: string;
+    automatic?: boolean;
+    accountId?: string;
+    subject?: string;
+    humanText?: string;
+  }): Promise<void> {
+    const targetAccountId = params.accountId || this.accountId;
+    const { buildMdnMessage } = await import("@/lib/mdn");
+    const raw = buildMdnMessage(params);
+
+    const file = new File([raw], "receipt.eml", { type: "message/rfc822" });
+    const { blobId } = await this.uploadBlob(file);
+
+    const mailboxes = await this.getMailboxes();
+    const targetMailbox = mailboxes.find(mb => mb.role === 'sent') || mailboxes[0];
+    if (!targetMailbox) throw new Error('No mailbox available for MDN import');
+
+    const emailId = await this.importEmail(
+      blobId,
+      { [targetMailbox.id]: true },
+      { "$seen": true },
+      targetAccountId
+    );
+    if (!emailId) throw new Error('MDN import failed');
+
+    const subId = `mdnsub-${Date.now()}`;
+    const response = await this.request([
+      ["EmailSubmission/set", {
+        accountId: targetAccountId,
+        create: {
+          [subId]: {
+            emailId,
+            identityId: params.identityId,
+            envelope: {
+              mailFrom: { email: params.fromEmail },
+              rcptTo: [{ email: params.to }],
+            },
+          },
+        },
+      }, "0"],
+    ]);
+    const subRes = response.methodResponses?.[0];
+    const notCreated = (subRes?.[1] as { notCreated?: Record<string, { type?: string; description?: string }> })?.notCreated?.[subId];
+    if (notCreated) {
+      throw new Error(`MDN submission failed: ${notCreated.description || notCreated.type || 'unknown'}`);
+    }
   }
 
   getBlobDownloadUrl(blobId: string, name?: string, type?: string): string {
