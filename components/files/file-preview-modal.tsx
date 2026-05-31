@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { X, Download, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getFilePreviewKind } from "@/lib/file-preview";
+import { getFilePreviewKind, isMimeTypeSafeForInlinePreview } from "@/lib/file-preview";
 import dynamic from "next/dynamic";
 
 // pdf.js-based inline viewer for mobile (no native inline PDF viewer). Loaded
@@ -149,6 +149,10 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
   const [error, setError] = useState(false);
   const [resolvedFileType, setResolvedFileType] = useState(() => getFilePreviewKind(name));
   const [pdfInlineSupported, setPdfInlineSupported] = useState(true);
+  // Whether the resolved blob MIME is inert enough to open as a top-level
+  // navigation. Blob URLs inherit our origin, so opening a script-bearing type
+  // (text/html, image/svg+xml, ...) in a new tab would execute it in-origin.
+  const [canOpenInNewTab, setCanOpenInNewTab] = useState(false);
 
   // Decide whether to render the PDF in a plain <iframe> (desktop) or with the
   // pdf.js canvas viewer (mobile). navigator.pdfViewerEnabled is the standard
@@ -200,6 +204,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
 
     setContent(null);
     setObjectUrl(null);
+    setCanOpenInNewTab(false);
     setLoading(true);
     setError(false);
     setResolvedFileType(getFilePreviewKind(name));
@@ -236,7 +241,10 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
             ? new Blob([blob], { type: effectiveType })
             : blob;
           revokeUrl = URL.createObjectURL(typedBlob);
-          if (!cancelled) setObjectUrl(revokeUrl);
+          if (!cancelled) {
+            setObjectUrl(revokeUrl);
+            setCanOpenInNewTab(isMimeTypeSafeForInlinePreview(effectiveType));
+          }
         }
       } catch {
         if (!cancelled) setError(true);
@@ -271,7 +279,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
       <div className="flex items-center justify-between px-4 py-3 bg-background/90 backdrop-blur border-b border-border" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-medium truncate">{name}</h3>
         <div className="flex items-center gap-2">
-          {objectUrl && (
+          {objectUrl && canOpenInNewTab && (
             <Button
               variant="ghost"
               size="icon"
