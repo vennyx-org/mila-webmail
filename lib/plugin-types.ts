@@ -374,6 +374,10 @@ export interface EmailReadView {
   hasAttachment: boolean;
   preview: string;
   keywords: string[];
+  /** Full plain-text body of the message (HTML-only bodies are stripped to
+   *  text). Empty string when the host hasn't loaded the body. Same
+   *  `email:read` sensitivity as the rest of this view. */
+  text: string;
   /**
    * Parsed Authentication-Results header (SPF, DKIM, DMARC, reverse-DNS).
    * Absent on stores that didn't parse the header (e.g. bodies not yet
