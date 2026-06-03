@@ -24,7 +24,8 @@ function makeMockClient(initial: FileNode[] = []) {
       return (ids === null ? nodes : nodes.filter(n => ids.includes(n.id))).map(n => ({ ...n }));
     },
     async createFileDirectory(name: string, parentId: string | null) {
-      const node: FileNode = { id: `n${++seq}`, parentId, name, type: 'd', blobId: null, size: 0, created: now(), updated: now() };
+      // A real folder has no content blob (this is how Stalwart marks a container).
+      const node: FileNode = { id: `n${++seq}`, parentId, name, type: '', blobId: null, size: 0, created: now(), updated: now() };
       nodes.push(node);
       return { ...node };
     },
@@ -39,11 +40,24 @@ function makeMockClient(initial: FileNode[] = []) {
     },
     async updateFileNodes(updates: Record<string, Partial<Pick<FileNode, 'name' | 'parentId'>>>) {
       const updated: string[] = [];
+      const notUpdated: Record<string, string> = {};
       for (const [id, patch] of Object.entries(updates)) {
         const node = nodes.find(n => n.id === id);
-        if (node) { Object.assign(node, patch); updated.push(id); }
+        if (!node) { notUpdated[id] = 'not found'; continue; }
+        // Mirror Stalwart: a parentId must point at a real folder, i.e. a node
+        // with no content blob. A blob-backed node (file or old "folder marker")
+        // is not a container and is rejected.
+        if (patch.parentId != null) {
+          const parent = nodes.find(n => n.id === patch.parentId);
+          if (!parent || parent.blobId != null) {
+            notUpdated[id] = 'Parent ID does not exist or is not a folder.';
+            continue;
+          }
+        }
+        Object.assign(node, patch);
+        updated.push(id);
       }
-      return { updated, notUpdated: {} as Record<string, string> };
+      return { updated, notUpdated };
     },
     async destroyFileNodes(ids: string[]) {
       // Emulate Stalwart's onDestroyRemoveChildren: removing a directory also
@@ -79,6 +93,11 @@ function makeMockClient(initial: FileNode[] = []) {
 
 const dir = (id: string, name: string, parentId: string | null): FileNode => ({
   id, parentId, name, type: 'd', blobId: null, size: 0, created: '', updated: '',
+});
+// An old build's "folder": a directory-typed node that is actually a blob-backed
+// file, so the server won't let anything be parented under it.
+const marker = (id: string, name: string, parentId: string | null): FileNode => ({
+  id, parentId, name, type: 'd', blobId: `b-${id}`, size: 0, created: '', updated: '',
 });
 const file = (id: string, name: string, parentId: string | null): FileNode => ({
   id, parentId, name, type: 'text/plain', blobId: `b-${id}`, size: 10, created: '', updated: '',
@@ -232,6 +251,107 @@ describe('file-store hierarchy (issue #379)', () => {
     await useFileStore.getState().navigate(null);
     expect(useFileStore.getState().resources.map(r => r.name).sort())
       .toEqual(['kunden', 'night-medieval-castle-lake']);
+  });
+
+  it('creates missing intermediate folders instead of reparenting under a non-folder', async () => {
+    // The shape that produced "Parent ID does not exist or is not a folder" in
+    // production (#379): flat files whose path prefixes have no real directory
+    // node at all. The migration must materialize the folders, not skip them.
+    const SEP = '∕';
+    const client = makeMockClient([
+      file('a', `Docs${SEP}report.pdf`, null),
+      file('b', `Docs${SEP}Sub${SEP}notes.txt`, null),
+    ]);
+    useFileStore.getState().initClient(client);
+
+    expect(await useFileStore.getState().migrateLegacyFlatNodes()).toBe(true);
+
+    const nodes = client._nodes();
+    const docs = nodes.find(n => n.name === 'Docs' && n.parentId === null);
+    expect(docs?.blobId).toBeNull();
+    const sub = nodes.find(n => n.name === 'Sub' && n.parentId === docs!.id);
+    expect(sub?.blobId).toBeNull();
+
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+    expect(byId.a).toMatchObject({ name: 'report.pdf', parentId: docs!.id });
+    expect(byId.b).toMatchObject({ name: 'notes.txt', parentId: sub!.id });
+
+    // No leftover separators anywhere.
+    expect(nodes.some(n => n.name.includes(SEP))).toBe(false);
+  });
+
+  it('replaces legacy folder-marker files with real folders and reparents children', async () => {
+    // Old builds stored folders as 0-byte directory-typed FILES (blobId set).
+    // The server treats those as non-containers, which is the actual cause of
+    // "Parent ID does not exist or is not a folder" (#379): the migration must
+    // delete the markers and recreate real folders before reparenting.
+    const SEP = '∕';
+    const client = makeMockClient([
+      marker('docs', 'Documents', null),
+      file('a', `Documents${SEP}readme.txt`, null),
+      file('b', `Documents${SEP}img${SEP}logo.png`, null),
+    ]);
+    useFileStore.getState().initClient(client);
+
+    expect(await useFileStore.getState().migrateLegacyFlatNodes()).toBe(true);
+
+    const nodes = client._nodes();
+    // The marker file is gone, replaced by a real folder (no blob).
+    expect(nodes.find(n => n.id === 'docs')).toBeUndefined();
+    const docs = nodes.find(n => n.name === 'Documents' && n.parentId === null);
+    expect(docs?.blobId).toBeNull();
+    const img = nodes.find(n => n.name === 'img' && n.parentId === docs!.id);
+    expect(img?.blobId).toBeNull();
+
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+    expect(byId.a).toMatchObject({ name: 'readme.txt', parentId: docs!.id });
+    expect(byId.b).toMatchObject({ name: 'logo.png', parentId: img!.id });
+    expect(nodes.some(n => n.name.includes(SEP))).toBe(false);
+  });
+
+  it('handles a folder-marker whose own name is path-encoded', async () => {
+    // A nested old "folder" was itself stored flat ("Docs∕Sub", type d + blob).
+    // It is both legacy and a marker; it must be deleted (not reparented as a
+    // file) and replaced by a real folder holding the child.
+    const SEP = '∕';
+    const client = makeMockClient([
+      marker('docs', 'Docs', null),
+      marker('sub', `Docs${SEP}Sub`, null),
+      file('f', `Docs${SEP}Sub${SEP}file.txt`, null),
+    ]);
+    useFileStore.getState().initClient(client);
+
+    expect(await useFileStore.getState().migrateLegacyFlatNodes()).toBe(true);
+
+    const nodes = client._nodes();
+    expect(nodes.find(n => n.id === 'docs')).toBeUndefined();
+    expect(nodes.find(n => n.id === 'sub')).toBeUndefined();
+    const docs = nodes.find(n => n.name === 'Docs' && n.parentId === null);
+    const sub = nodes.find(n => n.name === 'Sub' && n.parentId === docs!.id);
+    expect(sub?.blobId).toBeNull();
+    expect(nodes.find(n => n.id === 'f')).toMatchObject({ name: 'file.txt', parentId: sub!.id });
+    expect(nodes.some(n => n.name.includes(SEP))).toBe(false);
+  });
+
+  it('aborts and restores markers (no data loss) if the server cannot create real folders', async () => {
+    const SEP = '∕';
+    const client = makeMockClient([
+      marker('docs', 'Documents', null),
+      file('a', `Documents${SEP}readme.txt`, null),
+    ]);
+    // Simulate a broken/stale server: "folders" come back blob-backed (not real
+    // containers). The migration must detect this and undo its marker rename.
+    (client as unknown as { createFileDirectory: typeof client.createFileDirectory }).createFileDirectory =
+      async (name: string, parentId: string | null) =>
+        ({ id: 'bad', parentId, name, type: 'd', blobId: 'b-bad', size: 0, created: '', updated: '' });
+    useFileStore.getState().initClient(client);
+
+    expect(await useFileStore.getState().migrateLegacyFlatNodes()).toBe(false);
+
+    const byId = Object.fromEntries(client._nodes().map(n => [n.id, n]));
+    // Marker restored to its original name; content file untouched (still flat).
+    expect(byId.docs).toMatchObject({ name: 'Documents' });
+    expect(byId.a).toMatchObject({ name: `Documents${SEP}readme.txt`, parentId: null });
   });
 
   it('migration is a no-op when no legacy nodes exist', async () => {

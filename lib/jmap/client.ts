@@ -5099,11 +5099,12 @@ export class JMAPClient implements IJMAPClient {
   async createFileDirectory(name: string, parentId: string | null): Promise<FileNode> {
     const accountId = this.getFilesAccountId();
 
-    // Stalwart requires a blobId even for directories - upload an empty blob
-    const emptyBlob = new File([], name, { type: 'application/x-directory' });
-    const { blobId } = await this.uploadBlob(emptyBlob);
-
-    const dirProps: Record<string, unknown> = { name, type: "d", blobId, size: 0 };
+    // A FileNode is a folder (container) only when it has no content - i.e. no
+    // blobId, type or size, so the server stores it with `file == null`. Sending
+    // any of those - as older builds did (type "d" + an empty blob) - makes it a
+    // 0-byte FILE that nothing can ever be parented under, which is what caused
+    // "Parent ID does not exist or is not a folder" during the #379 migration.
+    const dirProps: Record<string, unknown> = { name };
     if (parentId !== null) {
       dirProps.parentId = parentId;
     }
