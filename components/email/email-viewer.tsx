@@ -2936,13 +2936,20 @@ export function EmailViewer({
      (see below): the email's own <style> is injected inside our <body> and so
      lands later in source order, where - at equal specificity and !important -
      it would otherwise win the cascade. */
-  html, body { overflow: hidden; height: auto !important; }
-  body { margin: 0; padding: ${bodyPadding}; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
+  /* overflow-y stays hidden so our scrollHeight-based height measurement works;
+     overflow-x is auto on the body so an intrinsically wide table (e.g. a
+     20-column data table) can scroll horizontally instead of being crushed to
+     fit - the latter wraps header text to one character per line, which reads
+     as 90deg-rotated vertical headers (issue #409). */
+  html { overflow: hidden; height: auto !important; }
+  body { margin: 0; padding: ${bodyPadding}; overflow-x: auto; overflow-y: hidden; height: auto !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
   @media (max-width: 640px) { body { padding-left: ${mobileBodyPaddingX}; padding-right: ${mobileBodyPaddingX}; } }
   img { max-width: 100% !important; height: auto !important; }
   a { color: #1a73e8; }
   table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
-  td, th { overflow-wrap: anywhere; }
+  /* break-word (not anywhere): break only over-long single words, and keep each
+     word's min-content width so columns are not collapsed to a single char. */
+  td, th { overflow-wrap: break-word; }
   pre { white-space: pre-wrap; word-wrap: break-word; }
   ${wordHtmlCSS}
   ${darkModeCSS}
