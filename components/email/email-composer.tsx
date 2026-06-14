@@ -28,6 +28,7 @@ import { buildMimeMessage, wrapCmsAsSmimeMessage } from "@/lib/smime/mime-builde
 import type { MimeAttachment } from "@/lib/smime/mime-builder";
 import { smimeSign } from "@/lib/smime/smime-sign";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
+import { Avatar } from "@/components/ui/avatar";
 import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import { smimeEncrypt } from "@/lib/smime/smime-encrypt";
 import { useContactStore } from "@/stores/contact-store";
@@ -2702,6 +2703,7 @@ const AutocompleteDropdown = React.forwardRef<HTMLDivElement, {
             onSelect(r);
           }}
         >
+          <Avatar name={r.name} email={r.email} size="sm" className="shrink-0 w-6 h-6 text-[10px]" />
           <span className="font-medium truncate">{r.name || r.email}</span>
           {r.name && (
             <span className="text-muted-foreground truncate">&lt;{r.email}&gt;</span>
