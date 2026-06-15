@@ -50,11 +50,15 @@ import {
 } from "@/lib/email-composer-utils";
 import { RichTextEditor } from "@/components/email/rich-text-editor";
 import type { Editor } from "@tiptap/react";
+import { htmlToPlainText as htmlToPlainTextShared } from "@/lib/html-to-text";
 
-/** Strip HTML tags and decode entities to get a plain-text version */
+/**
+ * Derives the text/plain alternative from the composer's HTML body, preserving
+ * line structure from block elements and <br> tags. Paragraph spacing is on so
+ * <p> blocks are separated by a blank line, matching their visual rendering (#421).
+ */
 function htmlToPlainText(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return doc.body.textContent || '';
+  return htmlToPlainTextShared(html, { paragraphSpacing: true });
 }
 
 /**
