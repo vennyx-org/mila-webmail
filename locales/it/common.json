@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Messaggio programmato per l’invio",
     "undo_send": "Annulla invio",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
+      "title": "Contatto",
+      "close": "Chiudi barra laterale",
       "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "action_email_title": "Invia email",
+      "action_copy": "Copia",
+      "action_copy_title": "Copia email",
+      "action_edit_title": "Modifica contatto",
+      "section_emails": "Email",
+      "section_phones": "Telefoni",
+      "section_organizations": "Organizzazioni",
+      "section_addresses": "Indirizzi",
+      "section_notes": "Note",
+      "not_in_contacts": "Non è nei tuoi contatti",
+      "add_to_contacts": "Aggiungi ai contatti",
+      "copied": "Copiato!",
+      "copy_failed": "Copia non riuscita"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "L’invio programmato non è supportato per questo account.",
     "schedule_send_cleanup_warning": "L’invio programmato è stato creato, ma la pulizia della bozza non è riuscita.",
     "send_delay_unsupported": "Il ritardo di invio non è supportato per questo account.",
-    "send_delay_unsupported_confirm": "Questo account non supporta il ritardo di invio. Inviare subito?"
+    "send_delay_unsupported_confirm": "Questo account non supporta il ritardo di invio. Inviare subito?",
+    "recipient_edit_email": "Modifica indirizzo email",
+    "recipient_edit_name": "Modifica nome visualizzato",
+    "recipient_email_placeholder": "Indirizzo email",
+    "recipient_name_placeholder": "Nome visualizzato"
   },
   "confirm_dialog": {
     "confirm": "Conferma",
@@ -1300,6 +1304,11 @@
         "move_down": "Sposta giù",
         "drag_handle": "Trascina per riordinare",
         "add": "Aggiungi account"
+      },
+      "shared_accounts": {
+        "title": "Condivisi con me",
+        "description": "Account di gruppo e condivisi che puoi gestire. Selezionane uno per modificarne filtri, risponditore automatico, calendari e contatti.",
+        "shared_label": "Account condiviso"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Cerca impostazioni",
     "search_clear": "Cancella ricerca",
-    "search_no_results": "Nessuna impostazione corrispondente"
+    "search_no_results": "Nessuna impostazione corrispondente",
+    "scoped": {
+      "back": "Torna al mio account",
+      "managing": "Gestione: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Qualcosa è andato storto",

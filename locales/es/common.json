@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "El envío programado no es compatible con esta cuenta.",
     "schedule_send_cleanup_warning": "Se creó el envío programado, pero falló la limpieza del borrador.",
     "send_delay_unsupported": "La demora de envío no es compatible con esta cuenta.",
-    "send_delay_unsupported_confirm": "Esta cuenta no admite demora de envío. ¿Enviar inmediatamente?"
+    "send_delay_unsupported_confirm": "Esta cuenta no admite demora de envío. ¿Enviar inmediatamente?",
+    "recipient_edit_email": "Editar dirección de correo",
+    "recipient_edit_name": "Editar nombre para mostrar",
+    "recipient_email_placeholder": "Dirección de correo",
+    "recipient_name_placeholder": "Nombre para mostrar"
   },
   "confirm_dialog": {
     "confirm": "Confirmar",
@@ -1300,6 +1304,11 @@
         "move_down": "Mover abajo",
         "drag_handle": "Arrastra para reordenar",
         "add": "Añadir cuenta"
+      },
+      "shared_accounts": {
+        "title": "Compartido conmigo",
+        "description": "Cuentas de grupo y compartidas que puedes gestionar. Selecciona una para editar sus filtros, respuesta de vacaciones, calendarios y contactos.",
+        "shared_label": "Cuenta compartida"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Buscar ajustes",
     "search_clear": "Borrar búsqueda",
-    "search_no_results": "No hay ajustes coincidentes"
+    "search_no_results": "No hay ajustes coincidentes",
+    "scoped": {
+      "back": "Volver a mi cuenta",
+      "managing": "Gestionando: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Algo salió mal",

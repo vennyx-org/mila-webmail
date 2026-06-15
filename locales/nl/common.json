@@ -547,21 +547,21 @@
     "undo_send": "Verzenden ongedaan maken",
     "contact_sidebar": {
       "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "close": "Zijbalk sluiten",
+      "action_email": "E-mail",
+      "action_email_title": "E-mail verzenden",
+      "action_copy": "Kopiëren",
+      "action_copy_title": "E-mailadres kopiëren",
+      "action_edit_title": "Contact bewerken",
+      "section_emails": "E-mailadressen",
+      "section_phones": "Telefoonnummers",
+      "section_organizations": "Organisaties",
+      "section_addresses": "Adressen",
+      "section_notes": "Notities",
+      "not_in_contacts": "Niet in uw contacten",
+      "add_to_contacts": "Aan contacten toevoegen",
+      "copied": "Gekopieerd!",
+      "copy_failed": "Kopiëren mislukt"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Gepland verzenden wordt niet ondersteund voor dit account.",
     "schedule_send_cleanup_warning": "Gepland verzenden is aangemaakt, maar het opschonen van de conceptversie is mislukt.",
     "send_delay_unsupported": "Verzendvertraging wordt niet ondersteund voor dit account.",
-    "send_delay_unsupported_confirm": "Dit account ondersteunt geen verzendvertraging. Meteen verzenden?"
+    "send_delay_unsupported_confirm": "Dit account ondersteunt geen verzendvertraging. Meteen verzenden?",
+    "recipient_edit_email": "E-mailadres bewerken",
+    "recipient_edit_name": "Weergavenaam bewerken",
+    "recipient_email_placeholder": "E-mailadres",
+    "recipient_name_placeholder": "Weergavenaam"
   },
   "confirm_dialog": {
     "confirm": "Bevestigen",
@@ -1300,6 +1304,11 @@
         "move_down": "Omlaag verplaatsen",
         "drag_handle": "Sleep om volgorde aan te passen",
         "add": "Account toevoegen"
+      },
+      "shared_accounts": {
+        "title": "Gedeeld met mij",
+        "description": "Groeps- en gedeelde accounts die u kunt beheren. Selecteer er een om de filters, afwezigheidsassistent, agenda's en contacten te bewerken.",
+        "shared_label": "Gedeeld account"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Instellingen zoeken",
     "search_clear": "Zoekopdracht wissen",
-    "search_no_results": "Geen overeenkomende instellingen"
+    "search_no_results": "Geen overeenkomende instellingen",
+    "scoped": {
+      "back": "Terug naar mijn account",
+      "managing": "Beheren: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Er is iets misgegaan",

@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Ziņojums ir ieplānots nosūtīšanai",
     "undo_send": "Atsaukt sūtīšanu",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Kontaktpersona",
+      "close": "Aizvērt sānjoslu",
+      "action_email": "E-pasts",
+      "action_email_title": "Sūtīt e-pastu",
+      "action_copy": "Kopēt",
+      "action_copy_title": "Kopēt e-pastu",
+      "action_edit_title": "Rediģēt kontaktpersonu",
+      "section_emails": "E-pasti",
+      "section_phones": "Tālruņi",
+      "section_organizations": "Organizācijas",
+      "section_addresses": "Adreses",
+      "section_notes": "Piezīmes",
+      "not_in_contacts": "Nav jūsu kontaktpersonās",
+      "add_to_contacts": "Pievienot kontaktpersonām",
+      "copied": "Nokopēts!",
+      "copy_failed": "Neizdevās nokopēt"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Šim kontam ieplānota sūtīšana netiek atbalstīta.",
     "schedule_send_cleanup_warning": "Ieplānotā sūtīšana tika izveidota, bet melnraksta tīrīšana neizdevās.",
     "send_delay_unsupported": "Šim kontam sūtīšanas aizture netiek atbalstīta.",
-    "send_delay_unsupported_confirm": "Šis konts neatbalsta sūtīšanas aizturi. Sūtīt uzreiz?"
+    "send_delay_unsupported_confirm": "Šis konts neatbalsta sūtīšanas aizturi. Sūtīt uzreiz?",
+    "recipient_edit_email": "Rediģēt e-pasta adresi",
+    "recipient_edit_name": "Rediģēt parādāmo vārdu",
+    "recipient_email_placeholder": "E-pasta adrese",
+    "recipient_name_placeholder": "Parādāmais vārds"
   },
   "confirm_dialog": {
     "confirm": "Apstiprināt",
@@ -1300,6 +1304,11 @@
         "move_down": "Pārvietot uz leju",
         "drag_handle": "Velciet, lai pārkārtotu",
         "add": "Pievienot kontu"
+      },
+      "shared_accounts": {
+        "title": "Kopīgots ar mani",
+        "description": "Grupas un kopīgotie konti, kurus varat pārvaldīt. Atlasiet vienu, lai rediģētu tā filtrus, prombūtnes atbildētāju, kalendārus un kontaktus.",
+        "shared_label": "Kopīgots konts"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Meklēt iestatījumos",
     "search_clear": "Notīrīt meklēšanu",
-    "search_no_results": "Nav atbilstošu iestatījumu"
+    "search_no_results": "Nav atbilstošu iestatījumu",
+    "scoped": {
+      "back": "Atpakaļ uz manu kontu",
+      "managing": "Pārvalda: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Kaut kas nogāja griezi",

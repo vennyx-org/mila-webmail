@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "L’envoi planifié n’est pas pris en charge pour ce compte.",
     "schedule_send_cleanup_warning": "L’envoi planifié a été créé, mais le nettoyage du brouillon a échoué.",
     "send_delay_unsupported": "Le délai d’envoi n’est pas pris en charge pour ce compte.",
-    "send_delay_unsupported_confirm": "Ce compte ne prend pas en charge le délai d’envoi. Envoyer immédiatement ?"
+    "send_delay_unsupported_confirm": "Ce compte ne prend pas en charge le délai d’envoi. Envoyer immédiatement ?",
+    "recipient_edit_email": "Modifier l'adresse e-mail",
+    "recipient_edit_name": "Modifier le nom d'affichage",
+    "recipient_email_placeholder": "Adresse e-mail",
+    "recipient_name_placeholder": "Nom d'affichage"
   },
   "confirm_dialog": {
     "confirm": "Confirmer",
@@ -1300,6 +1304,11 @@
         "move_down": "Déplacer vers le bas",
         "drag_handle": "Faire glisser pour réorganiser",
         "add": "Ajouter un compte"
+      },
+      "shared_accounts": {
+        "title": "Partagé avec moi",
+        "description": "Comptes de groupe et partagés que vous pouvez gérer. Sélectionnez-en un pour modifier ses filtres, son répondeur d'absence, ses calendriers et ses contacts.",
+        "shared_label": "Compte partagé"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Rechercher dans les paramètres",
     "search_clear": "Effacer la recherche",
-    "search_no_results": "Aucun paramètre correspondant"
+    "search_no_results": "Aucun paramètre correspondant",
+    "scoped": {
+      "back": "Retour à mon compte",
+      "managing": "Gestion : {name}"
+    }
   },
   "errors": {
     "page_error_title": "Une erreur s'est produite",

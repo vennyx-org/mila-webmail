@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Mensagem agendada para envio",
     "undo_send": "Desfazer envio",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Contato",
+      "close": "Fechar barra lateral",
+      "action_email": "E-mail",
+      "action_email_title": "Enviar e-mail",
+      "action_copy": "Copiar",
+      "action_copy_title": "Copiar e-mail",
+      "action_edit_title": "Editar contato",
+      "section_emails": "E-mails",
+      "section_phones": "Telefones",
+      "section_organizations": "Organizações",
+      "section_addresses": "Endereços",
+      "section_notes": "Notas",
+      "not_in_contacts": "Não está nos seus contatos",
+      "add_to_contacts": "Adicionar aos contatos",
+      "copied": "Copiado!",
+      "copy_failed": "Falha ao copiar"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Envio agendado não é compatível com esta conta.",
     "schedule_send_cleanup_warning": "O envio agendado foi criado, mas a limpeza do rascunho falhou.",
     "send_delay_unsupported": "Atraso de envio não é compatível com esta conta.",
-    "send_delay_unsupported_confirm": "Esta conta não oferece atraso de envio. Enviar imediatamente?"
+    "send_delay_unsupported_confirm": "Esta conta não oferece atraso de envio. Enviar imediatamente?",
+    "recipient_edit_email": "Editar endereço de e-mail",
+    "recipient_edit_name": "Editar nome de exibição",
+    "recipient_email_placeholder": "Endereço de e-mail",
+    "recipient_name_placeholder": "Nome de exibição"
   },
   "confirm_dialog": {
     "confirm": "Confirmar",
@@ -1300,6 +1304,11 @@
         "move_down": "Mover para baixo",
         "drag_handle": "Arraste para reordenar",
         "add": "Adicionar conta"
+      },
+      "shared_accounts": {
+        "title": "Compartilhado comigo",
+        "description": "Contas de grupo e compartilhadas que você pode gerenciar. Selecione uma para editar seus filtros, resposta de ausência, calendários e contatos.",
+        "shared_label": "Conta compartilhada"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Pesquisar configurações",
     "search_clear": "Limpar pesquisa",
-    "search_no_results": "Nenhuma configuração correspondente"
+    "search_no_results": "Nenhuma configuração correspondente",
+    "scoped": {
+      "back": "Voltar para minha conta",
+      "managing": "Gerenciando: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Algo deu errado",

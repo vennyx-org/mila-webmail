@@ -546,22 +546,22 @@
     "undo_send_scheduled": "İleti gönderim için zamanlandı",
     "undo_send": "Göndermeyi geri al",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Kişi",
+      "close": "Kenar çubuğunu kapat",
+      "action_email": "E-posta",
+      "action_email_title": "E-posta gönder",
+      "action_copy": "Kopyala",
+      "action_copy_title": "E-postayı kopyala",
+      "action_edit_title": "Kişiyi düzenle",
+      "section_emails": "E-postalar",
+      "section_phones": "Telefonlar",
+      "section_organizations": "Kuruluşlar",
+      "section_addresses": "Adresler",
+      "section_notes": "Notlar",
+      "not_in_contacts": "Kişilerinizde yok",
+      "add_to_contacts": "Kişilere ekle",
+      "copied": "Kopyalandı!",
+      "copy_failed": "Kopyalanamadı"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Bu hesap için zamanlanmış gönderim desteklenmiyor.",
     "schedule_send_cleanup_warning": "Zamanlanmış gönderim oluşturuldu, ancak taslak temizliği başarısız oldu.",
     "send_delay_unsupported": "Bu hesap için gönderim gecikmesi desteklenmiyor.",
-    "send_delay_unsupported_confirm": "Bu hesap gönderim gecikmesini desteklemiyor. Hemen gönderilsin mi?"
+    "send_delay_unsupported_confirm": "Bu hesap gönderim gecikmesini desteklemiyor. Hemen gönderilsin mi?",
+    "recipient_edit_email": "E-posta adresini düzenle",
+    "recipient_edit_name": "Görünen adı düzenle",
+    "recipient_email_placeholder": "E-posta adresi",
+    "recipient_name_placeholder": "Görünen ad"
   },
   "confirm_dialog": {
     "confirm": "Onayla",
@@ -1300,6 +1304,11 @@
         "move_down": "Aşağı taşı",
         "drag_handle": "Sıralamak için sürükleyin",
         "add": "Hesap ekle"
+      },
+      "shared_accounts": {
+        "title": "Benimle paylaşılanlar",
+        "description": "Yönetebileceğiniz grup ve paylaşılan hesaplar. Filtrelerini, tatil yanıtlayıcısını, takvimlerini ve kişilerini düzenlemek için birini seçin.",
+        "shared_label": "Paylaşılan hesap"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Ayarlarda ara",
     "search_clear": "Aramayı temizle",
-    "search_no_results": "Eşleşen ayar yok"
+    "search_no_results": "Eşleşen ayar yok",
+    "scoped": {
+      "back": "Hesabıma geri dön",
+      "managing": "Yönetiliyor: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Bir şeyler ters gitti",

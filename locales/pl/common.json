@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Wiadomość zaplanowana do wysłania",
     "undo_send": "Cofnij wysyłkę",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Kontakt",
+      "close": "Zamknij panel boczny",
+      "action_email": "E-mail",
+      "action_email_title": "Wyślij e-mail",
+      "action_copy": "Kopiuj",
+      "action_copy_title": "Kopiuj adres e-mail",
+      "action_edit_title": "Edytuj kontakt",
+      "section_emails": "E-maile",
+      "section_phones": "Telefony",
+      "section_organizations": "Organizacje",
+      "section_addresses": "Adresy",
+      "section_notes": "Notatki",
+      "not_in_contacts": "Brak w kontaktach",
+      "add_to_contacts": "Dodaj do kontaktów",
+      "copied": "Skopiowano!",
+      "copy_failed": "Nie udało się skopiować"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Zaplanowana wysyłka nie jest obsługiwana dla tego konta.",
     "schedule_send_cleanup_warning": "Zaplanowana wysyłka została utworzona, ale czyszczenie wersji roboczej nie powiodło się.",
     "send_delay_unsupported": "Opóźnienie wysyłki nie jest obsługiwane dla tego konta.",
-    "send_delay_unsupported_confirm": "To konto nie obsługuje opóźnienia wysyłki. Wysłać natychmiast?"
+    "send_delay_unsupported_confirm": "To konto nie obsługuje opóźnienia wysyłki. Wysłać natychmiast?",
+    "recipient_edit_email": "Edytuj adres e-mail",
+    "recipient_edit_name": "Edytuj wyświetlaną nazwę",
+    "recipient_email_placeholder": "Adres e-mail",
+    "recipient_name_placeholder": "Wyświetlana nazwa"
   },
   "confirm_dialog": {
     "confirm": "Potwierdź",
@@ -1300,6 +1304,11 @@
         "move_down": "Przesuń w dół",
         "drag_handle": "Przeciągnij, aby zmienić kolejność",
         "add": "Dodaj konto"
+      },
+      "shared_accounts": {
+        "title": "Udostępnione mnie",
+        "description": "Konta grupowe i udostępnione, którymi możesz zarządzać. Wybierz jedno, aby edytować jego filtry, odpowiedź wakacyjną, kalendarze i kontakty.",
+        "shared_label": "Konto udostępnione"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Szukaj ustawień",
     "search_clear": "Wyczyść wyszukiwanie",
-    "search_no_results": "Brak pasujących ustawień"
+    "search_no_results": "Brak pasujących ustawień",
+    "scoped": {
+      "back": "Powrót do mojego konta",
+      "managing": "Zarządzanie: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Coś poszło nie tak",

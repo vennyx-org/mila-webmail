@@ -546,22 +546,22 @@
     "undo_send_scheduled": "邮件已计划发送",
     "undo_send": "撤销发送",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "联系人",
+      "close": "关闭侧边栏",
+      "action_email": "邮件",
+      "action_email_title": "发送邮件",
+      "action_copy": "复制",
+      "action_copy_title": "复制邮箱地址",
+      "action_edit_title": "编辑联系人",
+      "section_emails": "邮箱",
+      "section_phones": "电话",
+      "section_organizations": "组织",
+      "section_addresses": "地址",
+      "section_notes": "备注",
+      "not_in_contacts": "不在您的联系人中",
+      "add_to_contacts": "添加到联系人",
+      "copied": "已复制！",
+      "copy_failed": "复制失败"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "此账户不支持计划发送。",
     "schedule_send_cleanup_warning": "已创建计划发送，但清理草稿失败。",
     "send_delay_unsupported": "此账户不支持发送延迟。",
-    "send_delay_unsupported_confirm": "此账户不支持发送延迟。是否立即发送？"
+    "send_delay_unsupported_confirm": "此账户不支持发送延迟。是否立即发送？",
+    "recipient_edit_email": "编辑电子邮件地址",
+    "recipient_edit_name": "编辑显示名称",
+    "recipient_email_placeholder": "电子邮件地址",
+    "recipient_name_placeholder": "显示名称"
   },
   "confirm_dialog": {
     "confirm": "确认",
@@ -1300,6 +1304,11 @@
         "move_down": "下移",
         "drag_handle": "拖动以重新排序",
         "add": "添加账户"
+      },
+      "shared_accounts": {
+        "title": "与我共享",
+        "description": "您可以管理的群组和共享账户。选择一个以编辑其筛选器、休假自动回复、日历和联系人。",
+        "shared_label": "共享账户"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "搜索设置",
     "search_clear": "清除搜索",
-    "search_no_results": "没有匹配的设置"
+    "search_no_results": "没有匹配的设置",
+    "scoped": {
+      "back": "返回我的账户",
+      "managing": "管理：{name}"
+    }
   },
   "errors": {
     "page_error_title": "出了点问题",

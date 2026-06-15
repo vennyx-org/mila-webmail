@@ -546,22 +546,22 @@
     "undo_send_scheduled": "メッセージは送信予約されています",
     "undo_send": "送信を取り消す",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "連絡先",
+      "close": "サイドバーを閉じる",
+      "action_email": "メール",
+      "action_email_title": "メールを送信",
+      "action_copy": "コピー",
+      "action_copy_title": "メールアドレスをコピー",
+      "action_edit_title": "連絡先を編集",
+      "section_emails": "メールアドレス",
+      "section_phones": "電話番号",
+      "section_organizations": "組織",
+      "section_addresses": "住所",
+      "section_notes": "メモ",
+      "not_in_contacts": "連絡先に登録されていません",
+      "add_to_contacts": "連絡先に追加",
+      "copied": "コピーしました！",
+      "copy_failed": "コピーに失敗しました"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "このアカウントでは予約送信はサポートされていません。",
     "schedule_send_cleanup_warning": "予約送信は作成されましたが、下書きのクリーンアップに失敗しました。",
     "send_delay_unsupported": "このアカウントでは送信遅延はサポートされていません。",
-    "send_delay_unsupported_confirm": "このアカウントは送信遅延に対応していません。すぐに送信しますか？"
+    "send_delay_unsupported_confirm": "このアカウントは送信遅延に対応していません。すぐに送信しますか？",
+    "recipient_edit_email": "メールアドレスを編集",
+    "recipient_edit_name": "表示名を編集",
+    "recipient_email_placeholder": "メールアドレス",
+    "recipient_name_placeholder": "表示名"
   },
   "confirm_dialog": {
     "confirm": "確認",
@@ -1300,6 +1304,11 @@
         "move_down": "下に移動",
         "drag_handle": "ドラッグして並べ替え",
         "add": "アカウントを追加"
+      },
+      "shared_accounts": {
+        "title": "自分と共有",
+        "description": "管理できるグループアカウントと共有アカウントです。1つ選択して、フィルター、不在応答、カレンダー、連絡先を編集します。",
+        "shared_label": "共有アカウント"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "設定を検索",
     "search_clear": "検索をクリア",
-    "search_no_results": "一致する設定はありません"
+    "search_no_results": "一致する設定はありません",
+    "scoped": {
+      "back": "自分のアカウントに戻る",
+      "managing": "管理中: {name}"
+    }
   },
   "errors": {
     "page_error_title": "問題が発生しました",

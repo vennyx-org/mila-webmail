@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Geplantes Senden wird für dieses Konto nicht unterstützt.",
     "schedule_send_cleanup_warning": "Geplantes Senden wurde erstellt, aber das Bereinigen des Entwurfs ist fehlgeschlagen.",
     "send_delay_unsupported": "Sendeverzögerung wird für dieses Konto nicht unterstützt.",
-    "send_delay_unsupported_confirm": "Dieses Konto unterstützt keine Sendeverzögerung. Stattdessen sofort senden?"
+    "send_delay_unsupported_confirm": "Dieses Konto unterstützt keine Sendeverzögerung. Stattdessen sofort senden?",
+    "recipient_edit_email": "E-Mail-Adresse bearbeiten",
+    "recipient_edit_name": "Anzeigenamen bearbeiten",
+    "recipient_email_placeholder": "E-Mail-Adresse",
+    "recipient_name_placeholder": "Anzeigename"
   },
   "confirm_dialog": {
     "confirm": "Bestätigen",
@@ -1300,6 +1304,11 @@
         "move_down": "Nach unten",
         "drag_handle": "Zum Sortieren ziehen",
         "add": "Konto hinzufügen"
+      },
+      "shared_accounts": {
+        "title": "Mit mir geteilt",
+        "description": "Gruppen- und freigegebene Konten, die Sie verwalten können. Wählen Sie eines aus, um dessen Filter, Abwesenheitsnotiz, Kalender und Kontakte zu bearbeiten.",
+        "shared_label": "Freigegebenes Konto"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Einstellungen durchsuchen",
     "search_clear": "Suche löschen",
-    "search_no_results": "Keine passenden Einstellungen"
+    "search_no_results": "Keine passenden Einstellungen",
+    "scoped": {
+      "back": "Zurück zu meinem Konto",
+      "managing": "Verwaltung: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Etwas ist schiefgelaufen",

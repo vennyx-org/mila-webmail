@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Besked planlagt til afsendelse",
     "undo_send": "Fortryd afsendelse",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Kontakt",
+      "close": "Luk sidepanel",
+      "action_email": "E-mail",
+      "action_email_title": "Send e-mail",
+      "action_copy": "Kopiér",
+      "action_copy_title": "Kopiér e-mail",
+      "action_edit_title": "Rediger kontakt",
+      "section_emails": "E-mails",
+      "section_phones": "Telefoner",
+      "section_organizations": "Organisationer",
+      "section_addresses": "Adresser",
+      "section_notes": "Noter",
+      "not_in_contacts": "Ikke i dine kontakter",
+      "add_to_contacts": "Tilføj til kontakter",
+      "copied": "Kopieret!",
+      "copy_failed": "Kunne ikke kopiere"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Planlagt afsendelse understøttes ikke for denne konto.",
     "schedule_send_cleanup_warning": "Planlagt afsendelse blev oprettet, men oprydning af kladde mislykkedes.",
     "send_delay_unsupported": "Sendeforsinkelse understøttes ikke for denne konto.",
-    "send_delay_unsupported_confirm": "Denne konto understøtter ikke sendeforsinkelse. Send straks i stedet?"
+    "send_delay_unsupported_confirm": "Denne konto understøtter ikke sendeforsinkelse. Send straks i stedet?",
+    "recipient_edit_email": "Rediger e-mailadresse",
+    "recipient_edit_name": "Rediger visningsnavn",
+    "recipient_email_placeholder": "E-mailadresse",
+    "recipient_name_placeholder": "Visningsnavn"
   },
   "confirm_dialog": {
     "confirm": "Bekræft",
@@ -1303,6 +1307,11 @@
         "move_down": "Flyt ned",
         "drag_handle": "Træk for at omarrangere",
         "add": "Tilføj konto"
+      },
+      "shared_accounts": {
+        "title": "Delt med mig",
+        "description": "Gruppe- og delte konti, du kan administrere. Vælg en for at redigere dens filtre, autosvar ved fravær, kalendere og kontakter.",
+        "shared_label": "Delt konto"
       }
     },
     "security": {
@@ -1866,6 +1875,10 @@
       "preview": {
         "label": "Forhåndsvisning"
       }
+    },
+    "scoped": {
+      "back": "Tilbage til min konto",
+      "managing": "Administrerer: {name}"
     }
   },
   "errors": {

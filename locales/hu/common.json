@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Üzenet ütemezve a küldéshez",
     "undo_send": "Küldés visszavonása",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Névjegy",
+      "close": "Oldalsáv bezárása",
+      "action_email": "E-mail",
+      "action_email_title": "E-mail küldése",
+      "action_copy": "Másolás",
+      "action_copy_title": "E-mail másolása",
+      "action_edit_title": "Névjegy szerkesztése",
+      "section_emails": "E-mailek",
+      "section_phones": "Telefonszámok",
+      "section_organizations": "Szervezetek",
+      "section_addresses": "Címek",
+      "section_notes": "Jegyzetek",
+      "not_in_contacts": "Nincs a névjegyei között",
+      "add_to_contacts": "Hozzáadás a névjegyekhez",
+      "copied": "Másolva!",
+      "copy_failed": "A másolás nem sikerült"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Az ütemezett küldés nem támogatott ehhez a fiókhoz.",
     "schedule_send_cleanup_warning": "Az ütemezett küldés létrejött, de a piszkozat tisztítása sikertelen volt.",
     "send_delay_unsupported": "A késleltetett küldés nem támogatott ehhez a fiókhoz.",
-    "send_delay_unsupported_confirm": "Ez a fiók nem támogatja a késleltetett küldést. Elküldjük azonnal?"
+    "send_delay_unsupported_confirm": "Ez a fiók nem támogatja a késleltetett küldést. Elküldjük azonnal?",
+    "recipient_edit_email": "E-mail-cím szerkesztése",
+    "recipient_edit_name": "Megjelenített név szerkesztése",
+    "recipient_email_placeholder": "E-mail-cím",
+    "recipient_name_placeholder": "Megjelenített név"
   },
   "confirm_dialog": {
     "confirm": "Megerősítés",
@@ -1303,6 +1307,11 @@
         "move_down": "Mozgatás le",
         "drag_handle": "Húzd át a sorrend módosításához",
         "add": "Fiók hozzáadása"
+      },
+      "shared_accounts": {
+        "title": "Velem megosztva",
+        "description": "Csoportos és megosztott fiókok, amelyeket kezelhet. Válasszon egyet a szűrői, távolléti válasza, naptárai és névjegyei szerkesztéséhez.",
+        "shared_label": "Megosztott fiók"
       }
     },
     "security": {
@@ -1866,6 +1875,10 @@
       "preview": {
         "label": "Előnézet"
       }
+    },
+    "scoped": {
+      "back": "Vissza a saját fiókomhoz",
+      "managing": "Kezelés: {name}"
     }
   },
   "errors": {

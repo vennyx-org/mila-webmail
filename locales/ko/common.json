@@ -546,22 +546,22 @@
     "undo_send_scheduled": "메시지가 보내기로 예약되었습니다",
     "undo_send": "보내기 실행 취소",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "연락처",
+      "close": "사이드바 닫기",
+      "action_email": "이메일",
+      "action_email_title": "이메일 보내기",
+      "action_copy": "복사",
+      "action_copy_title": "이메일 복사",
+      "action_edit_title": "연락처 편집",
+      "section_emails": "이메일",
+      "section_phones": "전화번호",
+      "section_organizations": "조직",
+      "section_addresses": "주소",
+      "section_notes": "메모",
+      "not_in_contacts": "연락처에 없음",
+      "add_to_contacts": "연락처에 추가",
+      "copied": "복사됨!",
+      "copy_failed": "복사하지 못했습니다"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "이 계정은 예약 보내기를 지원하지 않습니다.",
     "schedule_send_cleanup_warning": "예약 보내기는 생성되었지만 초안 정리에 실패했습니다.",
     "send_delay_unsupported": "이 계정은 보내기 지연을 지원하지 않습니다.",
-    "send_delay_unsupported_confirm": "이 계정은 보내기 지연을 지원하지 않습니다. 바로 보낼까요?"
+    "send_delay_unsupported_confirm": "이 계정은 보내기 지연을 지원하지 않습니다. 바로 보낼까요?",
+    "recipient_edit_email": "이메일 주소 편집",
+    "recipient_edit_name": "표시 이름 편집",
+    "recipient_email_placeholder": "이메일 주소",
+    "recipient_name_placeholder": "표시 이름"
   },
   "confirm_dialog": {
     "confirm": "확인",
@@ -1300,6 +1304,11 @@
         "move_down": "아래로 이동",
         "drag_handle": "끌어서 순서 변경",
         "add": "계정 추가"
+      },
+      "shared_accounts": {
+        "title": "나와 공유됨",
+        "description": "관리할 수 있는 그룹 및 공유 계정입니다. 하나를 선택하여 필터, 부재 중 자동 응답, 캘린더, 연락처를 편집하세요.",
+        "shared_label": "공유 계정"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "설정 검색",
     "search_clear": "검색 지우기",
-    "search_no_results": "일치하는 설정이 없습니다"
+    "search_no_results": "일치하는 설정이 없습니다",
+    "scoped": {
+      "back": "내 계정으로 돌아가기",
+      "managing": "관리 중: {name}"
+    }
   },
   "errors": {
     "page_error_title": "문제가 발생했어요",

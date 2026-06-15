@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Сообщение запланировано к отправке",
     "undo_send": "Отменить отправку",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Контакт",
+      "close": "Закрыть боковую панель",
+      "action_email": "Письмо",
+      "action_email_title": "Отправить письмо",
+      "action_copy": "Копировать",
+      "action_copy_title": "Копировать адрес",
+      "action_edit_title": "Редактировать контакт",
+      "section_emails": "Электронная почта",
+      "section_phones": "Телефоны",
+      "section_organizations": "Организации",
+      "section_addresses": "Адреса",
+      "section_notes": "Заметки",
+      "not_in_contacts": "Нет в ваших контактах",
+      "add_to_contacts": "Добавить в контакты",
+      "copied": "Скопировано!",
+      "copy_failed": "Не удалось скопировать"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Запланированная отправка не поддерживается для этой учетной записи.",
     "schedule_send_cleanup_warning": "Запланированная отправка создана, но очистка черновика не удалась.",
     "send_delay_unsupported": "Задержка отправки не поддерживается для этой учетной записи.",
-    "send_delay_unsupported_confirm": "Эта учетная запись не поддерживает задержку отправки. Отправить сразу?"
+    "send_delay_unsupported_confirm": "Эта учетная запись не поддерживает задержку отправки. Отправить сразу?",
+    "recipient_edit_email": "Изменить адрес эл. почты",
+    "recipient_edit_name": "Изменить отображаемое имя",
+    "recipient_email_placeholder": "Адрес эл. почты",
+    "recipient_name_placeholder": "Отображаемое имя"
   },
   "confirm_dialog": {
     "confirm": "Подтвердить",
@@ -1300,6 +1304,11 @@
         "move_down": "Переместить вниз",
         "drag_handle": "Перетащите, чтобы изменить порядок",
         "add": "Добавить учётную запись"
+      },
+      "shared_accounts": {
+        "title": "Доступные мне",
+        "description": "Групповые и общие учётные записи, которыми вы можете управлять. Выберите одну, чтобы изменить её фильтры, автоответчик, календари и контакты.",
+        "shared_label": "Общая учётная запись"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Поиск настроек",
     "search_clear": "Очистить поиск",
-    "search_no_results": "Нет подходящих настроек"
+    "search_no_results": "Нет подходящих настроек",
+    "scoped": {
+      "back": "Назад к моей учётной записи",
+      "managing": "Управление: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Что-то пошло не так",

@@ -546,22 +546,22 @@
     "undo_send_scheduled": "Повідомлення заплановано до надсилання",
     "undo_send": "Скасувати надсилання",
     "contact_sidebar": {
-      "title": "Contact",
-      "close": "Close sidebar",
-      "action_email": "Email",
-      "action_email_title": "Send email",
-      "action_copy": "Copy",
-      "action_copy_title": "Copy email",
-      "action_edit_title": "Edit contact",
-      "section_emails": "Emails",
-      "section_phones": "Phones",
-      "section_organizations": "Organizations",
-      "section_addresses": "Addresses",
-      "section_notes": "Notes",
-      "not_in_contacts": "Not in your contacts",
-      "add_to_contacts": "Add to contacts",
-      "copied": "Copied!",
-      "copy_failed": "Failed to copy"
+      "title": "Контакт",
+      "close": "Закрити бічну панель",
+      "action_email": "Лист",
+      "action_email_title": "Надіслати лист",
+      "action_copy": "Копіювати",
+      "action_copy_title": "Копіювати адресу",
+      "action_edit_title": "Редагувати контакт",
+      "section_emails": "Електронні адреси",
+      "section_phones": "Телефони",
+      "section_organizations": "Організації",
+      "section_addresses": "Адреси",
+      "section_notes": "Нотатки",
+      "not_in_contacts": "Немає у ваших контактах",
+      "add_to_contacts": "Додати до контактів",
+      "copied": "Скопійовано!",
+      "copy_failed": "Не вдалося скопіювати"
     }
   },
   "email_composer": {
@@ -667,7 +667,11 @@
     "schedule_send_unsupported": "Заплановане надсилання не підтримується для цього облікового запису.",
     "schedule_send_cleanup_warning": "Заплановане надсилання створено, але очищення чернетки не вдалося.",
     "send_delay_unsupported": "Затримка надсилання не підтримується для цього облікового запису.",
-    "send_delay_unsupported_confirm": "Цей обліковий запис не підтримує затримку надсилання. Надіслати негайно?"
+    "send_delay_unsupported_confirm": "Цей обліковий запис не підтримує затримку надсилання. Надіслати негайно?",
+    "recipient_edit_email": "Змінити адресу ел. пошти",
+    "recipient_edit_name": "Змінити відображуване ім'я",
+    "recipient_email_placeholder": "Адреса ел. пошти",
+    "recipient_name_placeholder": "Відображуване ім'я"
   },
   "confirm_dialog": {
     "confirm": "Підтвердити",
@@ -1300,6 +1304,11 @@
         "move_down": "Перемістити вниз",
         "drag_handle": "Перетягніть, щоб змінити порядок",
         "add": "Додати обліковий запис"
+      },
+      "shared_accounts": {
+        "title": "Доступні мені",
+        "description": "Групові та спільні облікові записи, якими ви можете керувати. Виберіть один, щоб змінити його фільтри, автовідповідач, календарі та контакти.",
+        "shared_label": "Спільний обліковий запис"
       }
     },
     "security": {
@@ -1866,7 +1875,11 @@
     },
     "search_placeholder": "Пошук у налаштуваннях",
     "search_clear": "Очистити пошук",
-    "search_no_results": "Немає відповідних налаштувань"
+    "search_no_results": "Немає відповідних налаштувань",
+    "scoped": {
+      "back": "Назад до мого облікового запису",
+      "managing": "Керування: {name}"
+    }
   },
   "errors": {
     "page_error_title": "Щось пішло не так",
