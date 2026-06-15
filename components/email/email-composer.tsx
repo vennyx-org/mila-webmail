@@ -57,6 +57,34 @@ function htmlToPlainText(html: string): string {
   return doc.body.textContent || '';
 }
 
+/**
+ * Build a floating drag image showing the recipient's address, mirroring the
+ * email-list drag preview so dragging a chip feels consistent. The element is
+ * positioned off-screen; the browser snapshots it for the drag cursor.
+ */
+function createChipDragPreview(label: string): HTMLElement {
+  const preview = document.createElement("div");
+  preview.className = "drag-preview";
+  preview.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: 0;
+    padding: 4px 12px;
+    background-color: var(--color-primary, #3b82f6);
+    color: var(--color-primary-foreground, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 9999;
+    white-space: nowrap;
+    pointer-events: none;
+  `;
+  preview.textContent = label;
+  document.body.appendChild(preview);
+  return preview;
+}
+
 export interface ComposerDraftData {
   to: string;
   cc: string;
@@ -3018,6 +3046,10 @@ function RecipientChipInput({
                 e.stopPropagation();
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('application/x-recipient-chip', JSON.stringify({ chip, fromField: field }));
+                // Show the address while dragging, matching the email-list drag preview.
+                const dragPreview = createChipDragPreview(parseChip(chip).email);
+                e.dataTransfer.setDragImage(dragPreview, 0, 0);
+                requestAnimationFrame(() => dragPreview.remove());
                 setDraggingIndex(i);
               }}
               onDragEnd={() => setDraggingIndex(null)}

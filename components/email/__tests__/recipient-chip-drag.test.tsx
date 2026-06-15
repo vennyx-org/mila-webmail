@@ -201,6 +201,10 @@ class MockDataTransfer {
   getData(type: string): string {
     return this._data[type] ?? '';
   }
+
+  setDragImage(_image: Element, _x: number, _y: number) {
+    // no-op: jsdom has no rendering, but the chip drag handler calls this.
+  }
 }
 
 // ─── Shared test data ─────────────────────────────────────────────────────────
