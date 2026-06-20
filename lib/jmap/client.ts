@@ -1273,19 +1273,19 @@ export class JMAPClient implements IJMAPClient {
     ]);
   }
 
-  async batchMarkAsRead(emailIds: string[], read: boolean = true): Promise<void> {
+  async batchMarkAsRead(emailIds: string[], read: boolean = true, accountId?: string): Promise<void> {
     if (emailIds.length === 0) return;
 
     const updates = Object.fromEntries(emailIds.map(id => [id, { "keywords/$seen": read }]));
     await this.request([
-      ["Email/set", { accountId: this.accountId, update: updates }, "0"],
+      ["Email/set", { accountId: accountId || this.accountId, update: updates }, "0"],
     ]);
   }
 
-  async toggleStar(emailId: string, starred: boolean): Promise<void> {
+  async toggleStar(emailId: string, starred: boolean, accountId?: string): Promise<void> {
     await this.request([
       ["Email/set", {
-        accountId: this.accountId,
+        accountId: accountId || this.accountId,
         update: {
           [emailId]: {
             "keywords/$flagged": starred,
@@ -1391,12 +1391,12 @@ export class JMAPClient implements IJMAPClient {
     ]);
   }
 
-  async batchDeleteEmails(emailIds: string[]): Promise<void> {
+  async batchDeleteEmails(emailIds: string[], accountId?: string): Promise<void> {
     if (emailIds.length === 0) return;
 
     await this.request([
       ["Email/set", {
-        accountId: this.accountId,
+        accountId: accountId || this.accountId,
         destroy: emailIds,
       }, "0"],
     ]);
@@ -1709,7 +1709,7 @@ export class JMAPClient implements IJMAPClient {
     ]);
   }
 
-  async createMailbox(name: string, parentId?: string): Promise<Mailbox> {
+  async createMailbox(name: string, parentId?: string, accountId?: string): Promise<Mailbox> {
     const createId = `new-${Date.now()}`;
     const createData: Record<string, unknown> = { name };
     if (parentId) {
@@ -1718,7 +1718,7 @@ export class JMAPClient implements IJMAPClient {
 
     const response = await this.request([
       ["Mailbox/set", {
-        accountId: this.accountId,
+        accountId: accountId || this.accountId,
         create: { [createId]: createData },
       }, "0"],
     ]);

@@ -134,7 +134,10 @@
     "nav_label": "Navigazione",
     "add_app": "App",
     "shared": "Condiviso",
-    "scheduled": "Programmate"
+    "scheduled": "Programmate",
+    "unified_all_unread": "Tutti i non letti",
+    "unified_all_starred": "Tutti gli speciali",
+    "unified_all_mail": "Tutta la posta"
   },
   "protocol_handlers": {
     "title": "App predefinite",
@@ -930,6 +933,18 @@
         "description": "Layout per utenti esperti solo desktop con esplorazione messaggi a più schede e flussi tra account. L'interfaccia standard non è influenzata; puoi tornare indietro in qualsiasi momento.",
         "open_label": "Apri interfaccia Pro",
         "back_to_standard": "Torna allo standard"
+      },
+      "cross_unread": {
+        "label": "Tutti gli account: Non letti",
+        "description": "Mostra una voce nella sezione Tutti gli account che elenca la posta non letta di tutti gli account, in tutte le cartelle tranne posta indesiderata, inviata, archivio, cestino e bozze."
+      },
+      "cross_starred": {
+        "label": "Tutti gli account: Speciali",
+        "description": "Mostra una voce nella sezione Tutti gli account che elenca la posta speciale di tutti gli account, in tutte le cartelle tranne posta indesiderata, inviata, archivio, cestino e bozze."
+      },
+      "cross_all": {
+        "label": "Tutti gli account: Tutta la posta",
+        "description": "Mostra una voce nella sezione Tutti gli account che elenca tutta la posta di tutti gli account, in tutte le cartelle tranne posta indesiderata, inviata, archivio, cestino e bozze."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archivia",
         "tag": "Etichetta",
         "spam": "Segna come spam",
+        "not_spam": "Non spam",
         "none_selected": "Nessuna azione selezionata",
         "mode_label": "Modalità di visualizzazione",
         "mode_inline": "In linea",

@@ -134,7 +134,10 @@
     "mail": "Levelek",
     "nav_label": "Navigáció",
     "add_app": "Alkalmazások",
-    "scheduled": "Ütemezett"
+    "scheduled": "Ütemezett",
+    "unified_all_unread": "Összes olvasatlan",
+    "unified_all_starred": "Összes csillagozott",
+    "unified_all_mail": "Összes levél"
   },
   "protocol_handlers": {
     "title": "Alapértelmezett alkalmazások",
@@ -933,6 +936,18 @@
         "description": "Asztali számítógépes erőfelhasználói elrendezés több lapos üzenetböngészéssel és fiókok közötti munkafolyamatokkal. A szabványos felületet nem érinti; bármikor visszaválthatsz.",
         "open_label": "Pro felület megnyitása",
         "back_to_standard": "Vissza a szabványoshoz"
+      },
+      "cross_unread": {
+        "label": "Összes fiók: Olvasatlan",
+        "description": "Megjelenít egy bejegyzést az Összes fiók szakaszban, amely az összes fiók olvasatlan leveleit listázza, a levélszemét, elküldött, archívum, kuka és piszkozatok mappák kivételével minden mappára kiterjedően."
+      },
+      "cross_starred": {
+        "label": "Összes fiók: Csillagozott",
+        "description": "Megjelenít egy bejegyzést az Összes fiók szakaszban, amely az összes fiók csillagozott leveleit listázza, a levélszemét, elküldött, archívum, kuka és piszkozatok mappák kivételével minden mappára kiterjedően."
+      },
+      "cross_all": {
+        "label": "Összes fiók: Összes levél",
+        "description": "Megjelenít egy bejegyzést az Összes fiók szakaszban, amely az összes fiók összes levelét listázza, a levélszemét, elküldött, archívum, kuka és piszkozatok mappák kivételével minden mappára kiterjedően."
       }
     },
     "keywords": {
@@ -1189,6 +1204,7 @@
         "archive": "Archiválás",
         "tag": "Címkézés",
         "spam": "Megjelölés spamként",
+        "not_spam": "Nem spam",
         "none_selected": "Nincs művelet kiválasztva",
         "mode_label": "Megjelenítési mód",
         "mode_inline": "Beágyazott",

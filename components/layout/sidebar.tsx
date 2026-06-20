@@ -34,13 +34,14 @@ import {
   CalendarClock,
   BellOff,
   Mails,
+  MailOpen,
 } from "lucide-react";
 import { cn, buildMailboxTree, MailboxNode } from "@/lib/utils";
 import { Mailbox } from "@/lib/jmap/types";
 import { useContextMenu } from "@/hooks/use-context-menu";
 import { MailboxContextMenu, type MailboxContextTarget } from "./mailbox-context-menu";
 import { useAccountStore } from '@/stores/account-store';
-import { UNIFIED_MAILBOX_IDS } from '@/lib/jmap/types';
+import { UNIFIED_MAILBOX_IDS, CROSS_VIEW_IDS } from '@/lib/jmap/types';
 import type { UnifiedMailboxRole } from '@/lib/jmap/types';
 import { useDragDropContext } from "@/contexts/drag-drop-context";
 import { useMailboxDrop } from "@/hooks/use-mailbox-drop";
@@ -79,6 +80,12 @@ interface SidebarProps {
   showScheduledMailbox?: boolean;
   /** Gated "All Mail" virtual folder that merges all of the account's folders. */
   showAllMailMailbox?: boolean;
+  /** Gated cross-account views in the "All accounts" section. */
+  showCrossUnread?: boolean;
+  showCrossStarred?: boolean;
+  showCrossAll?: boolean;
+  /** Unread total across all cross-view folders (badge for unread/all). */
+  crossUnreadCount?: number;
   className?: string;
   /**
    * Multi-account (Pro) mode props. When `multiAccountMode` is true, the
@@ -681,6 +688,10 @@ export function Sidebar({
   scheduledTotal = 0,
   showScheduledMailbox = false,
   showAllMailMailbox = false,
+  showCrossUnread = false,
+  showCrossStarred = false,
+  showCrossAll = false,
+  crossUnreadCount = 0,
   className,
   multiAccountMode = false,
   accountMailboxes,
@@ -991,7 +1002,7 @@ export function Sidebar({
             isCollapsed={isCollapsed}
           />
         )}
-        {showUnified && (
+        {(showUnified || showCrossUnread || showCrossStarred || showCrossAll) && (
           <div>
             <SidebarSectionHeader
               label={t("all_accounts")}
@@ -1002,7 +1013,7 @@ export function Sidebar({
             />
             {((unifiedExpanded && !isCollapsed) || isCollapsed) && (
               <>
-                {unifiedCounts.map((count) => {
+                {showUnified && unifiedCounts.map((count) => {
                   const unifiedId = UNIFIED_MAILBOX_IDS[count.role];
                   const Icon = getUnifiedIcon(count.role);
                   const isSelected = !selectedKeyword && selectedMailbox === unifiedId;
@@ -1016,6 +1027,26 @@ export function Sidebar({
                       unread={count.unreadEmails}
                       total={count.totalEmails}
                       onClick={() => onMailboxSelect?.(unifiedId)}
+                      isCollapsed={isCollapsed}
+                    />
+                  );
+                })}
+                {[
+                  { show: showCrossUnread, id: CROSS_VIEW_IDS.unread, Icon: MailOpen, label: t('unified_all_unread'), unread: crossUnreadCount },
+                  { show: showCrossStarred, id: CROSS_VIEW_IDS.starred, Icon: Star, label: t('unified_all_starred'), unread: undefined as number | undefined },
+                  { show: showCrossAll, id: CROSS_VIEW_IDS.all, Icon: Mails, label: t('unified_all_mail'), unread: crossUnreadCount },
+                ].map(({ show, id, Icon, label, unread }) => {
+                  if (!show) return null;
+                  const isSelected = !selectedKeyword && selectedMailbox === id;
+                  return (
+                    <SidebarRow
+                      key={id}
+                      icon={<Icon className={getIconClass(isSelected, false, colorfulSidebarIcons)} />}
+                      label={label}
+                      depth={0}
+                      isSelected={isSelected}
+                      unread={unread}
+                      onClick={() => onMailboxSelect?.(id)}
                       isCollapsed={isCollapsed}
                     />
                   );

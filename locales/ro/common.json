@@ -134,7 +134,10 @@
     "mail": "E-mail",
     "nav_label": "Navigare",
     "add_app": "Aplicații",
-    "scheduled": "Programat"
+    "scheduled": "Programat",
+    "unified_all_unread": "Toate necitite",
+    "unified_all_starred": "Toate cu stea",
+    "unified_all_mail": "Toată poșta"
   },
   "protocol_handlers": {
     "title": "Aplicații implicite",
@@ -933,6 +936,18 @@
         "description": "Aspect destinat utilizatorilor avansați, disponibil doar pe desktop, cu navigare prin mesaje în mai multe file și fluxuri de lucru între conturi. Interfața standard nu este afectată; puteți reveni la aceasta în orice moment.",
         "open_label": "Interfața Open Pro",
         "back_to_standard": "Înapoi la standard"
+      },
+      "cross_unread": {
+        "label": "Toate conturile: Necitite",
+        "description": "Afișează în secțiunea Toate conturile o intrare cu poșta necitită din toate conturile, în toate folderele cu excepția spam, trimise, arhivă, coș și ciorne."
+      },
+      "cross_starred": {
+        "label": "Toate conturile: Cu stea",
+        "description": "Afișează în secțiunea Toate conturile o intrare cu poșta cu stea din toate conturile, în toate folderele cu excepția spam, trimise, arhivă, coș și ciorne."
+      },
+      "cross_all": {
+        "label": "Toate conturile: Toată poșta",
+        "description": "Afișează în secțiunea Toate conturile o intrare cu toată poșta din toate conturile, în toate folderele cu excepția spam, trimise, arhivă, coș și ciorne."
       }
     },
     "keywords": {
@@ -1189,6 +1204,7 @@
         "archive": "Arhivează",
         "tag": "Etichetă",
         "spam": "Marcați ca spam",
+        "not_spam": "Nu este spam",
         "none_selected": "Nu sunt selectate acțiuni",
         "mode_label": "Modul de afișare",
         "mode_inline": "În text",

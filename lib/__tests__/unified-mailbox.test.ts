@@ -28,6 +28,8 @@ function makeAccount(
     accountLabel: over.accountId,
     mailboxes: [],
     client: clientImpl as unknown as IJMAPClient,
+    clientAccountId: over.accountId,
+    jmapAccountId: over.accountId,
     ...over,
   };
 }
@@ -71,6 +73,8 @@ describe('fetchUnifiedEmails', () => {
     const a2 = result.emails.find((e) => e.id === 'a2')!;
     expect(a2.accountId).toBe('A');
     expect(a2.accountLabel).toBe('Account A');
+    expect(a2.sourceClientAccountId).toBe('A');
+    expect(a2.sourceAccountId).toBe('A');
     // getEmails called with (mailboxId, accountId=undefined for personal, limit, position)
     expect(acc1.client.getEmails).toHaveBeenCalledWith('a-in', undefined, 20, 0);
   });

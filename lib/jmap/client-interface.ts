@@ -73,7 +73,7 @@ export interface IJMAPClient {
   // ── Mailboxes ─────────────────────────────────────────────────
   getMailboxes(accountId?: string): Promise<Mailbox[]>;
   getAllMailboxes(): Promise<Mailbox[]>;
-  createMailbox(name: string, parentId?: string): Promise<Mailbox>;
+  createMailbox(name: string, parentId?: string, accountId?: string): Promise<Mailbox>;
   updateMailbox(mailboxId: string, changes: { name?: string; parentId?: string | null; role?: string | null; sortOrder?: number }): Promise<void>;
   deleteMailbox(mailboxId: string): Promise<void>;
 
@@ -92,14 +92,14 @@ export interface IJMAPClient {
 
   // ── Email mutations ───────────────────────────────────────────
   markAsRead(emailId: string, read?: boolean, accountId?: string): Promise<void>;
-  batchMarkAsRead(emailIds: string[], read?: boolean): Promise<void>;
-  toggleStar(emailId: string, starred: boolean): Promise<void>;
+  batchMarkAsRead(emailIds: string[], read?: boolean, accountId?: string): Promise<void>;
+  toggleStar(emailId: string, starred: boolean, accountId?: string): Promise<void>;
   updateEmailKeywords(emailId: string, keywords: Record<string, boolean>): Promise<void>;
   setKeyword(emailId: string, keyword: string): Promise<void>;
   migrateKeyword(oldKeyword: string, newKeyword: string): Promise<number>;
   deleteEmail(emailId: string, accountId?: string): Promise<void>;
   moveToTrash(emailId: string, trashMailboxId: string, accountId?: string, markAsRead?: boolean): Promise<void>;
-  batchDeleteEmails(emailIds: string[]): Promise<void>;
+  batchDeleteEmails(emailIds: string[], accountId?: string): Promise<void>;
   batchMoveEmails(emailIds: string[], toMailboxId: string, accountId?: string, markAsRead?: boolean): Promise<void>;
   batchArchiveEmails(
     emails: Array<{ id: string; receivedAt: string }>,

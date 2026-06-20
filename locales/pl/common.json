@@ -134,7 +134,10 @@
     "nav_label": "Nawigacja",
     "add_app": "Aplikacje",
     "shared": "Udostępnione",
-    "scheduled": "Zaplanowane"
+    "scheduled": "Zaplanowane",
+    "unified_all_unread": "Wszystkie nieprzeczytane",
+    "unified_all_starred": "Wszystkie oznaczone gwiazdką",
+    "unified_all_mail": "Cała poczta"
   },
   "protocol_handlers": {
     "title": "Aplikacje domyślne",
@@ -930,6 +933,18 @@
         "description": "Układ dla zaawansowanych użytkowników (tylko na komputerze) z przeglądaniem wiadomości w wielu kartach i obiegami pracy między kontami. Standardowy interfejs pozostaje nietknięty; możesz wrócić w dowolnej chwili.",
         "open_label": "Otwórz interfejs Pro",
         "back_to_standard": "Powrót do standardu"
+      },
+      "cross_unread": {
+        "label": "Wszystkie konta: Nieprzeczytane",
+        "description": "Pokazuje pozycję w sekcji Wszystkie konta z nieprzeczytaną pocztą ze wszystkich kont, obejmującą wszystkie foldery oprócz spamu, wysłanych, archiwum, kosza i roboczych."
+      },
+      "cross_starred": {
+        "label": "Wszystkie konta: Oznaczone gwiazdką",
+        "description": "Pokazuje pozycję w sekcji Wszystkie konta z pocztą oznaczoną gwiazdką ze wszystkich kont, obejmującą wszystkie foldery oprócz spamu, wysłanych, archiwum, kosza i roboczych."
+      },
+      "cross_all": {
+        "label": "Wszystkie konta: Cała poczta",
+        "description": "Pokazuje pozycję w sekcji Wszystkie konta z całą pocztą ze wszystkich kont, obejmującą wszystkie foldery oprócz spamu, wysłanych, archiwum, kosza i roboczych."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archiwizuj",
         "tag": "Etykieta",
         "spam": "Oznacz jako spam",
+        "not_spam": "Nie spam",
         "none_selected": "Nie wybrano żadnych akcji",
         "mode_label": "Tryb wyświetlania",
         "mode_inline": "Wbudowany",

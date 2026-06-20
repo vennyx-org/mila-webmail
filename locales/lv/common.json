@@ -134,7 +134,10 @@
     "nav_label": "Navigācija",
     "add_app": "Lietotnes",
     "shared": "Koplietots",
-    "scheduled": "Ieplānots"
+    "scheduled": "Ieplānots",
+    "unified_all_unread": "Visi nelasītie",
+    "unified_all_starred": "Visi ar zvaigzni",
+    "unified_all_mail": "Visas vēstules"
   },
   "protocol_handlers": {
     "title": "Noklusējuma lietotnes",
@@ -930,6 +933,18 @@
         "description": "Tikai darbvirsmas pieredzējušu lietotāju izkārtojums ar ziņojumu pārlūkošanu vairākās cilnēs un kontu pārvaldību. Standarta saskarne netiek ietekmēta; varat jebkurā brīdī pārslēgties atpakaļ.",
         "open_label": "Atvērt Pro saskarni",
         "back_to_standard": "Atpakaļ uz standartu"
+      },
+      "cross_unread": {
+        "label": "Visi konti: Nelasītie",
+        "description": "Rāda ierakstu sadaļā “Visi konti”, kas uzskaita nelasītās vēstules no visiem kontiem, aptverot visas mapes, izņemot mēstules, nosūtītās, arhīvu, miskasti un melnrakstus."
+      },
+      "cross_starred": {
+        "label": "Visi konti: Ar zvaigzni",
+        "description": "Rāda ierakstu sadaļā “Visi konti”, kas uzskaita ar zvaigzni atzīmētās vēstules no visiem kontiem, aptverot visas mapes, izņemot mēstules, nosūtītās, arhīvu, miskasti un melnrakstus."
+      },
+      "cross_all": {
+        "label": "Visi konti: Visas vēstules",
+        "description": "Rāda ierakstu sadaļā “Visi konti”, kas uzskaita visas vēstules no visiem kontiem, aptverot visas mapes, izņemot mēstules, nosūtītās, arhīvu, miskasti un melnrakstus."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Arhivēt",
         "tag": "Tags",
         "spam": "Mēstule",
+        "not_spam": "Nav mēstule",
         "none_selected": "Nav atlasītu darbību",
         "mode_label": "Attēlošanas režīms",
         "mode_inline": "Iebūvēts",

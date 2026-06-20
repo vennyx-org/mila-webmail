@@ -134,7 +134,10 @@
     "mail": "Posta",
     "nav_label": "Gezinme",
     "add_app": "Uygulamalar",
-    "scheduled": "Zamanlandı"
+    "scheduled": "Zamanlandı",
+    "unified_all_unread": "Tüm okunmamışlar",
+    "unified_all_starred": "Tüm yıldızlılar",
+    "unified_all_mail": "Tüm postalar"
   },
   "protocol_handlers": {
     "title": "Varsayılan uygulamalar",
@@ -930,6 +933,18 @@
         "description": "Yalnızca masaüstü için güçlü kullanıcı düzeni: çoklu sekmede ileti gezme ve hesaplar arası iş akışları. Standart arayüz etkilenmez; istediğiniz zaman geri dönebilirsiniz.",
         "open_label": "Pro Arayüzü Aç",
         "back_to_standard": "Standarda dön"
+      },
+      "cross_unread": {
+        "label": "Tüm hesaplar: Okunmamış",
+        "description": "Tüm hesaplar bölümünde, tüm hesaplardaki okunmamış postaları listeleyen bir giriş gösterir; önemsiz, gönderilmiş, arşiv, çöp ve taslaklar dışındaki tüm klasörleri kapsar."
+      },
+      "cross_starred": {
+        "label": "Tüm hesaplar: Yıldızlı",
+        "description": "Tüm hesaplar bölümünde, tüm hesaplardaki yıldızlı postaları listeleyen bir giriş gösterir; önemsiz, gönderilmiş, arşiv, çöp ve taslaklar dışındaki tüm klasörleri kapsar."
+      },
+      "cross_all": {
+        "label": "Tüm hesaplar: Tüm postalar",
+        "description": "Tüm hesaplar bölümünde, tüm hesaplardaki tüm postaları listeleyen bir giriş gösterir; önemsiz, gönderilmiş, arşiv, çöp ve taslaklar dışındaki tüm klasörleri kapsar."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Arşivle",
         "tag": "Etiketle",
         "spam": "Spam Olarak İşaretle",
+        "not_spam": "Önemsiz değil",
         "none_selected": "Hiç işlem seçilmedi",
         "mode_label": "Görüntüleme Modu",
         "mode_inline": "Satır içi",

@@ -134,7 +134,10 @@
     "mail": "Pošta",
     "nav_label": "Navigace",
     "add_app": "Aplikace",
-    "scheduled": "Naplánováno"
+    "scheduled": "Naplánováno",
+    "unified_all_unread": "Vše nepřečtené",
+    "unified_all_starred": "Vše s hvězdičkou",
+    "unified_all_mail": "Veškerá pošta"
   },
   "protocol_handlers": {
     "title": "Výchozí aplikace",
@@ -930,6 +933,18 @@
         "description": "Rozložení pro pokročilé uživatele pouze pro stolní počítače s prohlížením zpráv na více kartách a pracovními postupy napříč účty. Standardní rozhraní zůstává nedotčeno; kdykoli se můžete vrátit.",
         "open_label": "Otevřít Pro rozhraní",
         "back_to_standard": "Zpět na standard"
+      },
+      "cross_unread": {
+        "label": "Všechny účty: Nepřečtené",
+        "description": "Zobrazí v sekci Všechny účty položku s nepřečtenou poštou ze všech účtů, napříč všemi složkami kromě spamu, odeslané, archivu, koše a konceptů."
+      },
+      "cross_starred": {
+        "label": "Všechny účty: S hvězdičkou",
+        "description": "Zobrazí v sekci Všechny účty položku s poštou s hvězdičkou ze všech účtů, napříč všemi složkami kromě spamu, odeslané, archivu, koše a konceptů."
+      },
+      "cross_all": {
+        "label": "Všechny účty: Veškerá pošta",
+        "description": "Zobrazí v sekci Všechny účty položku s veškerou poštou ze všech účtů, napříč všemi složkami kromě spamu, odeslané, archivu, koše a konceptů."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archivovat",
         "tag": "Štítek",
         "spam": "Označit jako spam",
+        "not_spam": "Není spam",
         "none_selected": "Nebyly vybrány žádné akce",
         "mode_label": "Režim zobrazení",
         "mode_inline": "Vložené",

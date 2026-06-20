@@ -11,7 +11,7 @@ import type { ComposerDraftData } from "@/components/email/email-composer";
 import { ProtocolAccountPicker } from "@/components/protocol/protocol-account-picker";
 import { ThreadConversationView } from "@/components/email/thread-conversation-view";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { ThreadGroup, Email, isUnifiedMailboxId, UNIFIED_ROLE_BY_ID, ALL_MAIL_MAILBOX_ID } from "@/lib/jmap/types";
+import { ThreadGroup, Email, Mailbox, isUnifiedMailboxId, UNIFIED_ROLE_BY_ID, ALL_MAIL_MAILBOX_ID, CROSS_VIEW_BY_ID, isCrossViewId } from "@/lib/jmap/types";
 import { useAccountStore } from "@/stores/account-store";
 import { usePolicyStore } from "@/stores/policy-store";
 import type { UnifiedAccountClient } from "@/lib/unified-mailbox";
@@ -319,7 +319,10 @@ export default function Home() {
     clearPendingUndoSend,
     pendingUndoSend,
     fetchUnifiedEmails: fetchUnifiedEmailsAction,
+    fetchCrossView: fetchCrossViewAction,
     refreshUnifiedCounts,
+    refreshCrossCounts,
+    crossUnreadCount,
     exitUnifiedView,
     emptyMailbox,
     markMailboxAsRead,
@@ -347,6 +350,19 @@ export default function Home() {
   const delayedSendSupported = client?.hasDelayedSend() ?? true;
   const allMailViewEnabled = usePolicyStore((s) => s.isFeatureEnabled('allMailViewEnabled'));
   const showAllMailMailbox = allMailViewEnabled && enableAllMailView;
+
+  // Cross-account "All accounts" views: a sub-feature of the unified mailbox, so
+  // they require Unified Mailbox to be enabled, plus the admin gate and the
+  // per-user setting. Hooks are called unconditionally.
+  const crossUnreadGate = usePolicyStore((s) => s.isFeatureEnabled('crossUnreadViewEnabled'));
+  const crossStarredGate = usePolicyStore((s) => s.isFeatureEnabled('crossStarredViewEnabled'));
+  const crossAllGate = usePolicyStore((s) => s.isFeatureEnabled('crossAllViewEnabled'));
+  const enableCrossUnreadView = useSettingsStore((s) => s.enableCrossUnreadView);
+  const enableCrossStarredView = useSettingsStore((s) => s.enableCrossStarredView);
+  const enableCrossAllView = useSettingsStore((s) => s.enableCrossAllView);
+  const showCrossUnread = enableUnifiedMailbox && crossUnreadGate && enableCrossUnreadView;
+  const showCrossStarred = enableUnifiedMailbox && crossStarredGate && enableCrossStarredView;
+  const showCrossAll = enableUnifiedMailbox && crossAllGate && enableCrossAllView;
   const activeEmails = isScheduledView ? scheduledEmails : emails;
   const activeHasMore = isScheduledView ? scheduledHasMore : hasMoreEmails;
   const activeIsLoading = isScheduledView ? isLoadingScheduled : isLoading;
@@ -986,14 +1002,16 @@ export default function Home() {
   // recounting happened"). The Pro shell always renders the unified mailbox
   // regardless of the user setting, so refresh when embedded too.
   useEffect(() => {
-    if (!enableUnifiedMailbox && !isEmbedded) return;
+    const anyCross = showCrossUnread || showCrossStarred || showCrossAll;
+    if (!enableUnifiedMailbox && !isEmbedded && !anyCross) return;
     if (!isAuthenticated || !client) return;
     buildPopulatedUnifiedAccounts().then((built) => {
       const hasGroupEntry = built.some((b) => b.isShared);
+      if (anyCross) refreshCrossCounts(built);
       if (built.length < 2 && !hasGroupEntry && !isEmbedded) return;
       refreshUnifiedCounts(built);
     });
-  }, [enableUnifiedMailbox, includeGroupInUnified, isEmbedded, isAuthenticated, client, mailboxes, connectedAccountsSignature, buildPopulatedUnifiedAccounts, refreshUnifiedCounts]);
+  }, [enableUnifiedMailbox, includeGroupInUnified, isEmbedded, isAuthenticated, client, mailboxes, connectedAccountsSignature, buildPopulatedUnifiedAccounts, refreshUnifiedCounts, refreshCrossCounts, showCrossUnread, showCrossStarred, showCrossAll]);
 
   // System-notification click handler. The push SW navigates the user back
   // here with `?email=<id>` (specific email it built the toast from) or
@@ -1039,8 +1057,8 @@ export default function Home() {
     // Skip when handleEmailSelect already started a fetch (it sets isLoadingEmail before
     // calling selectEmail on the stub), to avoid a duplicate request.
     if (!selectedEmail.bodyValues && !isLoadingEmail) {
-      const perAccountClient = isUnifiedView && selectedEmail.accountId
-        ? useAuthStore.getState().getClientForAccount(selectedEmail.accountId)
+      const perAccountClient = isUnifiedView && selectedEmail.sourceClientAccountId
+        ? useAuthStore.getState().getClientForAccount(selectedEmail.sourceClientAccountId)
         : undefined;
       const fetchClient = perAccountClient ?? client;
       setLoadingEmail(true);
@@ -1177,8 +1195,15 @@ export default function Home() {
           const emailState = useEmailStore.getState();
           const repliedEmail = emailState.emails.find(e => e.id === originalEmailId);
           if (repliedEmail?.threadId && emailState.expandedThreadIds.has(repliedEmail.threadId)) {
-            const accountId = client.getAccountId();
-            const fullEmails = await client.getThreadEmails(repliedEmail.threadId, accountId);
+            // Route to the email's own account so shared/group threads refresh
+            // from the right server, not the active one. (#281)
+            const threadClient = emailState.isUnifiedView && repliedEmail.sourceClientAccountId
+              ? (useAuthStore.getState().getClientForAccount(repliedEmail.sourceClientAccountId) ?? client)
+              : client;
+            const accountId = emailState.isUnifiedView && repliedEmail.sourceAccountId
+              ? repliedEmail.sourceAccountId
+              : client.getAccountId();
+            const fullEmails = await threadClient.getThreadEmails(repliedEmail.threadId, accountId);
             if (fullEmails.length > 0) {
               useEmailStore.setState((state) => {
                 const c = new Map(state.threadEmailsCache);
@@ -1414,10 +1439,11 @@ export default function Home() {
     if (!client || !emailToDelete) return;
 
     // In unified view the trash destination and current-folder check must come
-    // from the email's own account, not the active one. (#281)
+    // from the email's own account, not the active one. The owning account's
+    // mailbox list is cached under its JMAP id (`sourceAccountId`). (#281)
     const actionMailboxes =
-      isUnifiedView && emailToDelete.accountId
-        ? (accountMailboxes[emailToDelete.accountId] ?? mailboxes)
+      isUnifiedView && emailToDelete.sourceAccountId
+        ? (accountMailboxes[emailToDelete.sourceAccountId] ?? mailboxes)
         : mailboxes;
 
     // Check if we're currently in the trash or junk folder. In unified view the
@@ -1446,11 +1472,17 @@ export default function Home() {
         console.error("Failed to permanently delete email:", error);
       }
     } else {
-      // Not in trash: always move to trash (in the email's own account).
+      // Not in trash: always move to trash (in the email's own account). Scope
+      // the trash lookup to the email's account: for a shared/group source every
+      // mailbox in the list is `isShared`, so we match by accountId instead of
+      // excluding shared (otherwise no trash is found and the delete fails). (#281)
+      const sourceAccountId = isUnifiedView ? emailToDelete.sourceAccountId : undefined;
+      const matchesScope = (m: Mailbox) =>
+        sourceAccountId ? m.accountId === sourceAccountId : !m.isShared;
       const trashMailbox =
-        actionMailboxes.find(m => m.role === 'trash' && !m.isShared) ??
+        actionMailboxes.find(m => m.role === 'trash' && matchesScope(m)) ??
         actionMailboxes.find(m => {
-          if (m.isShared) return false;
+          if (!matchesScope(m)) return false;
           const lower = m.name.toLowerCase();
           return lower.includes('trash') || lower.includes('deleted');
         });
@@ -1473,11 +1505,14 @@ export default function Home() {
     if (!client || !emailToArchive) return;
 
     // In unified view the archive folder (and any year/month subfolders we
-    // create) must live in the email's own account, reached through that
-    // account's client. (#281)
-    const archiveAccountId = isUnifiedView ? emailToArchive.accountId : undefined;
-    const archiveClient = archiveAccountId
-      ? (useAuthStore.getState().getClientForAccount(archiveAccountId) ?? client)
+    // create) must live in the email's own account, reached through the login it
+    // is reachable via (`sourceClientAccountId`) and routed to its owning JMAP
+    // account (`sourceAccountId`). For personal sources these resolve to the
+    // account itself, so behavior is unchanged. (#281)
+    const archiveClientId = isUnifiedView ? emailToArchive.sourceClientAccountId : undefined;
+    const archiveAccountId = isUnifiedView ? emailToArchive.sourceAccountId : undefined;
+    const archiveClient = archiveClientId
+      ? (useAuthStore.getState().getClientForAccount(archiveClientId) ?? client)
       : client;
     // Read fresh mailboxes from the store – batch archive calls this in a loop,
     // and each iteration needs to see folders created by prior iterations.
@@ -1512,7 +1547,7 @@ export default function Home() {
           m => m.name === year && m.parentId === archiveId
         );
         if (!yearMailbox) {
-          yearMailbox = await archiveClient.createMailbox(year, archiveId);
+          yearMailbox = await archiveClient.createMailbox(year, archiveId, archiveAccountId);
           await refreshMailboxes();
         }
 
@@ -1525,7 +1560,7 @@ export default function Home() {
             m => m.name === month && m.parentId === yearId
           );
           if (!monthMailbox) {
-            monthMailbox = await archiveClient.createMailbox(month, yearId);
+            monthMailbox = await archiveClient.createMailbox(month, yearId, archiveAccountId);
             await refreshMailboxes();
           }
           await moveThreadToMailbox(client, emailToArchive.id, monthMailbox.id);
@@ -1618,7 +1653,7 @@ export default function Home() {
         });
       } else {
         const jmapKey = `$label:${color}`;
-        if (keywords[jmapKey] === true) {
+        if (keywords[jmapKey]) {
           // Toggle off if already active
           keywords[jmapKey] = false;
         } else {
@@ -1711,6 +1746,28 @@ export default function Home() {
       const populated = await buildPopulatedUnifiedAccounts();
       await fetchUnifiedEmailsAction(populated, role);
       refreshUnifiedCounts(populated);
+      return;
+    }
+
+    if (isCrossViewId(mailboxId)) {
+      setScheduledView(false);
+      const view = CROSS_VIEW_BY_ID[mailboxId];
+      if (!view) return;
+
+      selectMailbox(mailboxId);
+      selectEmail(null);
+
+      if (isMobile) {
+        setSidebarOpen(false);
+        setActiveView("list");
+      }
+      if (isTablet) {
+        setTabletListVisible(true);
+      }
+
+      const populated = await buildPopulatedUnifiedAccounts();
+      await fetchCrossViewAction(populated, view);
+      refreshCrossCounts(populated);
       return;
     }
 
@@ -2227,8 +2284,15 @@ export default function Home() {
     const emailState = useEmailStore.getState();
     const repliedEmail = emailState.emails.find(e => e.id === originalEmailId);
     if (repliedEmail?.threadId && emailState.expandedThreadIds.has(repliedEmail.threadId)) {
-      const accountId = client.getAccountId();
-      const fullEmails = await client.getThreadEmails(repliedEmail.threadId, accountId);
+      // Route to the email's own account so shared/group threads refresh from
+      // the right server, not the active one. (#281)
+      const threadClient = emailState.isUnifiedView && repliedEmail.sourceClientAccountId
+        ? (useAuthStore.getState().getClientForAccount(repliedEmail.sourceClientAccountId) ?? client)
+        : client;
+      const accountId = emailState.isUnifiedView && repliedEmail.sourceAccountId
+        ? repliedEmail.sourceAccountId
+        : client.getAccountId();
+      const fullEmails = await threadClient.getThreadEmails(repliedEmail.threadId, accountId);
       if (fullEmails.length > 0) {
         useEmailStore.setState((state) => {
           const c = new Map(state.threadEmailsCache);
@@ -2292,21 +2356,25 @@ export default function Home() {
 
     // Fetch the full content
     try {
-      // In unified view each email carries its own accountId. Use that
-      // account's client so we fetch from the server that actually owns it.
-      const emailAccountId = isUnifiedView ? listEmail?.accountId : undefined;
-      const perAccountClient = emailAccountId
-        ? useAuthStore.getState().getClientForAccount(emailAccountId)
+      // In unified view each email carries its source reference: the login it is
+      // reachable through (`sourceClientAccountId`) and its owning JMAP account
+      // (`sourceAccountId`). Resolve both so we fetch from the server that actually
+      // owns it — works uniformly for personal and shared/group sources, since for
+      // personal the owning account equals the client's primary (no-op). (#281)
+      const sourceClientId = isUnifiedView ? listEmail?.sourceClientAccountId : undefined;
+      const perAccountClient = sourceClientId
+        ? useAuthStore.getState().getClientForAccount(sourceClientId)
         : undefined;
       const fetchClient = perAccountClient ?? client;
 
-      // For shared folders on the primary client, we still need to pass the
-      // shared account's id. In unified view we use the per-account client
-      // directly, so no explicit accountId is needed.
-      const mailbox = mailboxes.find(mb => mb.id === selectedMailbox);
-      const accountId = perAccountClient
-        ? undefined
-        : mailbox?.isShared ? mailbox.accountId : undefined;
+      const accountId = isUnifiedView
+        ? listEmail?.sourceAccountId
+        : (() => {
+            // Non-unified: shared folders on the active client still need their
+            // owner accountId passed explicitly.
+            const mailbox = mailboxes.find(mb => mb.id === selectedMailbox);
+            return mailbox?.isShared ? mailbox.accountId : undefined;
+          })();
 
       const fullEmail = await fetchClient.getEmail(email.id, accountId);
       if (fullEmail) {
@@ -2318,9 +2386,13 @@ export default function Home() {
           fullEmail.isScheduled = true;
           fullEmail.isSmimeScheduled = listEmail.isSmimeScheduled;
         }
-        if (emailAccountId) {
-          fullEmail.accountId = emailAccountId;
-          fullEmail.accountLabel = listEmail?.accountLabel;
+        // Re-stamp the source reference so later actions on the open email
+        // resolve to the right account (the fetched object lacks these).
+        if (isUnifiedView && listEmail) {
+          fullEmail.accountId = listEmail.accountId;
+          fullEmail.accountLabel = listEmail.accountLabel;
+          fullEmail.sourceClientAccountId = listEmail.sourceClientAccountId;
+          fullEmail.sourceAccountId = listEmail.sourceAccountId;
         }
         selectEmail(fullEmail);
         // Mark-as-read logic is now handled by useEffect
@@ -2369,8 +2441,27 @@ export default function Home() {
     setActiveView("viewer");
 
     try {
-      // Fetch complete thread emails
-      const emails = await client.getThreadEmails(thread.threadId);
+      // In unified/aggregate views the thread may belong to another (possibly
+      // shared/group) account. Route the fetch to the login it's reachable
+      // through (`sourceClientAccountId`) and pass its owning JMAP account
+      // (`sourceAccountId`) so the thread loads from the right server instead of
+      // the active one (which doesn't have it → empty/body-less). (#281)
+      const ref = thread.emails?.[0];
+      const threadClient = isUnifiedView && ref?.sourceClientAccountId
+        ? (useAuthStore.getState().getClientForAccount(ref.sourceClientAccountId) ?? client)
+        : client;
+      const threadAccountId = isUnifiedView ? ref?.sourceAccountId : undefined;
+      const emails = await threadClient.getThreadEmails(thread.threadId, threadAccountId);
+      // Re-stamp the source reference so conversation actions (reply/move/…)
+      // resolve to the right account; the fetched objects don't carry it.
+      if (isUnifiedView && ref) {
+        for (const e of emails) {
+          e.accountId = ref.accountId;
+          e.accountLabel = ref.accountLabel;
+          e.sourceClientAccountId = ref.sourceClientAccountId;
+          e.sourceAccountId = ref.sourceAccountId;
+        }
+      }
       setConversationEmails(emails);
     } catch (error) {
       console.error('Failed to fetch thread emails:', error);
@@ -2518,6 +2609,10 @@ export default function Home() {
               scheduledTotal={scheduledTotal}
               showScheduledMailbox={delayedSendSupported}
               showAllMailMailbox={showAllMailMailbox}
+              showCrossUnread={showCrossUnread}
+              showCrossStarred={showCrossStarred}
+              showCrossAll={showCrossAll}
+              crossUnreadCount={crossUnreadCount}
               onMailboxSelect={handleMailboxSelect}
               onTagSelect={handleTagSelect}
               onUnreadFilterClick={handleUnreadFilterClick}
@@ -2685,19 +2780,19 @@ export default function Home() {
                         icon={<Paperclip className="w-3.5 h-3.5" />}
                         label={t("advanced_search.has_attachment")}
                         value={searchFilters.hasAttachment}
-                        onClick={() => { const next = searchFilters.hasAttachment === null ? true : searchFilters.hasAttachment === true ? false : null; setSearchFilters({ hasAttachment: next }); handleAdvancedSearch(); }}
+                        onClick={() => { const next = searchFilters.hasAttachment === null ? true : searchFilters.hasAttachment ? false : null; setSearchFilters({ hasAttachment: next }); handleAdvancedSearch(); }}
                       />
                       <ToggleChip
                         icon={<Star className="w-3.5 h-3.5" />}
                         label={t("advanced_search.starred")}
                         value={searchFilters.isStarred}
-                        onClick={() => { const next = searchFilters.isStarred === null ? true : searchFilters.isStarred === true ? false : null; setSearchFilters({ isStarred: next }); handleAdvancedSearch(); }}
+                        onClick={() => { const next = searchFilters.isStarred === null ? true : searchFilters.isStarred ? false : null; setSearchFilters({ isStarred: next }); handleAdvancedSearch(); }}
                       />
                       <ToggleChip
                         icon={searchFilters.isUnread === false ? <MailOpen className="w-3.5 h-3.5" /> : <Mail className="w-3.5 h-3.5" />}
                         label={searchFilters.isUnread === false ? t("advanced_search.read") : t("advanced_search.unread")}
                         value={searchFilters.isUnread}
-                        onClick={() => { const next = searchFilters.isUnread === null ? true : searchFilters.isUnread === true ? false : null; setSearchFilters({ isUnread: next }); handleAdvancedSearch(); }}
+                        onClick={() => { const next = searchFilters.isUnread === null ? true : searchFilters.isUnread ? false : null; setSearchFilters({ isUnread: next }); handleAdvancedSearch(); }}
                       />
                     </div>
                     <div className="flex items-center gap-1">
@@ -3142,7 +3237,7 @@ export default function Home() {
                     }}
                     currentUserEmail={client?.getUsername()}
                     currentUserName={client?.getUsername()?.split("@")[0]}
-                    currentMailboxRole={mailboxes.find(m => m.id === selectedMailbox)?.role}
+                    currentMailboxRole={mailboxes.find(m => m.id === selectedMailbox)?.role ?? (isUnifiedView ? (unifiedRole ?? undefined) : undefined)}
                     mailboxes={mailboxes}
                     selectedMailbox={selectedMailbox}
                     onMoveToMailbox={async (mailboxId) => {

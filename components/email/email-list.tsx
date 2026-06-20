@@ -108,7 +108,17 @@ export function EmailList({
     clearSearchFilters,
     advancedSearch,
     searchQuery,
+    isUnifiedView,
+    unifiedRole,
   } = useEmailStore();
+
+  // In aggregate role-views (e.g. "All Junk") the selected mailbox is virtual, so
+  // there is no concrete mailbox to read the role from. Fall back to the unified
+  // role so contextual actions (e.g. mark-as-spam ↔ not-spam) behave as if inside
+  // that role's folder.
+  const effectiveMailboxRole =
+    mailboxes.find(m => m.id === selectedMailbox)?.role
+    ?? (isUnifiedView ? (unifiedRole ?? undefined) : undefined);
 
   const disableThreading = useSettingsStore((state) => state.disableThreading);
 
@@ -499,6 +509,7 @@ export function EmailList({
                       onArchive={onArchive ? (email) => onArchive(email) : undefined}
                       onSetColorTag={onSetColorTag}
                       onMarkAsSpam={onMarkAsSpam ? (email) => onMarkAsSpam(email) : undefined}
+                      onUndoSpam={onUndoSpam ? (email) => onUndoSpam(email) : undefined}
                     />
                   </div>
                 );
@@ -532,7 +543,7 @@ export function EmailList({
           menuRef={menuRef}
           mailboxes={mailboxes}
           selectedMailbox={selectedMailbox}
-          currentMailboxRole={mailboxes.find(m => m.id === selectedMailbox)?.role}
+          currentMailboxRole={effectiveMailboxRole}
           isMultiSelect={selectedEmailIds.has(contextMenu.data.id)}
           selectedCount={selectedEmailIds.size}
           onReply={() => onReply?.(contextMenu.data!)}

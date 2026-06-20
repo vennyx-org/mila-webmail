@@ -134,7 +134,10 @@
     "nav_label": "Navegação",
     "add_app": "Apps",
     "shared": "Compartilhado",
-    "scheduled": "Agendados"
+    "scheduled": "Agendados",
+    "unified_all_unread": "Tudo não lido",
+    "unified_all_starred": "Tudo com estrela",
+    "unified_all_mail": "Todo o correio"
   },
   "protocol_handlers": {
     "title": "Aplicativos padrão",
@@ -930,6 +933,18 @@
         "description": "Layout para utilizadores avançados apenas em desktop com navegação de mensagens em múltiplos separadores e fluxos entre contas. A interface padrão não é afetada; pode voltar a qualquer momento.",
         "open_label": "Abrir interface Pro",
         "back_to_standard": "Voltar ao padrão"
+      },
+      "cross_unread": {
+        "label": "Todas as contas: Não lido",
+        "description": "Mostra uma entrada na seção Todas as contas listando o correio não lido de todas as contas, abrangendo todas as pastas exceto spam, enviados, arquivo, lixeira e rascunhos."
+      },
+      "cross_starred": {
+        "label": "Todas as contas: Com estrela",
+        "description": "Mostra uma entrada na seção Todas as contas listando o correio com estrela de todas as contas, abrangendo todas as pastas exceto spam, enviados, arquivo, lixeira e rascunhos."
+      },
+      "cross_all": {
+        "label": "Todas as contas: Todo o correio",
+        "description": "Mostra uma entrada na seção Todas as contas listando todo o correio de todas as contas, abrangendo todas as pastas exceto spam, enviados, arquivo, lixeira e rascunhos."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Arquivar",
         "tag": "Etiqueta",
         "spam": "Marcar como spam",
+        "not_spam": "Não é spam",
         "none_selected": "Nenhuma ação selecionada",
         "mode_label": "Modo de exibição",
         "mode_inline": "Em linha",

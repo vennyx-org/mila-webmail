@@ -2,10 +2,10 @@
 
 import React, { useCallback } from "react";
 import { formatDate, formatDateTime, stripInvisibleLeading } from "@/lib/utils";
-import { Email, ThreadGroup } from "@/lib/jmap/types";
+import { Email, ThreadGroup, ALL_MAIL_MAILBOX_ID } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
-import { Paperclip, Star, Circle, ChevronRight, ChevronDown, Loader2, MessageSquare, CheckSquare, Square, Reply, Forward, CalendarClock } from "lucide-react";
+import { Paperclip, Star, Circle, ChevronRight, ChevronDown, Loader2, MessageSquare, CheckSquare, Square, Reply, Forward, CalendarClock, Folder } from "lucide-react";
 import { useSettingsStore, KEYWORD_PALETTE } from "@/stores/settings-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useEmailStore } from "@/stores/email-store";
@@ -16,6 +16,23 @@ import { useLongPress } from "@/hooks/use-long-press";
 import { ThreadEmailItem } from "./thread-email-item";
 import { EmailHoverActions } from "./email-hover-actions";
 import { useTranslations } from "next-intl";
+
+/**
+ * Small chip showing the originating folder of a message, rendered in the
+ * aggregate "All …" views (All Mail / unified / cross-account) where rows come
+ * from different folders. `email.sourceFolder` is stamped at fetch time.
+ */
+function SourceFolderTag({ name }: { name: string }) {
+  return (
+    <span
+      className="inline-flex max-w-[8rem] shrink-0 items-center gap-1 truncate rounded-full border border-border bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+      title={name}
+    >
+      <Folder className="h-3 w-3 shrink-0" />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
 
 interface ThreadListItemProps {
   thread: ThreadGroup;
@@ -35,6 +52,7 @@ interface ThreadListItemProps {
   onArchive?: (email: Email) => void;
   onSetColorTag?: (emailId: string, color: string | null) => void;
   onMarkAsSpam?: (email: Email) => void;
+  onUndoSpam?: (email: Email) => void;
 }
 
 interface SingleEmailItemProps {
@@ -51,18 +69,22 @@ interface SingleEmailItemProps {
   onArchive?: () => void;
   onSetColorTag?: (color: string | null) => void;
   onMarkAsSpam?: () => void;
+  onUndoSpam?: () => void;
 }
 
 const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
-  function SingleEmailItem({ email, selected, onClick, onDoubleClick, onContextMenu, showPreview, colorTag, onToggleStar, onMarkAsRead, onDelete, onArchive, onSetColorTag, onMarkAsSpam }, ref) {
+  function SingleEmailItem({ email, selected, onClick, onDoubleClick, onContextMenu, showPreview, colorTag, onToggleStar, onMarkAsRead, onDelete, onArchive, onSetColorTag, onMarkAsSpam, onUndoSpam }, ref) {
     const t = useTranslations('email_viewer');
     const isUnread = !email.keywords?.$seen;
     const isStarred = email.keywords?.$flagged;
     const isAnswered = email.keywords?.$answered;
     const isForwarded = email.keywords?.$forwarded;
-    const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection } = useEmailStore();
-    // In Sent/Drafts folders, show recipient instead of sender (which is always "me")
-    const currentMailboxRole = mailboxes.find(mb => mb.id === selectedMailbox)?.role;
+    const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView, unifiedRole } = useEmailStore();
+    // In Sent/Drafts folders, show recipient instead of sender (which is always
+    // "me"). In aggregate role-views the selected mailbox is virtual → fall back
+    // to the unified role so junk-contextual UI and avatar hiding work.
+    const currentMailboxRole = mailboxes.find(mb => mb.id === selectedMailbox)?.role
+      ?? (isUnifiedView ? (unifiedRole ?? undefined) : undefined);
     const showRecipient = currentMailboxRole === 'sent' || currentMailboxRole === 'drafts';
     const sender = showRecipient ? (email.to?.[0] ?? email.from?.[0]) : email.from?.[0];
     const emailKeywords = useSettingsStore((state) => state.emailKeywords);
@@ -71,7 +93,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const timeFormat = useSettingsStore((state) => state.timeFormat);
     const showAvatarsInJunk = useSettingsStore((state) => state.showAvatarsInJunk);
     const hideJunkAvatarImages = currentMailboxRole === 'junk' && !showAvatarsInJunk;
-    const isUnifiedView = useEmailStore((state) => state.isUnifiedView);
+    // Show the originating folder in the aggregate "All …" views.
+    const showSourceFolder = (isUnifiedView || selectedMailbox === ALL_MAIL_MAILBOX_ID) && !!email.sourceFolder;
     const getAccountById = useAccountStore((state) => state.getAccountById);
     const accountColor = email.accountId ? getAccountById(email.accountId)?.avatarColor : undefined;
     const isChecked = selectedEmailIds.has(email.id);
@@ -246,6 +269,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                   {resolvedKeywordDefs.map((kd) => (
                     <span key={kd.id} className={cn('h-2.5 w-2.5 rounded-full', KEYWORD_PALETTE[kd.color]?.dot || 'bg-gray-400')} />
                   ))}
+                  {showSourceFolder && <SourceFolderTag name={email.sourceFolder!} />}
                   {scheduledSendLabel ? (
                     <span
                       className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-sky-700 dark:text-sky-300"
@@ -314,6 +338,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                         {kd.label}
                       </span>
                     ))}
+                    {showSourceFolder && <SourceFolderTag name={email.sourceFolder!} />}
                     {scheduledSendLabel ? (
                       <span
                         className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-sky-700 dark:text-sky-300"
@@ -370,6 +395,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
             onArchive={onArchive}
             onSetColorTag={onSetColorTag}
             onMarkAsSpam={onMarkAsSpam}
+            onUndoSpam={onUndoSpam}
+            isInJunk={currentMailboxRole === 'junk'}
           />
         )}
       </div>
@@ -396,6 +423,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     onArchive,
     onSetColorTag,
     onMarkAsSpam,
+    onUndoSpam,
   }, ref) {
     const t = useTranslations('threads');
     const tEmailViewer = useTranslations('email_viewer');
@@ -414,11 +442,15 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
       ? formatDateTime(latestEmail.scheduledSendAt, timeFormat)
       : null;
 
-    const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView } = useEmailStore();
+    const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView, unifiedRole } = useEmailStore();
+    const showSourceFolder = (isUnifiedView || selectedMailbox === ALL_MAIL_MAILBOX_ID) && !!latestEmail.sourceFolder;
     const getAccountById = useAccountStore((state) => state.getAccountById);
     const threadAccountColor = latestEmail.accountId ? getAccountById(latestEmail.accountId)?.avatarColor : undefined;
-    // In Sent/Drafts folders, show recipient instead of sender (which is always "me")
-    const currentMailboxRole = mailboxes.find(mb => mb.id === selectedMailbox)?.role;
+    // In Sent/Drafts folders, show recipient instead of sender (which is always
+    // "me"). Aggregate role-views use a virtual selected mailbox → fall back to
+    // the unified role so junk-contextual UI and avatar hiding work.
+    const currentMailboxRole = mailboxes.find(mb => mb.id === selectedMailbox)?.role
+      ?? (isUnifiedView ? (unifiedRole ?? undefined) : undefined);
     const showRecipient = currentMailboxRole === 'sent' || currentMailboxRole === 'drafts';
     const displayNames = showRecipient
       ? Array.from(new Set(
@@ -472,6 +504,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
           onArchive={onArchive ? () => onArchive(latestEmail) : undefined}
           onSetColorTag={onSetColorTag ? (color) => onSetColorTag(latestEmail.id, color) : undefined}
           onMarkAsSpam={onMarkAsSpam ? () => onMarkAsSpam(latestEmail) : undefined}
+          onUndoSpam={onUndoSpam ? () => onUndoSpam(latestEmail) : undefined}
         />
       );
     }
@@ -682,6 +715,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                     {keywordDef && (
                       <span className={cn('h-2.5 w-2.5 rounded-full', KEYWORD_PALETTE[keywordDef.color]?.dot || 'bg-gray-400')} />
                     )}
+                    {showSourceFolder && <SourceFolderTag name={latestEmail.sourceFolder!} />}
                     {scheduledSendLabel ? (
                       <span
                         className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-sky-700 dark:text-sky-300"
@@ -762,6 +796,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                           {keywordDef.label}
                         </span>
                       )}
+                      {showSourceFolder && <SourceFolderTag name={latestEmail.sourceFolder!} />}
                       {scheduledSendLabel ? (
                         <span
                           className="inline-flex max-w-[11rem] shrink-0 items-center gap-1 truncate rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-sky-700 dark:text-sky-300"
@@ -818,6 +853,8 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
               onArchive={onArchive ? () => onArchive(latestEmail) : undefined}
               onSetColorTag={onSetColorTag ? (color) => onSetColorTag(latestEmail.id, color) : undefined}
               onMarkAsSpam={onMarkAsSpam ? () => onMarkAsSpam(latestEmail) : undefined}
+              onUndoSpam={onUndoSpam ? () => onUndoSpam(latestEmail) : undefined}
+              isInJunk={currentMailboxRole === 'junk'}
             />
           )}
         </div>

@@ -134,7 +134,10 @@
     "nav_label": "Navigation",
     "add_app": "Apps",
     "shared": "Partagé",
-    "scheduled": "Planifiés"
+    "scheduled": "Planifiés",
+    "unified_all_unread": "Tous les non lus",
+    "unified_all_starred": "Tous les favoris",
+    "unified_all_mail": "Tout le courrier"
   },
   "protocol_handlers": {
     "title": "Applications par défaut",
@@ -930,6 +933,18 @@
         "description": "Disposition pour utilisateurs avancés (bureau uniquement) avec navigation des messages multi-onglets et flux de travail multi-comptes. L'interface standard n'est pas affectée ; vous pouvez revenir à tout moment.",
         "open_label": "Ouvrir l'interface Pro",
         "back_to_standard": "Retour au standard"
+      },
+      "cross_unread": {
+        "label": "Tous les comptes : Non lus",
+        "description": "Affiche une entrée dans la section Tous les comptes répertoriant les messages non lus de tous les comptes, couvrant tous les dossiers sauf indésirables, envoyés, archives, corbeille et brouillons."
+      },
+      "cross_starred": {
+        "label": "Tous les comptes : Favoris",
+        "description": "Affiche une entrée dans la section Tous les comptes répertoriant les messages favoris de tous les comptes, couvrant tous les dossiers sauf indésirables, envoyés, archives, corbeille et brouillons."
+      },
+      "cross_all": {
+        "label": "Tous les comptes : Tout le courrier",
+        "description": "Affiche une entrée dans la section Tous les comptes répertoriant tout le courrier de tous les comptes, couvrant tous les dossiers sauf indésirables, envoyés, archives, corbeille et brouillons."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archiver",
         "tag": "Étiquette",
         "spam": "Marquer comme spam",
+        "not_spam": "Non indésirable",
         "none_selected": "Aucune action sélectionnée",
         "mode_label": "Mode d'affichage",
         "mode_inline": "En ligne",

@@ -134,7 +134,10 @@
     "mail": "Mail",
     "nav_label": "Navigation",
     "add_app": "Apps",
-    "scheduled": "Scheduled"
+    "scheduled": "Scheduled",
+    "unified_all_unread": "All unread",
+    "unified_all_starred": "All starred",
+    "unified_all_mail": "All mail"
   },
   "protocol_handlers": {
     "title": "Default apps",
@@ -933,6 +936,18 @@
         "description": "Desktop-only power-user layout with multi-tab message browsing and cross-account workflows. The standard interface is unaffected; you can switch back at any time.",
         "open_label": "Open Pro Interface",
         "back_to_standard": "Back to standard"
+      },
+      "cross_unread": {
+        "label": "All accounts: Unread",
+        "description": "Show an entry in the All accounts section listing unread mail across every account, spanning all folders except junk, sent, archive, trash and drafts."
+      },
+      "cross_starred": {
+        "label": "All accounts: Starred",
+        "description": "Show an entry in the All accounts section listing starred mail across every account, spanning all folders except junk, sent, archive, trash and drafts."
+      },
+      "cross_all": {
+        "label": "All accounts: All mail",
+        "description": "Show an entry in the All accounts section listing all mail across every account, spanning all folders except junk, sent, archive, trash and drafts."
       }
     },
     "keywords": {
@@ -1189,6 +1204,7 @@
         "archive": "Archive",
         "tag": "Tag",
         "spam": "Mark as Spam",
+        "not_spam": "Not Spam",
         "none_selected": "No actions selected",
         "mode_label": "Display Mode",
         "mode_inline": "Inline",

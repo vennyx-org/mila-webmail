@@ -4,7 +4,7 @@ import { Email } from "@/lib/jmap/types";
 import { useSettingsStore } from "@/stores/settings-store";
 import type { HoverAction } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
-import { Trash2, Star, Mail, MailOpen, Archive, Tag, ShieldAlert } from "lucide-react";
+import { Trash2, Star, Mail, MailOpen, Archive, Tag, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useIsMobile } from "@/hooks/use-media-query";
 
@@ -17,6 +17,10 @@ interface EmailHoverActionsProps {
   onArchive?: () => void;
   onSetColorTag?: (color: string | null) => void;
   onMarkAsSpam?: () => void;
+  // When the email lives in a junk folder (incl. the aggregate "All Junk" view)
+  // the spam quick-action flips to "not spam".
+  isInJunk?: boolean;
+  onUndoSpam?: () => void;
 }
 
 const ACTION_CONFIG: Record<HoverAction, {
@@ -72,6 +76,8 @@ export function EmailHoverActions({
   onArchive,
   onSetColorTag,
   onMarkAsSpam,
+  isInJunk = false,
+  onUndoSpam,
 }: EmailHoverActionsProps) {
   const hoverActions = useSettingsStore((state) => state.hoverActions);
   const hoverActionsMode = useSettingsStore((state) => state.hoverActionsMode);
@@ -106,7 +112,8 @@ export function EmailHoverActions({
         onSetColorTag?.(null);
         break;
       case "spam":
-        onMarkAsSpam?.();
+        if (isInJunk) onUndoSpam?.();
+        else onMarkAsSpam?.();
         break;
     }
   };
@@ -116,20 +123,28 @@ export function EmailHoverActions({
     if (!config) return null;
     const Icon = config.icon;
 
+    // In a junk context the spam action becomes "not spam".
+    const isNotSpam = actionId === "spam" && isInJunk;
     const DisplayIcon = actionId === "markRead"
       ? (isUnread ? MailOpen : Mail)
       : actionId === "star" && isStarred
         ? Star
-        : Icon;
+        : isNotSpam
+          ? ShieldCheck
+          : Icon;
+    const title = isNotSpam ? t("not_spam") : t(config.titleKey);
+    const className = isNotSpam
+      ? "hover:text-green-600 dark:hover:text-green-400"
+      : config.className;
 
     return (
       <button
         key={actionId}
         onClick={(e) => handleAction(e, actionId)}
-        title={t(config.titleKey)}
+        title={title}
         className={cn(
           "p-1.5 rounded-md transition-colors duration-100 text-muted-foreground hover:bg-black/5 dark:hover:bg-white/10",
-          config.className,
+          className,
         )}
       >
         <DisplayIcon

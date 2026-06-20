@@ -220,6 +220,15 @@ interface SettingsState {
   // configured, in which case the view defaults to all non-special (no-role)
   // folders of the active account.
   enableAllMailView: boolean;
+
+  // Cross-account "All accounts" views (gated per-view by the admin policy)
+  enableCrossUnreadView: boolean;
+  enableCrossStarredView: boolean;
+  enableCrossAllView: boolean;
+
+  // Folder ids merged into the virtual "All Mail" mailbox. `null` = never
+  // configured, in which case the view defaults to all non-special (no-role)
+  // folders of the active account.
   allMailFolderIds: string[] | null;
 
   // Email Display
@@ -409,6 +418,10 @@ const DEFAULT_SETTINGS = {
   enableAllMailView: false,
   allMailFolderIds: null as string[] | null,
 
+  enableCrossUnreadView: false,
+  enableCrossStarredView: false,
+  enableCrossAllView: false,
+
   // Email Display
   disableThreading: false,
 
@@ -583,6 +596,9 @@ export const useSettingsStore = create<SettingsState>()(
           includeGroupInUnified: state.includeGroupInUnified,
           enableAllMailView: state.enableAllMailView,
           allMailFolderIds: state.allMailFolderIds,
+          enableCrossUnreadView: state.enableCrossUnreadView,
+          enableCrossStarredView: state.enableCrossStarredView,
+          enableCrossAllView: state.enableCrossAllView,
           senderFavicons: state.senderFavicons,
           showAvatarsInJunk: state.showAvatarsInJunk,
           colorfulSidebarIcons: state.colorfulSidebarIcons,

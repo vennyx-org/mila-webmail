@@ -134,7 +134,10 @@
     "nav_label": "Navegación",
     "add_app": "Apps",
     "shared": "Compartido",
-    "scheduled": "Programados"
+    "scheduled": "Programados",
+    "unified_all_unread": "Todo no leído",
+    "unified_all_starred": "Todo destacado",
+    "unified_all_mail": "Todo el correo"
   },
   "protocol_handlers": {
     "title": "Aplicaciones predeterminadas",
@@ -930,6 +933,18 @@
         "description": "Diseño de escritorio para usuarios avanzados con exploración de mensajes en varias pestañas y flujos de trabajo entre cuentas. La interfaz estándar no se ve afectada; puedes volver en cualquier momento.",
         "open_label": "Abrir interfaz Pro",
         "back_to_standard": "Volver al estándar"
+      },
+      "cross_unread": {
+        "label": "Todas las cuentas: No leído",
+        "description": "Muestra una entrada en la sección Todas las cuentas con el correo no leído de todas las cuentas, abarcando todas las carpetas excepto spam, enviados, archivo, papelera y borradores."
+      },
+      "cross_starred": {
+        "label": "Todas las cuentas: Destacado",
+        "description": "Muestra una entrada en la sección Todas las cuentas con el correo destacado de todas las cuentas, abarcando todas las carpetas excepto spam, enviados, archivo, papelera y borradores."
+      },
+      "cross_all": {
+        "label": "Todas las cuentas: Todo el correo",
+        "description": "Muestra una entrada en la sección Todas las cuentas con todo el correo de todas las cuentas, abarcando todas las carpetas excepto spam, enviados, archivo, papelera y borradores."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archivar",
         "tag": "Etiqueta",
         "spam": "Marcar como spam",
+        "not_spam": "No es spam",
         "none_selected": "No hay acciones seleccionadas",
         "mode_label": "Modo de visualización",
         "mode_inline": "En línea",

@@ -134,7 +134,10 @@
     "nav_label": "导航",
     "add_app": "应用",
     "shared": "共享",
-    "scheduled": "已计划"
+    "scheduled": "已计划",
+    "unified_all_unread": "全部未读",
+    "unified_all_starred": "全部加星标",
+    "unified_all_mail": "全部邮件"
   },
   "protocol_handlers": {
     "title": "默认应用",
@@ -930,6 +933,18 @@
         "description": "仅限桌面的高级用户布局，支持多标签消息浏览和跨账户工作流。标准界面不受影响，您可以随时切换回来。",
         "open_label": "打开 Pro 界面",
         "back_to_standard": "返回标准"
+      },
+      "cross_unread": {
+        "label": "所有账户：未读",
+        "description": "在“所有账户”部分显示一个条目，列出所有账户的未读邮件，涵盖除垃圾邮件、已发送、归档、废纸篓和草稿之外的所有文件夹。"
+      },
+      "cross_starred": {
+        "label": "所有账户：加星标",
+        "description": "在“所有账户”部分显示一个条目，列出所有账户的加星标邮件，涵盖除垃圾邮件、已发送、归档、废纸篓和草稿之外的所有文件夹。"
+      },
+      "cross_all": {
+        "label": "所有账户：全部邮件",
+        "description": "在“所有账户”部分显示一个条目，列出所有账户的全部邮件，涵盖除垃圾邮件、已发送、归档、废纸篓和草稿之外的所有文件夹。"
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "归档",
         "tag": "标签",
         "spam": "标记为垃圾邮件",
+        "not_spam": "非垃圾邮件",
         "none_selected": "未选择任何操作",
         "mode_label": "显示模式",
         "mode_inline": "内嵌",

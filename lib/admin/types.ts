@@ -60,6 +60,9 @@ export interface FeatureGates {
   filesEnabled: boolean;
   contactsEnabled: boolean;
   allMailViewEnabled: boolean;
+  crossUnreadViewEnabled: boolean;
+  crossStarredViewEnabled: boolean;
+  crossAllViewEnabled: boolean;
 }
 
 export const DEFAULT_FEATURE_GATES: FeatureGates = {
@@ -81,6 +84,9 @@ export const DEFAULT_FEATURE_GATES: FeatureGates = {
   filesEnabled: true,
   contactsEnabled: true,
   allMailViewEnabled: false,
+  crossUnreadViewEnabled: false,
+  crossStarredViewEnabled: false,
+  crossAllViewEnabled: false,
 };
 
 export interface ThemePolicy {

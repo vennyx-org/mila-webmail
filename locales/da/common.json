@@ -134,7 +134,10 @@
     "mail": "Mail",
     "nav_label": "Navigation",
     "add_app": "Apps",
-    "scheduled": "Planlagt"
+    "scheduled": "Planlagt",
+    "unified_all_unread": "Alle ulæste",
+    "unified_all_starred": "Alle med stjerne",
+    "unified_all_mail": "Al post"
   },
   "protocol_handlers": {
     "title": "Standardapps",
@@ -933,6 +936,18 @@
         "description": "Power user-layout kun til skrivebordet med beskedvisning på flere faner og arbejdsforløb på tværs af konti. Standardgrænsefladen påvirkes ikke; du kan skifte tilbage når som helst.",
         "open_label": "Åbn Pro-grænsefladen",
         "back_to_standard": "Tilbage til standard"
+      },
+      "cross_unread": {
+        "label": "Alle konti: Ulæste",
+        "description": "Viser en post i sektionen Alle konti med ulæst post fra alle konti, på tværs af alle mapper undtagen spam, sendt, arkiv, papirkurv og kladder."
+      },
+      "cross_starred": {
+        "label": "Alle konti: Med stjerne",
+        "description": "Viser en post i sektionen Alle konti med post med stjerne fra alle konti, på tværs af alle mapper undtagen spam, sendt, arkiv, papirkurv og kladder."
+      },
+      "cross_all": {
+        "label": "Alle konti: Al post",
+        "description": "Viser en post i sektionen Alle konti med al post fra alle konti, på tværs af alle mapper undtagen spam, sendt, arkiv, papirkurv og kladder."
       }
     },
     "keywords": {
@@ -1189,6 +1204,7 @@
         "archive": "Arkivér",
         "tag": "Tag",
         "spam": "Markér som spam",
+        "not_spam": "Ikke spam",
         "none_selected": "Ingen handlinger valgt",
         "mode_label": "Visningstilstand",
         "mode_inline": "Indlejret",

@@ -121,7 +121,7 @@ export class DemoJMAPClient implements IJMAPClient {
   async getMailboxes(_accountId?: string): Promise<Mailbox[]> { return [...this.data.mailboxes]; }
   async getAllMailboxes(): Promise<Mailbox[]> { return [...this.data.mailboxes]; }
 
-  async createMailbox(name: string, parentId?: string): Promise<Mailbox> {
+  async createMailbox(name: string, parentId?: string, _accountId?: string): Promise<Mailbox> {
     const mb: Mailbox = {
       id: generateDemoId('mailbox'),
       name,
@@ -222,7 +222,7 @@ export class DemoJMAPClient implements IJMAPClient {
     this.recalcMailboxCounts();
   }
 
-  async batchMarkAsRead(emailIds: string[], read: boolean = true): Promise<void> {
+  async batchMarkAsRead(emailIds: string[], read: boolean = true, _accountId?: string): Promise<void> {
     for (const id of emailIds) {
       const email = this.data.emails.find(e => e.id === id);
       if (email) {
@@ -233,7 +233,7 @@ export class DemoJMAPClient implements IJMAPClient {
     this.recalcMailboxCounts();
   }
 
-  async toggleStar(emailId: string, starred: boolean): Promise<void> {
+  async toggleStar(emailId: string, starred: boolean, _accountId?: string): Promise<void> {
     const email = this.data.emails.find(e => e.id === emailId);
     if (!email) return;
     if (starred) email.keywords.$flagged = true;
@@ -275,7 +275,7 @@ export class DemoJMAPClient implements IJMAPClient {
     this.recalcMailboxCounts();
   }
 
-  async batchDeleteEmails(emailIds: string[]): Promise<void> {
+  async batchDeleteEmails(emailIds: string[], _accountId?: string): Promise<void> {
     const idSet = new Set(emailIds);
     this.data.emails = this.data.emails.filter(e => !idSet.has(e.id));
     this.recalcMailboxCounts();

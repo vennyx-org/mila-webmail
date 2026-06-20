@@ -134,7 +134,10 @@
     "nav_label": "Navigatie",
     "add_app": "Apps",
     "shared": "Gedeeld",
-    "scheduled": "Gepland"
+    "scheduled": "Gepland",
+    "unified_all_unread": "Alle ongelezen",
+    "unified_all_starred": "Alle met ster",
+    "unified_all_mail": "Alle e-mail"
   },
   "protocol_handlers": {
     "title": "Standaardapps",
@@ -930,6 +933,18 @@
         "description": "Power user-indeling alleen voor desktop met meertabs berichtweergave en accountoverschrijdende workflows. De standaardinterface blijft onveranderd; u kunt op elk moment terugkeren.",
         "open_label": "Pro-interface openen",
         "back_to_standard": "Terug naar standaard"
+      },
+      "cross_unread": {
+        "label": "Alle accounts: Ongelezen",
+        "description": "Toont een item in de sectie Alle accounts met ongelezen e-mail van alle accounts, in alle mappen behalve ongewenst, verzonden, archief, prullenbak en concepten."
+      },
+      "cross_starred": {
+        "label": "Alle accounts: Met ster",
+        "description": "Toont een item in de sectie Alle accounts met e-mail met ster van alle accounts, in alle mappen behalve ongewenst, verzonden, archief, prullenbak en concepten."
+      },
+      "cross_all": {
+        "label": "Alle accounts: Alle e-mail",
+        "description": "Toont een item in de sectie Alle accounts met alle e-mail van alle accounts, in alle mappen behalve ongewenst, verzonden, archief, prullenbak en concepten."
       }
     },
     "keywords": {
@@ -1186,6 +1201,7 @@
         "archive": "Archiveren",
         "tag": "Label",
         "spam": "Markeer als spam",
+        "not_spam": "Geen spam",
         "none_selected": "Geen acties geselecteerd",
         "mode_label": "Weergavemodus",
         "mode_inline": "Inline",
