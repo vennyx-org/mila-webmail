@@ -805,7 +805,10 @@
     "pt": "Portugheză",
     "ru": "Русский",
     "uk": "Ukrainiană",
-    "zh": "Chineză simplificată"
+    "zh": "Chineză simplificată",
+    "fa": "فارسی",
+    "farsi": "فارسی",
+    "switch_to_farsi": "Comută la persană"
   },
   "settings": {
     "title": "Setări",

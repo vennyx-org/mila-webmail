@@ -805,7 +805,10 @@
     "uk": "Українська",
     "zh": "简体中文",
     "polish": "Polski",
-    "switch_to_polish": "Перемкнути на польську"
+    "switch_to_polish": "Перемкнути на польську",
+    "fa": "فارسی",
+    "farsi": "فارسی",
+    "switch_to_farsi": "Перейти на фарсі"
   },
   "settings": {
     "title": "Налаштування",
