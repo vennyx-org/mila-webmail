@@ -8,6 +8,7 @@ import daMessages from '@/locales/da/common.json';
 import deMessages from '@/locales/de/common.json';
 import enMessages from '@/locales/en/common.json';
 import esMessages from '@/locales/es/common.json';
+import faMessages from '@/locales/fa/common.json';
 import frMessages from '@/locales/fr/common.json';
 import huMessages from '@/locales/hu/common.json';
 import itMessages from '@/locales/it/common.json';
@@ -30,6 +31,7 @@ const ALL_MESSAGES = {
   de: deMessages,
   en: enMessages,
   es: esMessages,
+  fa: faMessages,
   fr: frMessages,
   hu: huMessages,
   it: itMessages,
@@ -90,7 +92,7 @@ export function IntlProvider({ locale: initialLocale, children }: IntlProviderPr
   return (
     <NextIntlClientProvider
       locale={activeLocale}
-      messages={ALL_MESSAGES[activeLocale as keyof typeof ALL_MESSAGES]}
+      messages={ALL_MESSAGES[activeLocale as keyof typeof ALL_MESSAGES] ?? ALL_MESSAGES.en}
       timeZone={timeZone}
     >
       {children}
