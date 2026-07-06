@@ -20,10 +20,21 @@ vi.mock('@/stores/auth-store', () => ({
   },
 }));
 
+// Mila fork: changePassword now routes through the server proxy
+// (/api/account/change-password -> Mila self-service), not JMAP.
+vi.mock('@/lib/browser-navigation', () => ({
+  apiFetch: vi.fn(),
+}));
+vi.mock('@/lib/auth/active-account-slot', () => ({
+  getActiveAccountSlotHeaders: () => ({}),
+}));
+
 import { useAccountSecurityStore } from '../account-security-store';
 import { stalwartJmap } from '@/lib/stalwart/jmap-passthrough';
+import { apiFetch } from '@/lib/browser-navigation';
 
 const mockedJmap = stalwartJmap as unknown as ReturnType<typeof vi.fn>;
+const mockedFetch = apiFetch as unknown as ReturnType<typeof vi.fn>;
 
 function resetStore() {
   useAccountSecurityStore.getState().clearState();
@@ -32,6 +43,7 @@ function resetStore() {
 describe('account-security-store', () => {
   beforeEach(() => {
     mockedJmap.mockReset();
+    mockedFetch.mockReset();
     resetStore();
   });
 
@@ -197,43 +209,47 @@ describe('account-security-store', () => {
   });
 
   describe('changePassword', () => {
-    it('calls x:AccountPassword/set with currentSecret and secret', async () => {
-      mockedJmap.mockResolvedValueOnce([
-        ['x:AccountPassword/set', { updated: { singleton: null } }, '0'],
-      ]);
+    it('POSTs accountId + current/new password to the server route (not JMAP directly)', async () => {
+      mockedFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) } as Response);
 
       await useAccountSecurityStore.getState().changePassword('old', 'new');
 
-      const calls = mockedJmap.mock.calls[0][0];
-      expect(calls).toEqual([[
-        'x:AccountPassword/set',
-        {
-          accountId: 'acc-primary',
-          update: { singleton: { currentSecret: 'old', secret: 'new' } },
-        },
-        '0',
-      ]]);
-    });
-
-    it('propagates errors and records state', async () => {
-      mockedJmap.mockRejectedValueOnce(new Error('forbidden'));
-
-      await expect(useAccountSecurityStore.getState().changePassword('x', 'y')).rejects.toThrow('forbidden');
-      expect(useAccountSecurityStore.getState().error).toBe('forbidden');
+      expect(mockedFetch).toHaveBeenCalledWith(
+        '/api/account/change-password',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ accountId: 'acc-primary', currentPassword: 'old', newPassword: 'new' }),
+        }),
+      );
+      // The store never calls Stalwart's JMAP password method directly -- the
+      // server route owns that (and may delegate to an external provider).
+      expect(mockedJmap).not.toHaveBeenCalled();
       expect(useAccountSecurityStore.getState().isSaving).toBe(false);
     });
 
-    it('throws the server message when the set comes back as notUpdated (HTTP 200)', async () => {
-      mockedJmap.mockResolvedValueOnce([
-        ['x:AccountPassword/set', {
-          notUpdated: { singleton: { type: 'invalidProperties', description: 'Current password is incorrect' } },
-        }, '0'],
-      ]);
+    it('propagates the server error message and records state', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Invalid email or current password' }),
+      } as Response);
+
+      await expect(useAccountSecurityStore.getState().changePassword('x', 'y')).rejects.toThrow('Invalid email or current password');
+      expect(useAccountSecurityStore.getState().error).toBe('Invalid email or current password');
+      expect(useAccountSecurityStore.getState().isSaving).toBe(false);
+    });
+
+    it('surfaces a 400 weak-password rejection from the proxy', async () => {
+      mockedFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'newPassword must be at least 8 characters' }),
+      } as Response);
 
       await expect(
-        useAccountSecurityStore.getState().changePassword('wrong', 'new'),
-      ).rejects.toThrow('Current password is incorrect');
-      expect(useAccountSecurityStore.getState().error).toBe('Current password is incorrect');
+        useAccountSecurityStore.getState().changePassword('current', 'short'),
+      ).rejects.toThrow('newPassword must be at least 8 characters');
+      expect(useAccountSecurityStore.getState().error).toBe('newPassword must be at least 8 characters');
       expect(useAccountSecurityStore.getState().isSaving).toBe(false);
     });
   });

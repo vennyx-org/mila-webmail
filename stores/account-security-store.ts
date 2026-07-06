@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { debug } from '@/lib/debug';
+import { apiFetch } from '@/lib/browser-navigation';
+import { getActiveAccountSlotHeaders } from '@/lib/auth/active-account-slot';
 import { useAuthStore } from '@/stores/auth-store';
 import { stalwartJmap, requireResult, type JmapMethodResponse } from '@/lib/stalwart/jmap-passthrough';
 
@@ -360,18 +362,31 @@ export const useAccountSecurityStore = create<AccountSecurityState>()((set, get)
   changePassword: async (currentPassword, newPassword) => {
     set({ isSaving: true, error: null });
     try {
+      // Password change goes through the server route rather than a direct
+      // JMAP call: the route either performs the standard Stalwart
+      // `x:AccountPassword/set` (default) or, when the deployment configures
+      // an external password provider (`PASSWORD_CHANGE_URL`), delegates to
+      // it -- for a Stalwart fronting a read-only auth directory whose
+      // passwords are owned elsewhere, where `x:AccountPassword/set` fails
+      // "Operation not allowed". `accountId` is forwarded for the default
+      // JMAP transport; slot headers select the account like the JMAP
+      // passthrough does.
       const accountId = getPrimaryAccountId();
-      const responses = await stalwartJmap([
-        [
-          'x:AccountPassword/set',
-          {
-            accountId,
-            update: { singleton: { currentSecret: currentPassword, secret: newPassword } },
-          },
-          '0',
-        ],
-      ]);
-      requireAccountPasswordUpdate(responses, 'Failed to change password');
+      const response = await apiFetch('/api/account/change-password', {
+        method: 'POST',
+        headers: { ...getActiveAccountSlotHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId, currentPassword, newPassword }),
+      });
+      if (!response.ok) {
+        let message = 'Failed to change password';
+        try {
+          const body = await response.json();
+          if (body?.error) message = body.error;
+        } catch {
+          /* ignore non-JSON error bodies */
+        }
+        throw new Error(message);
+      }
       set({ isSaving: false });
     } catch (error) {
       set({
